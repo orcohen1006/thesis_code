@@ -36,11 +36,11 @@ def exp_DeltaTheta(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
         vec_delta_theta = np.arange(2, 11)
     else:
         print('=========== SMALL SCALE MC tests@@@ !!! =======')
-        num_mc = 10
-        vec_delta_theta = np.arange(3,5) #np.arange(2, 11)
+        num_mc = 50
+        vec_delta_theta = np.arange(2,11) #np.arange(2, 11)
     
     snr = 0
-    algo_list = ["PER", "SPICE", "SAMV"]#, "AFFINV"]
+    algo_list = ["PER", "SPICE", "SAMV", "AFFINV"]
     
     num_algos = len(algo_list)
     

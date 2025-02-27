@@ -11,6 +11,7 @@ def detect_DOAs(p_vec, DOAscan, DOA):
 
     if len(peaks_indices) < Numsources:
         # Not all peaks detected
+        print("Not all peaks detected ")
         normal = 0
         Distance = np.nan
         Detected_powers = np.nan

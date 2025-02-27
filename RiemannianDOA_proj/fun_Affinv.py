@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import linalg
 from utils import *
+from time import time
 
 
 def adamupdate(p, grad, averageGrad, averageSqGrad, iter, learnRate, gradDecay, sqGradDecay):
@@ -30,6 +31,7 @@ def adamupdate(p, grad, averageGrad, averageSqGrad, iter, learnRate, gradDecay, 
 
 def fun_Affinv_aux(sigma2_n, A, GammaTensor, DAS_init):
     """Auxiliary function for Affinv algorithm"""
+    t0 = time()
     D = A.shape[1]
     M = A.shape[0]
     L = 1  # Assuming GammaTensor is 2D
@@ -37,7 +39,7 @@ def fun_Affinv_aux(sigma2_n, A, GammaTensor, DAS_init):
     NUM_MAX_ITERS = 10000
     eta = 1e-3
     eps_pow = 1e-5
-    nu = 0  # D**2 * 1e-8 in original
+    nu = 0
     beta = 0.9
     EPS_NORM_CHANGE = 1e-4
     
@@ -72,11 +74,8 @@ def fun_Affinv_aux(sigma2_n, A, GammaTensor, DAS_init):
         # Assuming GammaTensor is just R_hat (not a 3D tensor)
         invsqrtm_R_l = np.linalg.pinv(linalg.sqrtm(GammaTensor))
         Q = invsqrtm_R_l @ R @ invsqrtm_R_l
-        Q = (Q + Q.conj().T) / 2  # For numerical stability
-        
-        U, Lam, _ = np.linalg.svd(Q)
-        lambdas = Lam
-        
+        lambdas, U = np.linalg.eigh(Q)
+
         prev_loss = np.sum(np.log(lambdas)**2)
         
         V = np.abs(U.conj().T @ invsqrtm_R_l @ A)**2
@@ -109,7 +108,11 @@ def fun_Affinv_aux(sigma2_n, A, GammaTensor, DAS_init):
         gradDecay = 0.95
         sqGradDecay = 0.95
         p, averageGrad, averageSqGrad = adamupdate(p, grad, averageGrad, averageSqGrad, iter, learnRate, gradDecay, sqGradDecay)
-        
+
+
+
+        # p = p - eta*grad
+
         # Set small values to zero
         p[p < eps_pow] = 0
         
@@ -128,7 +131,7 @@ def fun_Affinv_aux(sigma2_n, A, GammaTensor, DAS_init):
         p = p_init
     else:
         p = all_ps[:, chosen_last_iter]
-        
+    print(f"affinv iters: {chosen_last_iter}, time: {time() - t0}")
     return p, logger
 
 def fun_Affinv(Y, A, DAS_init, DOAscan, DOA, noise_power):

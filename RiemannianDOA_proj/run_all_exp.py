@@ -13,7 +13,7 @@ def run_all_exp():
     #     for N in [16, 120]:
     #         exp_SNR(N, cohr_flag, Large_Scale_Flag)
 
-    for cohr_flag in [False, True]:
+    for cohr_flag in [False]:#[False, True]:
         for N in [16]: #[16, 120]:
             exp_DeltaTheta(N, cohr_flag, Large_Scale_Flag)
 
