@@ -137,7 +137,7 @@ def compute_algos_std_err_parallel(
         power_doa_db: np.ndarray,
         doa: np.ndarray,
         method: str = 'joblib',
-        n_jobs: int = -1,
+        n_jobs: int = 4,
         random_seed: int = 42
 ) -> Tuple[np.ndarray, np.ndarray, float]:
     """

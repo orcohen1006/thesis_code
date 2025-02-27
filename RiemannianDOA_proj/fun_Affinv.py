@@ -2,6 +2,7 @@ import numpy as np
 from scipy import linalg
 from utils import *
 from time import time
+from OptimizeRiemannianLoss import optimize_lbfgs_AFFINV, optimize_adam_AFFINV
 
 
 def adamupdate(p, grad, averageGrad, averageSqGrad, iter, learnRate, gradDecay, sqGradDecay):
@@ -65,14 +66,14 @@ def fun_Affinv_aux(sigma2_n, A, GammaTensor, DAS_init):
     all_grads = np.zeros((len(p), NUM_MAX_ITERS+1))
     all_ps = np.zeros((len(p), NUM_MAX_ITERS+1))
     loss_vec = np.zeros(NUM_MAX_ITERS+1)
-    
+
+    invsqrtm_R_l = np.linalg.pinv(linalg.sqrtm(GammaTensor))
     for iter in range(1, NUM_MAX_ITERS+2):
         R = A @ np.diag(p) @ A.conj().T + sigma2_n * np.eye(M)
         grad = 0
         prev_loss = 0
         
         # Assuming GammaTensor is just R_hat (not a 3D tensor)
-        invsqrtm_R_l = np.linalg.pinv(linalg.sqrtm(GammaTensor))
         Q = invsqrtm_R_l @ R @ invsqrtm_R_l
         lambdas, U = np.linalg.eigh(Q)
 
@@ -158,7 +159,11 @@ def fun_Affinv(Y, A, DAS_init, DOAscan, DOA, noise_power):
     sigma2_n = noise_power
     
     # Call auxiliary function for Affinv estimation
-    p, _ = fun_Affinv_aux(sigma2_n, A, R_hat, DAS_init)
+    # p, _ = fun_Affinv_aux(sigma2_n, A, R_hat, DAS_init)
+
+    p = optimize_adam_AFFINV(A, R_hat, sigma2_n, DAS_init, _max_iter=100)
+
+
     Detected_powers, Distance, normal = detect_DOAs(p, DOAscan, DOA)
 
     
