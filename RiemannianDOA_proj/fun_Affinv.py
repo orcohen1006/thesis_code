@@ -161,7 +161,7 @@ def fun_Affinv(Y, A, DAS_init, DOAscan, DOA, noise_power):
     # Call auxiliary function for Affinv estimation
     # p, _ = fun_Affinv_aux(sigma2_n, A, R_hat, DAS_init)
 
-    p = optimize_adam_AFFINV(A, R_hat, sigma2_n, DAS_init, _max_iter=100)
+    p,_ = optimize_adam_AFFINV(A, R_hat, sigma2_n, DAS_init, _max_iter=int(1e4), _lr=1e-2)
 
 
     Detected_powers, Distance, normal = detect_DOAs(p, DOAscan, DOA)

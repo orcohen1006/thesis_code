@@ -27,7 +27,7 @@ def loss_AFFINV(p, A, pinv_sqrtm_R_hat, sigma2):
 
     # Eigenvalues of Q
     eigvals = torch.linalg.eigvalsh(Q).real  # Ensure real part (Q should be Hermitian)
-    print(eigvals)
+    # print(eigvals)
     # Compute loss
     loss = torch.sum(torch.log(eigvals) ** 2)
     return loss
@@ -59,12 +59,13 @@ def optimize_lbfgs_AFFINV(_A, _R_hat, _sigma2, _p_init, _max_iter=100):
     return p.detach().numpy()
 
 
-def optimize_adam_AFFINV(_A, _R_hat, _sigma2, _p_init, _max_iter=100, lr=0.01):
+def optimize_adam_AFFINV(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
     pinv_sqrtm_R_hat = matrix_pinv_sqrtm(torch.as_tensor(_R_hat, dtype=torch.complex64))  # Compute R_hat^(-1/2)
     p = torch.as_tensor(_p_init, dtype=torch.float).clone().detach().requires_grad_(True)  # Use provided initialization
     A = torch.as_tensor(_A, dtype=torch.complex64)
 
-    optimizer = torch.optim.Adam([p], lr=lr)
+    optimizer = torch.optim.Adam([p], lr=_lr)
+    loss_history = []
 
     for step in range(_max_iter):
         optimizer.zero_grad()
@@ -75,10 +76,14 @@ def optimize_adam_AFFINV(_A, _R_hat, _sigma2, _p_init, _max_iter=100, lr=0.01):
         with torch.no_grad():
             p.clamp_(min=0)  # Keep p non-negative if needed
 
-        if step % 10 == 0:
+
+        if do_store_history: # Store loss
+            loss_history.append(loss.item())
+
+        if do_verbose and step % 10 == 0:
             print(f"Step {step}: Loss = {loss.item()}")
 
-    return p.detach()
+    return p.detach(), loss_history
 
 
 # # Example usage

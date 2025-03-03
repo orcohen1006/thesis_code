@@ -32,3 +32,28 @@ def detect_DOAs(p_vec, DOAscan, DOA):
     Detected_powers = Detected_powers[sorted_idx]
 
     return Detected_powers, Distance, normal
+
+
+def generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=False, seed=None):
+    if seed is not None:
+        np.random.seed(seed)
+
+    m = A_true.shape[0]
+    num_sources = len(power_doa_db)
+    amplitude_doa = np.sqrt(10.0 ** (power_doa_db / 10.0))
+
+    # Generate signal
+    noise = np.sqrt(noise_power / 2) * (np.random.randn(m, t_samples) + 1j * np.random.randn(m, t_samples))
+
+    if not cohr_flag:  # independent sources
+        waveform = np.exp(1j * 2 * np.pi * np.random.rand(num_sources, t_samples))
+        waveform = waveform * np.tile(amplitude_doa, (t_samples, 1)).T
+    else:  # coherent sources
+        waveform = np.exp(1j * 2 * np.pi * np.random.rand(num_sources - 1, t_samples))
+        waveform = np.vstack([waveform, waveform[0, :]])
+        waveform = waveform * np.tile(amplitude_doa, (t_samples, 1)).T
+
+    y_noisefree = A_true @ waveform  # ideal noiseless measurements
+    y_noisy = y_noisefree + noise  # noisy measurements
+
+    return y_noisy

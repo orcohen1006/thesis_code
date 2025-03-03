@@ -37,7 +37,7 @@ def exp_DeltaTheta(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
     else:
         print('=========== SMALL SCALE MC tests@@@ !!! =======')
         num_mc = 1 #50
-        vec_delta_theta = np.arange(8, 9) #np.arange(2, 11)
+        vec_delta_theta = np.arange(5, 6) #np.arange(2, 11)
 
     
     snr = 0
