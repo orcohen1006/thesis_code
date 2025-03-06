@@ -2,7 +2,7 @@ import numpy as np
 from scipy import linalg
 from utils import *
 from time import time
-from OptimizeRiemannianLoss import optimize_lbfgs_AFFINV, optimize_adam_AFFINV
+from OptimizeRiemannianLoss import optimize_adam_AFFINV, optimize_adam_LD
 
 
 def adamupdate(p, grad, averageGrad, averageSqGrad, iter, learnRate, gradDecay, sqGradDecay):
@@ -135,38 +135,21 @@ def fun_Affinv_aux(sigma2_n, A, GammaTensor, DAS_init):
     print(f"affinv iters: {chosen_last_iter}, time: {time() - t0}")
     return p, logger
 
-def fun_Affinv(Y, A, DAS_init, DOAscan, DOA, noise_power):
-    """
-    Affine Invariant estimator implementation.
-    
-    Parameters:
-    Y: measured data, each col. is one snapshot
-    A: steering vector matrix
-    DAS_init: initial coefficients estimates by DAS
-    DOAscan: grid
-    DOA: truth (actual DOA angles)
-    noise_power: known noise power
-    
-    Returns:
-    Detected_powers: powers of detected sources
-    Distance: difference between detected and true DOAs
-    p: power spectrum vector
-    normal: tag (1 if detection OK, 0 if failed)
-    noisepower: estimated noise power
-    """
+def fun_Riemannian(Y, A, DAS_init, DOAscan, DOA, noise_power, loss_name="AFFINV"):
     t_samples = Y.shape[1]
-    R_hat = Y @ Y.conj().T / t_samples
+    R_hat = (Y @ Y.conj().T) / t_samples
     sigma2_n = noise_power
     
     # Call auxiliary function for Affinv estimation
     # p, _ = fun_Affinv_aux(sigma2_n, A, R_hat, DAS_init)
 
-    p,_ = optimize_adam_AFFINV(A, R_hat, sigma2_n, DAS_init, _max_iter=int(1e4), _lr=1e-2)
-
+    if loss_name == "AFFINV":
+        p,_ = optimize_adam_AFFINV(A, R_hat, sigma2_n, DAS_init, _max_iter=int(5e3), _lr=1e-1)
+    elif loss_name == "LD":
+        p,_ = optimize_adam_LD(A, R_hat, sigma2_n, DAS_init, _max_iter=int(5e3), _lr=1e-1)
 
     Detected_powers, Distance, normal = detect_DOAs(p, DOAscan, DOA)
 
     
     noisepower = sigma2_n
-    
     return Detected_powers, Distance, p, normal, noisepower

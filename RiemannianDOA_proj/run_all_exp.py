@@ -6,7 +6,7 @@ from Exp_DeltaTheta import *
 
 def run_all_exp():
     np.random.seed(42)
-    Large_Scale_Flag = False
+    Large_Scale_Flag = True
     t0_overall = time.time()
 
     # for cohr_flag in [False, True]:

@@ -3,7 +3,6 @@ from utils import *
 from scipy import sparse
 from time import time
 
-
 def fun_SAM3Res(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
     """
     SAM-3 (Sparse And Matched 3) estimator implementation.
@@ -60,8 +59,9 @@ def fun_SAM3Res(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
         
         p_vec_Old = p_vec.copy()
 
-    print(f"samv iters: {iterIdx}, time: {time() - t0}")
     p_vec = np.real(p_vec)
+
+    print(f"samv: #iters= {iterIdx}, time= {time() - t0} [sec]")
     Detected_powers, Distance, normal = detect_DOAs(p_vec, DOAscan, DOA)
 
     noisepower = sigma

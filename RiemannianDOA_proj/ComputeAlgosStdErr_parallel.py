@@ -9,7 +9,7 @@ from functools import partial
 from fun_DASRes import *
 from fun_SAM3Res import *
 from fun_SPICEplusRes import *
-from fun_Affinv import *
+from fun_Riemannian import *
 from SAM_CRB import *
 
 def run_single_mc_iteration(
@@ -73,8 +73,11 @@ def run_single_mc_iteration(
             detected_powers, distance, p_vec, normal, _ = fun_SPICEplusRes(y_noisy, A, modulus_hat_das, doa_scan, doa,
                                                                            noise_power)
         elif algo_list[i_algo] == "AFFINV":
-            detected_powers, distance, p_vec, normal, _ = fun_Affinv(y_noisy, A, modulus_hat_das, doa_scan, doa,
-                                                                     noise_power)
+            detected_powers, distance, p_vec, normal, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, doa,
+                                                                         noise_power, loss_name="AFFINV")
+        elif algo_list[i_algo] == "LD":
+            detected_powers, distance, p_vec, normal, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, doa,
+                                                                         noise_power, loss_name="LD")
         else:
             raise ValueError("Algorithm not implemented")
 

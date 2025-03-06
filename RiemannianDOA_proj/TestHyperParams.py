@@ -3,16 +3,17 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from utils import *
-from OptimizeRiemannianLoss import optimize_adam_AFFINV
+from OptimizeRiemannianLoss import optimize_adam_AFFINV, optimize_adam_LE, optimize_adam_LD
 from itertools import product
 
 
-def test_hyper_params() -> None:
+def test_hyper_params(input) -> None:
     # Test parameters
     np.random.seed(42)
     m = 12
     snr = 0
     N = 16
+    MAX_ITERS = int(5e3)
     # Source powers in dB
     power_doa_db = np.array([3, 4])
 
@@ -21,14 +22,20 @@ def test_hyper_params() -> None:
     A = np.exp(1j * np.pi * np.outer(np.arange(m), np.cos(doa_scan * np.pi / 180)))
 
     firstDOA = 35.11
-    # Learning rates to test
-    # lr_values = [1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 5e-2]
-    lr_values = [1e-4, 1e-3, 1e-2]
 
-    list_deltaDOA = [5,10]
-    list_snr = [-5, 0, 5]
-    list_N = [16, 120]
-    list_seed = np.arange(0,3).tolist()
+    lr_values = input['lr_values']
+    optimize_func = input['optimize_func']
+
+    # list_deltaDOA = [5,10]
+    # list_snr = [-5, 0, 5]
+    # list_N = [16, 120]
+    # list_seed = np.arange(0,3).tolist()
+
+    list_deltaDOA = [5]
+    list_snr = [0]
+    list_N = [16]
+    list_seed = np.arange(0, 2).tolist()
+
     list_settings = list(product(list_deltaDOA, list_snr,list_N, list_seed))
 
     # Results tracking
@@ -39,15 +46,14 @@ def test_hyper_params() -> None:
         'avg_convergence_steps': [],
         'std_convergence_steps': [],
         'all_loss_histories': [],  # Will store a list of lists: [lr_idx][scenario_idx]
+        'all_rel_change_histories': [],
     }
 
     # Test each learning rate
     for lr_idx, lr in enumerate(tqdm(lr_values, desc="Testing learning rates")):
-        LEARNING_RATE = lr
-
         scenario_final_losses = []
-        scenario_convergence_steps = []
         scenario_loss_histories = []
+        scenario_rel_change_histories = []
 
         # Run multiple scenarios for each learning rate
         for idx_setting, setting in enumerate(tqdm(list_settings, desc=f"Testing scenarios for lr={lr}", leave=False)):
@@ -68,40 +74,25 @@ def test_hyper_params() -> None:
             R_hat = Y @ Y.conj().T / N
 
             # Optimize with this learning rate
-            p, step_losses = optimize_adam_AFFINV(A, R_hat, noise_power, DAS_init, _max_iter=int(5e3), _lr=lr,
-                                                  do_store_history=True)
-
+            p, tuple_history = optimize_func(A, R_hat, noise_power, DAS_init,
+                                                    _max_iter=MAX_ITERS, _lr=lr,
+                                                    do_store_history=True)
+            step_losses, rel_changes = tuple_history
             # Store results for this scenario
             scenario_final_losses.append(step_losses[-1] if step_losses else float('inf'))
             scenario_loss_histories.append(step_losses)
-
-            # Calculate convergence step
-            if len(step_losses) > 10:
-                # Define convergence as when the relative change in loss is small for several consecutive steps
-                rel_changes = np.abs(np.diff(step_losses) / np.array(step_losses[:-1]))
-                convergence_window = 5  # Number of consecutive steps with small change
-
-                # Find where we have 'convergence_window' consecutive steps with small relative change
-                conv_indices = \
-                np.where(np.convolve(rel_changes < 0.001, np.ones(convergence_window), 'valid') == convergence_window)[
-                    0]
-                convergence_step = conv_indices[0] if len(conv_indices) > 0 else len(step_losses)
-            else:
-                convergence_step = len(step_losses)
-
-            scenario_convergence_steps.append(convergence_step)
+            scenario_rel_change_histories.append(rel_changes)
 
         # Store aggregated results for this learning rate
         results['lr'].append(lr)
         results['avg_final_loss'].append(np.mean(scenario_final_losses))
         results['std_final_loss'].append(np.std(scenario_final_losses))
-        results['avg_convergence_steps'].append(np.mean(scenario_convergence_steps))
-        results['std_convergence_steps'].append(np.std(scenario_convergence_steps))
         results['all_loss_histories'].append(scenario_loss_histories)
+        results['all_rel_change_histories'].append(scenario_rel_change_histories)
 
     # Plot results
     fig, axs = plt.subplots(2, 2, figsize=(15, 10))
-
+    fig.suptitle(input['name'], fontsize=16)
     # Plot 1: Average loss curves for all learning rates
     for i, lr in enumerate(results['lr']):
         # Calculate mean and std of loss across scenarios at each iteration
@@ -160,26 +151,42 @@ def test_hyper_params() -> None:
     axs[1, 0].set_xscale('log')
     axs[1, 0].set_yscale('log')
 
-    # Plot 4: Convergence steps vs learning rate (with error bars)
-    axs[1, 1].errorbar(results['lr'], results['avg_convergence_steps'],
-                       yerr=results['std_convergence_steps'], fmt='o-')
-    axs[1, 1].set_title('Average Iterations to Convergence vs Learning Rate')
-    axs[1, 1].set_xlabel('Learning Rate')
-    axs[1, 1].set_ylabel('Iterations to Convergence (mean ± std)')
-    axs[1, 1].set_xscale('log')
+    # Plot 4:
+    for i, lr in enumerate(results['lr']):
+        # Average parameter changes across scenarios
+        max_len = MAX_ITERS #min(1000, max(len(changes) for changes in results['all_rel_change_histories'][i]))
+        avg_changes = np.zeros(max_len)
+        std_changes = np.zeros(max_len)
+
+        for step in range(max_len):
+            step_changes = [changes[step] if step < len(changes) else 0
+                            for changes in results['all_rel_change_histories'][i]]
+            avg_changes[step] = np.mean(step_changes)
+            std_changes[step] = np.std(step_changes)
+
+        # Plot mean parameter change with shaded std region
+        x = np.arange(max_len)
+        axs[1, 1].plot(x, avg_changes, label=f'lr={lr}')
+        axs[1, 1].fill_between(x, avg_changes - std_changes, avg_changes + std_changes, alpha=0.2)
+
+    axs[1, 1].set_title('Parameter Change During Optimization')
+    axs[1, 1].set_xlabel('Iterations')
+    axs[1, 1].set_ylabel('‖pᵢ - pᵢ₋₁‖/‖pᵢ‖')
+    axs[1, 1].legend()
+    axs[1, 1].set_yscale('log')
 
     plt.tight_layout()
-    plt.savefig('learning_rate_comparison_multi_scenario.png')
-    plt.show()
+    plt.savefig(input['name'] + '_learning_rate_comparison_multi_scenario.png')
+    # plt.show()
 
     # Print recommendation
-    best_lr_idx = np.argmin(results['avg_final_loss'])
-    best_lr = results['lr'][best_lr_idx]
-    print(f"\nRecommended learning rate: {best_lr}")
-    print(
-        f"Average lowest loss: {results['avg_final_loss'][best_lr_idx]:.6e} ± {results['std_final_loss'][best_lr_idx]:.6e}")
-    print(
-        f"Average convergence in {results['avg_convergence_steps'][best_lr_idx]:.1f} ± {results['std_convergence_steps'][best_lr_idx]:.1f} iterations")
+    # best_lr_idx = np.argmin(results['avg_final_loss'])
+    # best_lr = results['lr'][best_lr_idx]
+    # print(f"\nRecommended learning rate: {best_lr}")
+    # print(
+    #     f"Average lowest loss: {results['avg_final_loss'][best_lr_idx]:.6e} ± {results['std_final_loss'][best_lr_idx]:.6e}")
+    # print(
+    #     f"Average convergence in {results['avg_convergence_steps'][best_lr_idx]:.1f} ± {results['std_convergence_steps'][best_lr_idx]:.1f} iterations")
 
     # Create robustness plot - how consistent is each learning rate across scenarios?
     plt.figure(figsize=(10, 6))
@@ -197,9 +204,12 @@ def test_hyper_params() -> None:
     plt.ylabel('Final Loss')
     plt.yscale('log')
     plt.grid(True, linestyle='--', alpha=0.7)
-    plt.savefig('learning_rate_robustness.png')
-    plt.show()
+    plt.savefig(input['name'] + '_learning_rate_robustness.png')
+    # plt.show()
 
 
 if __name__ == "__main__":
-    test_hyper_params()
+    # test_hyper_params({'name':'AFFINV','optimize_func':optimize_adam_AFFINV,'lr_values':[1e-4, 1e-3, 1e-2]})
+    # test_hyper_params({'name':'LD','optimize_func':optimize_adam_LD,'lr_values':[1e-4, 1e-3, 1e-2]})
+    test_hyper_params({'name':'LE','optimize_func':optimize_adam_LE,'lr_values':[1e-3]})
+    plt.show()

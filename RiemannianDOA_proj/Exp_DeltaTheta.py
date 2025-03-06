@@ -36,12 +36,12 @@ def exp_DeltaTheta(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
         vec_delta_theta = np.arange(2, 11)
     else:
         print('=========== SMALL SCALE MC tests@@@ !!! =======')
-        num_mc = 1 #50
-        vec_delta_theta = np.arange(5, 6) #np.arange(2, 11)
+        num_mc = 50
+        vec_delta_theta = np.arange(2, 11)
 
     
     snr = 0
-    algo_list = ["PER", "SPICE", "SAMV", "AFFINV"]
+    algo_list = ["PER", "SPICE", "SAMV", "AFFINV", "LD"]
     
     num_algos = len(algo_list)
     
@@ -77,7 +77,7 @@ def exp_DeltaTheta(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
         )
     
     # Plot figures
-    color_set = ['r-->', 'm--p', 'b-^', 'g--s', 'k--']
+    color_set = ['r-->', 'm--p', 'b-^', 'g--s', 'y--o', 'k--']
 
     # Plot SE figure
     plt.figure()

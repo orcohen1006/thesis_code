@@ -98,7 +98,7 @@ def fun_SPICEplusRes(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
         measured_change_norm = np.linalg.norm(p - p_prev) / np.linalg.norm(p)
         if measured_change_norm < EPS_NORM_CHANGE:
             break
-    print(f"spice iters: {jj}, time: {time() - t0}")
+    print(f"spice: #iters= {jj}, time= {time() - t0} [sec]")
     Detected_powers, Distance, normal = detect_DOAs(p, DOAscan, DOA)
 
     noisepower = sigma
