@@ -15,7 +15,7 @@ def SAM_CRB(SNR_in, t_sample_in, cohr_flag, PowerDOAdB=None, DOA=None):
     Returns:
     mse_CBRDOA: Mean Square Error Cramer-Rao Bound for DOA
     """
-    M = 12
+    m = 12
     t_samples = t_sample_in
     
     # Fixed Source powers
@@ -27,13 +27,11 @@ def SAM_CRB(SNR_in, t_sample_in, cohr_flag, PowerDOAdB=None, DOA=None):
     
     # Complex Gaussian Noise
     SNR = SNR_in  # input parameters
-    noisePowerdB = np.mean(PowerDOAdB) - SNR
+    noisePowerdB = np.max(PowerDOAdB) - SNR
     noisePower = 10 ** (noisePowerdB / 10)
-    
-    # Inter-element spacing of sensors
-    Dist = np.ones(M - 1)
-    DistTmp = np.concatenate(([0], np.cumsum(Dist)))  # locations of the M sensors
-    
+
+    delta_vec = np.arange(m)
+
     if DOA is None:
         DOA = np.array([35.11, 50.15])  # true DOA angles, off grid case
     
@@ -41,10 +39,10 @@ def SAM_CRB(SNR_in, t_sample_in, cohr_flag, PowerDOAdB=None, DOA=None):
     source_no = len(DOA)  # # of sources
     
     # Real steering vector matrix
-    A = np.exp(1j * np.pi * np.outer(DistTmp, np.cos(DOA * np.pi / 180)))
-    DA = (-1j * np.pi * np.outer(DistTmp, np.sin(DOA * np.pi / 180) * np.pi / 180)) * A
+    A = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(DOA * np.pi / 180)))
+    DA = (-1j * np.pi * np.outer(delta_vec, np.sin(DOA * np.pi / 180) * np.pi / 180)) * A
     
-    PI_A = np.eye(M) - A @ np.linalg.inv(A.conj().T @ A) @ A.conj().T
+    PI_A = np.eye(m) - A @ np.linalg.inv(A.conj().T @ A) @ A.conj().T
     
     # Compute P, dependent on the cohr_flag
     if not cohr_flag:  # independent sources
@@ -57,7 +55,7 @@ def SAM_CRB(SNR_in, t_sample_in, cohr_flag, PowerDOAdB=None, DOA=None):
             [rho * amplitudeDOA[1] * amplitudeDOA[0], PowerDOA[1]]
         ])
     
-    R = A @ Pmat @ A.conj().T + noisePower * np.eye(M)
+    R = A @ Pmat @ A.conj().T + noisePower * np.eye(m)
     Inside = (DA.conj().T @ PI_A @ DA) * (Pmat @ A.conj().T @ np.linalg.inv(R) @ A @ Pmat).T
     CRB_matrix = np.linalg.inv(np.real(Inside)) * noisePower / (2 * t_samples)
     

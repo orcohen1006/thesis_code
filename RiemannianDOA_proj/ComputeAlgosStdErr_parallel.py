@@ -88,6 +88,7 @@ def run_single_mc_iteration(
             power_se[i_algo] = np.nan
         else:
             power_dif = detected_powers - 10.0 ** (power_doa_db / 10.0)
+            distance = distance.astype(float)
             sqr_err[i_algo] = np.dot(distance, distance)
             power_se[i_algo] = np.dot(power_dif, power_dif)
 
@@ -103,6 +104,7 @@ def run_single_mc_iteration(
         plt_doa, = plt.plot(doa, power_doa_db, 'x', label='DOA')
         plts.append(plt_doa)
         plt.legend(handles=plts)
+        plt.ylim([-15,15])
         plt.show()
     # Convert list to array for processing
     se_all_m = np.array([se if se is not None else np.nan for se in sqr_err])
@@ -173,7 +175,8 @@ def compute_algos_std_err_parallel(
 
     power_doa = 10.0 ** (power_doa_db / 10.0)
 
-    doa_scan = np.arange(0, 180.5, 0.5)  # doa grid
+    # doa_scan = np.arange(0, 180.5, 0.5)  # doa grid
+    doa_scan = np.arange(0, 181, 1)  # doa grid
 
     doa = np.sort(doa)
 
@@ -183,7 +186,7 @@ def compute_algos_std_err_parallel(
     # Steering vector matrix w.r.t all possible scanning DOA's
     A = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(doa_scan * np.pi / 180)))
 
-    noise_power_db = np.mean(power_doa_db) - snr
+    noise_power_db = np.max(power_doa_db) - snr
     noise_power = 10.0 ** (noise_power_db / 10.0)
 
     # Generate a seed for each MC iteration for reproducibility

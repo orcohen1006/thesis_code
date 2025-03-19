@@ -25,4 +25,4 @@ def git_commit_and_push():
         print(f"❌ Git command failed: {e}")
 
 # Run the function at the end of the script
-git_commit_and_push()
+# git_commit_and_push()
