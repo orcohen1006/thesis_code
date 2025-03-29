@@ -5,7 +5,7 @@ import os
 from typing import List, Optional
 from ComputeAlgosStdErr_parallel import compute_algos_std_err_parallel
 
-def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
+def exp_N(cohr_flag: bool, large_scale_flag: bool) -> None:
     """
     Experiment to evaluate algorithm performance with varying angle separations.
     
@@ -24,7 +24,7 @@ def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
     
     timestamp = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
-    results_dir = f'Exp_DeltaSNR_{timestamp}_{str_indp_cohr}_M{m}_N{n}_L{int(large_scale_flag)}'
+    results_dir = f'Exp_N_{timestamp}_{str_indp_cohr}_M{m}_L{int(large_scale_flag)}'
     
     if not os.path.exists(results_dir) and flag_save_fig:
         os.makedirs(results_dir)
@@ -32,11 +32,11 @@ def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
     if large_scale_flag:
         print('==== Large SCALE MC tests Running...')
         num_mc = 500
-        vec_delta_snr = np.arange(start=-10, stop=0, step=2)
+        vec_n = np.arange(16, 50, 5)
     else:
         print('=========== SMALL SCALE MC tests@@@ !!! =======')
-        num_mc = 50
-        vec_delta_snr = np.arange(start=-10, stop=0, step=2)
+        num_mc = 100#50
+        vec_n = np.arange(16, 50, 5)
 
     
     snr = 0
@@ -44,30 +44,29 @@ def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
     
     num_algos = len(algo_list)
     
-    se_mean = np.zeros((len(vec_delta_snr), num_algos))
-    failing_rate = np.zeros((len(vec_delta_snr), num_algos))
+    se_mean = np.zeros((len(vec_n), num_algos))
+    failing_rate = np.zeros((len(vec_n), num_algos))
     
-    crb_list = np.zeros(len(vec_delta_snr))
+    crb_list = np.zeros(len(vec_n))
     
     # Source powers in dB
-    doa = np.array([35, 40])
-    firstSourcePower_db = 0
-    for delta_snr_ind, delta_snr in enumerate(vec_delta_snr):
-        print(f'=== Computing DeltaSNR == {delta_snr}')
-        power_doa_db = np.array([firstSourcePower_db, firstSourcePower_db+delta_snr])
+    doa = np.array([55, 60])
+    power_doa_db = np.array([0, 0])
+    for n_ind, n in enumerate(vec_n):
+        print(f'=== Computing N == {n}')
 
         se_mean_per_algo, failing_rate_per_algo, crb_val = compute_algos_std_err_parallel(
             algo_list, num_mc, snr, n, m, cohr_flag, power_doa_db, doa
         )
         
-        se_mean[delta_snr_ind, :] = se_mean_per_algo
-        failing_rate[delta_snr_ind, :] = failing_rate_per_algo
-        crb_list[delta_snr_ind] = crb_val
+        se_mean[n_ind, :] = se_mean_per_algo
+        failing_rate[n_ind, :] = failing_rate_per_algo
+        crb_list[n_ind] = crb_val
     
     if flag_save_fig:
         np.savez(
             os.path.join(results_dir, 'Algos_Data'),
-            vec_delta_snr=vec_delta_snr,
+            vec_n=vec_n,
             se_mean=se_mean,
             failing_rate=failing_rate,
             algo_list=algo_list,
@@ -82,12 +81,12 @@ def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
     
     for i_algo in range(num_algos):
         prepare = np.sqrt(se_mean[:, i_algo] + np.finfo(float).eps)
-        plt.semilogy(vec_delta_snr, prepare, color_set[i_algo], label=algo_list[i_algo])
+        plt.semilogy(vec_n, prepare, color_set[i_algo], label=algo_list[i_algo])
     
     # CRB plot
-    plt.semilogy(vec_delta_snr, np.sqrt(crb_list), color_set[-1], label='CRB')
+    plt.semilogy(vec_n, np.sqrt(crb_list), color_set[-1], label='CRB')
     
-    plt.xlabel(r'$\Delta SNR$ (dB)')
+    plt.xlabel(r'$N$ (samples)')
     plt.ylabel('Angle RMSE (degree)')
     plt.title(f'{str_indp_cohr}, M={m}, N={n}')
     plt.legend()
@@ -98,4 +97,4 @@ def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
 
 if __name__ == "__main__":
     # Example usage
-    exp_DeltaSNR(n=100, cohr_flag=False, large_scale_flag=False)
+    exp_N(cohr_flag=False, large_scale_flag=False)

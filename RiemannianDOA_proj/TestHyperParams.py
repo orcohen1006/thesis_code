@@ -17,7 +17,7 @@ def test_hyper_params(input) -> None:
     # Source powers in dB
     power_doa_db = np.array([3, 4])
 
-    doa_scan = np.arange(0, 180.5, 0.5)  # doa grid
+    doa_scan = np.arange(0, 181, 1)  # doa grid
 
     A = np.exp(1j * np.pi * np.outer(np.arange(m), np.cos(doa_scan * np.pi / 180)))
 
@@ -209,7 +209,7 @@ def test_hyper_params(input) -> None:
 
 
 if __name__ == "__main__":
-    # test_hyper_params({'name':'AFFINV','optimize_func':optimize_adam_AFFINV,'lr_values':[1e-4, 1e-3, 1e-2]})
-    # test_hyper_params({'name':'LD','optimize_func':optimize_adam_LD,'lr_values':[1e-4, 1e-3, 1e-2]})
-    test_hyper_params({'name':'LE','optimize_func':optimize_adam_LE,'lr_values':[1e-3]})
+    test_hyper_params({'name':'AFFINV','optimize_func':optimize_adam_AFFINV,'lr_values':[1e-4, 1e-3, 1e-2]})
+    test_hyper_params({'name':'LD','optimize_func':optimize_adam_LD,'lr_values':[1e-4, 1e-3, 1e-2]})
+    # test_hyper_params({'name':'LE','optimize_func':optimize_adam_LE,'lr_values':[1e-3]})
     plt.show()
