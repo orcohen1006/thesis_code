@@ -11,12 +11,12 @@ from utils import *
 import scipy
 
 m = 12
-snr = 0
-N = 30
+snr = -5
+N = 20
 power_doa_db = np.array([0, -5])
 sources_power = 10.0 ** (power_doa_db / 10.0)
 doas_true = np.array([40, 45])
-doa_scan = np.linspace(start=doas_true.min() - 10, stop=doas_true.max() + 10, num=int(1e2))
+doa_scan = np.linspace(start=doas_true.min() - 15, stop=doas_true.max() + 15, num=int(1e2))
 doa_scan = np.clip(doa_scan, 0, 180)
 A_true = np.exp(1j * np.pi * np.outer(np.arange(m), np.cos(doas_true * np.pi / 180)))
 noise_power_db = np.max(power_doa_db) - snr
@@ -74,13 +74,15 @@ def visualize_metrics(metrics):
         X, Y = np.meshgrid(doa_scan, doa_scan)  # Create grid
         Z = metric.resultMat
         mask = np.tril(np.ones_like(Z, dtype=bool))  # Mask lower triangle
-        Z = np.where(mask, np.nan, Z)
+        Z_display = np.where(mask, np.nan, Z)
 
         # Create contour plot
-        c = ax.contourf(X, Y, Z, cmap="coolwarm", levels=60, alpha=0.75)
+        c = ax.contourf(X, Y, Z_display, cmap="coolwarm", levels=60, alpha=0.75)
 
         # Create contour lines
-        contour_lines = ax.contour(X, Y, Z, levels=5, colors='black', linewidths=2)
+        # contour_lines = ax.contour(X, Y, Z, levels=5, colors='black', linewidths=2)
+        percentile_levels = [np.percentile(Z, 1), np.percentile(Z, 25), np.percentile(Z, 50)]
+        bold_contours = ax.contour(X, Y, Z_display, levels=percentile_levels, colors='black', linewidths=2)
 
         # Add red 'x' for true position
         ax.scatter(doas_true[1], doas_true[0], color='red', marker='x', s=30, edgecolor='black', linewidth=2, zorder=10)
@@ -116,7 +118,7 @@ if __name__ == "__main__":
     with open(os.path.join(dir_name, 'data.pkl'), 'wb') as f:
         dill.dump(metrics, f)
     # ================
-    # # dir_name = 'visualize_metrics_25-03-2025_18-28-30'
+    # dir_name = 'visualize_metrics_theta01-04-2025_18-58-09'
     # with open(os.path.join(dir_name, 'data.pkl'), 'rb') as f:
     #     metrics = dill.load(f)
     # ================
