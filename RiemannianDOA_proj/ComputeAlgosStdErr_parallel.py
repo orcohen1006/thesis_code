@@ -26,7 +26,7 @@ def run_single_mc_iteration(
         noise_power: float,
         doa_scan: np.ndarray,
         seed: int
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Run a single Monte Carlo iteration with a specific random seed.
 
@@ -72,12 +72,12 @@ def run_single_mc_iteration(
         elif algo_list[i_algo] == "SPICE":
             detected_powers, distance, p_vec, normal, _ = fun_SPICEplusRes(y_noisy, A, modulus_hat_das, doa_scan, doa,
                                                                            noise_power)
-        elif algo_list[i_algo] == "AFFINV":
+        elif algo_list[i_algo] == "AIRM":
             detected_powers, distance, p_vec, normal, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, doa,
-                                                                         noise_power, loss_name="AFFINV")
-        elif algo_list[i_algo] == "LD":
+                                                                         noise_power, loss_name="AIRM")
+        elif algo_list[i_algo] == "JBLD":
             detected_powers, distance, p_vec, normal, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, doa,
-                                                                         noise_power, loss_name="LD")
+                                                                         noise_power, loss_name="JBLD")
         else:
             raise ValueError("Algorithm not implemented")
 
@@ -115,7 +115,7 @@ def run_single_mc_iteration(
     dt = time() - t0
     print(f"i_MC = {i_mc + 1}, elapsed time: {dt:.2f} [sec]")
 
-    return se_all_m, nan_flag_col_vec
+    return se_all_m, nan_flag_col_vec, p_vec_cell
 
 
 def compute_algos_std_err_parallel(
@@ -230,7 +230,7 @@ def compute_algos_std_err_parallel(
         raise ValueError(f"Unsupported parallelization method: {method}")
 
     # Process results
-    for i_mc, (se_all_m, nan_flag_col_vec) in enumerate(results):
+    for i_mc, (se_all_m, nan_flag_col_vec,_) in enumerate(results):
         failed_total_times = failed_total_times + nan_flag_col_vec
 
         # Change NaN to inf for sorting

@@ -4,6 +4,8 @@ from datetime import datetime
 import os
 from typing import List, Optional
 from ComputeAlgosStdErr_parallel import compute_algos_std_err_parallel
+from utils import get_algo_dict_list
+
 
 def exp_N(cohr_flag: bool, large_scale_flag: bool) -> None:
     """
@@ -35,12 +37,12 @@ def exp_N(cohr_flag: bool, large_scale_flag: bool) -> None:
         vec_n = np.arange(16, 50, 5)
     else:
         print('=========== SMALL SCALE MC tests@@@ !!! =======')
-        num_mc = 100#50
-        vec_n = np.arange(16, 50, 5)
+        num_mc = 100 #50
+        vec_n = np.arange(20, 50, 5)
 
     
     snr = 0
-    algo_list = ["PER", "SPICE", "SAMV", "AFFINV", "LD"]
+    algo_list = get_algo_dict_list()
     
     num_algos = len(algo_list)
     
@@ -50,13 +52,13 @@ def exp_N(cohr_flag: bool, large_scale_flag: bool) -> None:
     crb_list = np.zeros(len(vec_n))
     
     # Source powers in dB
-    doa = np.array([55, 60])
+    doa = np.array([40, 44])
     power_doa_db = np.array([0, 0])
     for n_ind, n in enumerate(vec_n):
         print(f'=== Computing N == {n}')
 
         se_mean_per_algo, failing_rate_per_algo, crb_val = compute_algos_std_err_parallel(
-            algo_list, num_mc, snr, n, m, cohr_flag, power_doa_db, doa
+            list(algo_list.keys()), num_mc, snr, n, m, cohr_flag, power_doa_db, doa
         )
         
         se_mean[n_ind, :] = se_mean_per_algo
@@ -72,19 +74,16 @@ def exp_N(cohr_flag: bool, large_scale_flag: bool) -> None:
             algo_list=algo_list,
             crb_list=crb_list
         )
-    
-    # Plot figures
-    color_set = ['r-->', 'm--p', 'b-^', 'g--s', 'y--o', 'k--']
 
     # Plot SE figure
     plt.figure()
-    
-    for i_algo in range(num_algos):
+
+    for i_algo, algo_name in enumerate(algo_list.keys()):
         prepare = np.sqrt(se_mean[:, i_algo] + np.finfo(float).eps)
-        plt.semilogy(vec_n, prepare, color_set[i_algo], label=algo_list[i_algo])
-    
-    # CRB plot
-    plt.semilogy(vec_n, np.sqrt(crb_list), color_set[-1], label='CRB')
+        plt.semilogy(vec_n, prepare, label=algo_name, **algo_list[algo_name])
+
+        # CRB plot
+    plt.semilogy(vec_n, np.sqrt(crb_list), 'k--', label='CRB')
     
     plt.xlabel(r'$N$ (samples)')
     plt.ylabel('Angle RMSE (degree)')

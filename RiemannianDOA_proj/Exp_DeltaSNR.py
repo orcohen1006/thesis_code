@@ -4,6 +4,8 @@ from datetime import datetime
 import os
 from typing import List, Optional
 from ComputeAlgosStdErr_parallel import compute_algos_std_err_parallel
+from utils import get_algo_dict_list
+
 
 def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
     """
@@ -35,12 +37,12 @@ def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
         vec_delta_snr = np.arange(start=-10, stop=0, step=2)
     else:
         print('=========== SMALL SCALE MC tests@@@ !!! =======')
-        num_mc = 50
+        num_mc = 1#100
         vec_delta_snr = np.arange(start=-10, stop=0, step=2)
 
     
     snr = 0
-    algo_list = ["PER", "SPICE", "SAMV", "AFFINV", "LD"]
+    algo_list = get_algo_dict_list()
     
     num_algos = len(algo_list)
     
@@ -57,7 +59,7 @@ def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
         power_doa_db = np.array([firstSourcePower_db, firstSourcePower_db+delta_snr])
 
         se_mean_per_algo, failing_rate_per_algo, crb_val = compute_algos_std_err_parallel(
-            algo_list, num_mc, snr, n, m, cohr_flag, power_doa_db, doa
+            list(algo_list.keys()), num_mc, snr, n, m, cohr_flag, power_doa_db, doa
         )
         
         se_mean[delta_snr_ind, :] = se_mean_per_algo
@@ -73,19 +75,16 @@ def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
             algo_list=algo_list,
             crb_list=crb_list
         )
-    
-    # Plot figures
-    color_set = ['r-->', 'm--p', 'b-^', 'g--s', 'y--o', 'k--']
 
     # Plot SE figure
     plt.figure()
     
-    for i_algo in range(num_algos):
+    for i_algo, algo_name in enumerate(algo_list.keys()):
         prepare = np.sqrt(se_mean[:, i_algo] + np.finfo(float).eps)
-        plt.semilogy(vec_delta_snr, prepare, color_set[i_algo], label=algo_list[i_algo])
+        plt.semilogy(vec_delta_snr, prepare, label=algo_name, **algo_list[algo_name])
     
     # CRB plot
-    plt.semilogy(vec_delta_snr, np.sqrt(crb_list), color_set[-1], label='CRB')
+    plt.semilogy(vec_delta_snr, np.sqrt(crb_list), 'k--', label='CRB')
     
     plt.xlabel(r'$\Delta SNR$ (dB)')
     plt.ylabel('Angle RMSE (degree)')

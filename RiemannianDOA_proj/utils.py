@@ -57,3 +57,17 @@ def generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=Fals
     y_noisy = y_noisefree + noise  # noisy measurements
 
     return y_noisy
+
+
+def get_algo_dict_list(flag_also_use_PER=False):
+    # return [("PER",'r-->'), ("SPICE",'m--p'), ("SAMV",'b-^'), ("AIRM",'g--s'), ("JBLD",'y--o')]
+    # return [("SPICE",'m--p'), ("SAMV",'r--^'), ("AIRM",'g-s'), ("JBLD",'b--o')]
+    d = {
+        "SPICE": {"linestyle": ":", "color": "m", "marker": "p"},
+        "SAMV":  {"linestyle": ":", "color": "r", "marker": "s"},
+        "AIRM":  {"linestyle": "-", "color": "g", "marker": "o"},
+        "JBLD":  {"linestyle": "--", "color": "b", "marker": "o", "markerfacecolor": "none", "markersize": 8},
+    }
+    if flag_also_use_PER:
+        d = {"PER": {"linestyle": ":", "color": "y", "marker": "^"}, **d}
+    return d

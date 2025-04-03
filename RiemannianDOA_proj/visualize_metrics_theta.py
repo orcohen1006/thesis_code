@@ -48,7 +48,8 @@ def calculate_metrics():
         Metric("AIRM", fun_AIRM, "r", resultMat.copy()),
         Metric("JBLD", fun_JBLD, "g", resultMat.copy()),
         Metric("SPICE", fun_SPICE, "b", resultMat.copy()),
-        Metric("ML", fun_ML, "m", resultMat.copy()),
+        Metric("AMV", fun_MV, "m", resultMat.copy()),
+        # Metric("ML", fun_ML, "m", resultMat.copy()),
     ]
     for ii in range(0,len(doa_scan)):
         for jj in range(ii, len(doa_scan)):

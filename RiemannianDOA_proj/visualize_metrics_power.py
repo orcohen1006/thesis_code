@@ -11,8 +11,8 @@ from utils import *
 import scipy
 
 m = 12
-snr = -10
-N = 30
+snr = -5
+N = 20
 power_doa_db = np.array([0, -5])
 sources_power = 10.0 ** (power_doa_db / 10.0)
 doas_true = np.array([40, 45])
@@ -50,7 +50,8 @@ def calculate_metrics():
         Metric("AIRM", fun_AIRM, "r", resultMat.copy()),
         Metric("JBLD", fun_JBLD, "g", resultMat.copy()),
         Metric("SPICE", fun_SPICE, "b", resultMat.copy()),
-        Metric("ML", fun_ML, "m", resultMat.copy()),
+        Metric("AMV", fun_MV, "m", resultMat.copy()),
+        # Metric("ML", fun_ML, "m", resultMat.copy()),
     ]
     for ii in range(0, len(power_db_scan)):
         for jj in range(0, len(power_db_scan)):
@@ -75,14 +76,15 @@ def visualize_metrics(metrics):
     for ax, metric in zip(axes, metrics):
         X, Y = np.meshgrid(power_db_scan, power_db_scan)  # Create grid
         Z = metric.resultMat
-        # mask = np.tril(np.ones_like(Z, dtype=bool))  # Mask lower triangle
-        # Z = np.where(mask, np.nan, Z)
+        Z_display = Z.copy()
 
         # Create contour plot
-        c = ax.contourf(X, Y, Z, cmap="coolwarm", levels=60, alpha=0.75)
+        c = ax.contourf(X, Y, Z_display, cmap="coolwarm", levels=60, alpha=0.75)
 
         # Create contour lines
-        contour_lines = ax.contour(X, Y, Z, levels=5, colors='black', linewidths=2)
+        # contour_lines = ax.contour(X, Y, Z, levels=5, colors='black', linewidths=2)
+        percentile_levels = [np.percentile(Z, 1), np.percentile(Z, 25), np.percentile(Z, 50)]
+        bold_contours = ax.contour(X, Y, Z_display, levels=percentile_levels, colors='black', linewidths=2)
 
         # Add red 'x' for true position
         ax.scatter(power_doa_db[1], power_doa_db[0], color='red', marker='x', s=30, edgecolor='black', linewidth=2, zorder=10)
