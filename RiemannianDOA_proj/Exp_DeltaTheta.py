@@ -38,7 +38,7 @@ def exp_DeltaTheta(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
         vec_delta_theta = np.arange(2, 11)
     else:
         print('=========== SMALL SCALE MC tests@@@ !!! =======')
-        num_mc = 50
+        num_mc = 100
         vec_delta_theta = np.arange(2, 11)
 
     
@@ -91,12 +91,12 @@ def exp_DeltaTheta(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
     
     plt.xlabel(r'$\Delta \theta$ (degrees)')
     plt.ylabel(r'Angle RMSE / $\Delta \theta$')
-    plt.title(f'{str_indp_cohr}, M={m}, N={n}')
+    #plt.title(f'{str_indp_cohr}, M={m}, N={n}')
     plt.legend()
     plt.grid(True)
     if flag_save_fig:
-        plt.savefig(os.path.join(results_dir, 'MSE.png'), dpi=300)
-        plt.savefig(os.path.join(results_dir, 'MSE.pdf'))
+        plt.savefig(os.path.join(results_dir, 'MSE_' + results_dir +  '.png'), dpi=300)
+        plt.savefig(os.path.join(results_dir, 'MSE_' + results_dir +  '.pdf'))
 
 if __name__ == "__main__":
     # Example usage

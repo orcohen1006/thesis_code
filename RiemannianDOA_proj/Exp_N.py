@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 from typing import List, Optional
 from ComputeAlgosStdErr_parallel import compute_algos_std_err_parallel
-from utils import get_algo_dict_list
+from utils import get_algo_dict_list, get_doa_grid
 
 
 def exp_N(cohr_flag: bool, large_scale_flag: bool) -> None:
@@ -38,7 +38,7 @@ def exp_N(cohr_flag: bool, large_scale_flag: bool) -> None:
     else:
         print('=========== SMALL SCALE MC tests@@@ !!! =======')
         num_mc = 100 #50
-        vec_n = np.arange(20, 50, 5)
+        vec_n = np.arange(20, 50+1, 10)
 
     
     snr = 0
@@ -52,7 +52,7 @@ def exp_N(cohr_flag: bool, large_scale_flag: bool) -> None:
     crb_list = np.zeros(len(vec_n))
     
     # Source powers in dB
-    doa = np.array([40, 44])
+    doa = np.array([40, 50])
     power_doa_db = np.array([0, 0])
     for n_ind, n in enumerate(vec_n):
         print(f'=== Computing N == {n}')
@@ -80,19 +80,19 @@ def exp_N(cohr_flag: bool, large_scale_flag: bool) -> None:
 
     for i_algo, algo_name in enumerate(algo_list.keys()):
         prepare = np.sqrt(se_mean[:, i_algo] + np.finfo(float).eps)
-        plt.semilogy(vec_n, prepare, label=algo_name, **algo_list[algo_name])
+        plt.plot(vec_n, prepare, label=algo_name, **algo_list[algo_name])
 
         # CRB plot
-    plt.semilogy(vec_n, np.sqrt(crb_list), 'k--', label='CRB')
+    plt.plot(vec_n, np.sqrt(crb_list), 'k--', label='CRB')
     
     plt.xlabel(r'$N$ (samples)')
     plt.ylabel('Angle RMSE (degree)')
-    plt.title(f'{str_indp_cohr}, M={m}, N={n}')
+    #plt.title(f'{str_indp_cohr}, M={m}, N={n}')
     plt.legend()
     plt.grid(True)
     if flag_save_fig:
-        plt.savefig(os.path.join(results_dir, 'MSE.png'), dpi=300)
-        plt.savefig(os.path.join(results_dir, 'MSE.pdf'))
+        plt.savefig(os.path.join(results_dir, 'MSE_' + results_dir + '.png'), dpi=300)
+        plt.savefig(os.path.join(results_dir, 'MSE_' + results_dir + '.pdf'))
 
 if __name__ == "__main__":
     # Example usage

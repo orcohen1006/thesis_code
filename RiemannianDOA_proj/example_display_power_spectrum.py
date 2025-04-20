@@ -4,27 +4,26 @@ import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict, Any, Optional
 
 from ComputeAlgosStdErr_parallel import run_single_mc_iteration
+from utils import get_doa_grid, get_algo_dict_list
 
 
 def display_power_spectrum():
     seed = 0
     m = 12
     snr = 0
-    N = 36
+    N = 20
 
 
-    power_doa_db = np.array([0, -5])
+    power_doa_db = np.array([0, -2, -4])
     sources_power = 10.0 ** (power_doa_db / 10.0)
-    doa = np.array([40, 45])
+    doa = np.array([40, 47, 55])
 
-    algo_list = ["PER", "SPICE", "SAMV", "AIRM", "JBLD"]
-    color_set = ['r:>', 'm:p', 'b:^', 'g:s', 'y:o', 'k--']
+    algo_list = get_algo_dict_list()
 
     num_algos = len(algo_list)
     num_sources = len(doa)  # # of sources
 
-    # doa_scan = np.arange(0, 180.5, 0.5)  # doa grid
-    doa_scan = np.arange(0, 181, 1)  # doa grid
+    doa_scan = get_doa_grid()
 
     doa = np.sort(doa)
 
@@ -35,20 +34,21 @@ def display_power_spectrum():
     noise_power_db = np.max(power_doa_db) - snr
     noise_power = 10.0 ** (noise_power_db / 10.0)
 
-    _,_,p_vec_cell = run_single_mc_iteration(i_mc=seed, algo_list=algo_list, snr=snr, t_samples=N,
+    _,_,p_vec_cell = run_single_mc_iteration(i_mc=seed, algo_list=list(algo_list.keys()), snr=snr, t_samples=N,
                                              m=m,cohr_flag=False,power_doa_db=power_doa_db,doa=doa, A_true= A_true, A=A,
                                              noise_power=noise_power,doa_scan=doa_scan, seed=seed)
 
     plt.figure()
     plt.grid(True)
     plts = []
-    epsilon_power = 10.0 ** (-30 / 10.0)
-    for i_algo in range(1,num_algos):
+    epsilon_power = 10.0 ** (-20 / 10.0)
+    for i_algo, algo_name in enumerate(algo_list.keys()):
         spectrum = p_vec_cell[i_algo]
-        spectrum[spectrum < epsilon_power] = 0
-        spectrum = 10*np.log10(spectrum)
-        plt_line, = plt.plot(doa_scan, spectrum, color_set[i_algo], label=algo_list[i_algo])
+        spectrum[spectrum < epsilon_power] = epsilon_power
+        spectrum = 10 * np.log10(spectrum)
+        plt_line, = plt.plot(doa_scan, spectrum, label=algo_name, **algo_list[algo_name])
         plts.append(plt_line)
+
 
     plt_doa, = plt.plot(doa, power_doa_db, 'x',color='red', label='DOA')
     plts.append(plt_doa)

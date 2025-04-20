@@ -58,6 +58,10 @@ def generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=Fals
 
     return y_noisy
 
+def get_doa_grid():
+    doa_scan = np.arange(0, 180.5, 0.5)  # doa grid
+    # doa_scan = np.arange(0, 181, 1)  # doa grid
+    return doa_scan
 
 def get_algo_dict_list(flag_also_use_PER=False):
     # return [("PER",'r-->'), ("SPICE",'m--p'), ("SAMV",'b-^'), ("AIRM",'g--s'), ("JBLD",'y--o')]

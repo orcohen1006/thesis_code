@@ -37,8 +37,9 @@ def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
         vec_delta_snr = np.arange(start=-10, stop=0, step=2)
     else:
         print('=========== SMALL SCALE MC tests@@@ !!! =======')
-        num_mc = 1#100
-        vec_delta_snr = np.arange(start=-10, stop=0, step=2)
+        num_mc = 100
+        # vec_delta_snr = np.arange(start=-10, stop=1, step=2)
+        vec_delta_snr = np.arange(start=-5, stop=1, step=1)
 
     
     snr = 0
@@ -81,20 +82,20 @@ def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
     
     for i_algo, algo_name in enumerate(algo_list.keys()):
         prepare = np.sqrt(se_mean[:, i_algo] + np.finfo(float).eps)
-        plt.semilogy(vec_delta_snr, prepare, label=algo_name, **algo_list[algo_name])
+        plt.plot(vec_delta_snr, prepare, label=algo_name, **algo_list[algo_name])
     
     # CRB plot
-    plt.semilogy(vec_delta_snr, np.sqrt(crb_list), 'k--', label='CRB')
+    plt.plot(vec_delta_snr, np.sqrt(crb_list), 'k--', label='CRB')
     
     plt.xlabel(r'$\Delta SNR$ (dB)')
     plt.ylabel('Angle RMSE (degree)')
-    plt.title(f'{str_indp_cohr}, M={m}, N={n}')
+    #plt.title(f'{str_indp_cohr}, M={m}, N={n}')
     plt.legend()
     plt.grid(True)
     if flag_save_fig:
-        plt.savefig(os.path.join(results_dir, 'MSE.png'), dpi=300)
-        plt.savefig(os.path.join(results_dir, 'MSE.pdf'))
+        plt.savefig(os.path.join(results_dir, 'MSE_' + results_dir + '.png'), dpi=300)
+        plt.savefig(os.path.join(results_dir, 'MSE_' + results_dir + '.pdf'))
 
 if __name__ == "__main__":
     # Example usage
-    exp_DeltaSNR(n=100, cohr_flag=False, large_scale_flag=False)
+    exp_DeltaSNR(n=30, cohr_flag=False, large_scale_flag=False)

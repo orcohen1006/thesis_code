@@ -175,8 +175,7 @@ def compute_algos_std_err_parallel(
 
     power_doa = 10.0 ** (power_doa_db / 10.0)
 
-    # doa_scan = np.arange(0, 180.5, 0.5)  # doa grid
-    doa_scan = np.arange(0, 181, 1)  # doa grid
+    doa_scan = get_doa_grid()
 
     doa = np.sort(doa)
 

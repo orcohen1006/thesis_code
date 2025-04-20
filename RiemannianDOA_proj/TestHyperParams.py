@@ -17,7 +17,7 @@ def test_hyper_params(input) -> None:
     # Source powers in dB
     power_doa_db = np.array([3, 4])
 
-    doa_scan = np.arange(0, 181, 1)  # doa grid
+    doa_scan = get_doa_grid()
 
     A = np.exp(1j * np.pi * np.outer(np.arange(m), np.cos(doa_scan * np.pi / 180)))
 
