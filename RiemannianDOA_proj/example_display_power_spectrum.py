@@ -8,18 +8,20 @@ from utils import get_doa_grid, get_algo_dict_list
 
 
 def display_power_spectrum():
-    seed = 0
+    seed = 42
     m = 12
     snr = 0
-    N = 500
+    N = 20
 
 
     # power_doa_db = np.array([0, -2, -4])
     # doa = np.array([40, 47, 55])
 
-    power_doa_db = np.array([0, 0])
-    doa = np.array([40.2, 45.3])
+    # power_doa_db = np.array([0, 0])
+    # doa = np.array([40.2, 45.3])
 
+    power_doa_db = np.array([3, 4])
+    doa = np.array([35, 40])
 
     sources_power = 10.0 ** (power_doa_db / 10.0)
     algo_list = get_algo_dict_list()
