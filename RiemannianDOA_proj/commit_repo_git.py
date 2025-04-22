@@ -1,10 +1,13 @@
 import os
 import subprocess
-
-def git_commit_and_push():
+def tmp():
     repo_path = os.path.dirname(os.path.abspath(__file__))
     print(repo_path)
     print("bye")
+
+def git_commit_and_push():
+    repo_path = os.path.dirname(os.path.abspath(__file__))
+
     commit_message = "Auto commit after script execution"
 
     try:
