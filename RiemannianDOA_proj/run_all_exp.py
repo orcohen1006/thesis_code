@@ -14,6 +14,9 @@ def run_all_exp():
     t0_overall = time.time()
 
     for cohr_flag in [False]:
+        exp_N(cohr_flag, Large_Scale_Flag)
+        
+    for cohr_flag in [False]:
         for N in [30]:
             exp_DeltaSNR(N, cohr_flag, Large_Scale_Flag)
 
@@ -21,8 +24,7 @@ def run_all_exp():
         for N in [20, 40]:
             exp_DeltaTheta(N, cohr_flag, Large_Scale_Flag)
 
-    for cohr_flag in [False]:
-        exp_N(cohr_flag, Large_Scale_Flag)
+
 
     print(f'Total Running Time: {time.time() - t0_overall} sec.')
     plt.show()

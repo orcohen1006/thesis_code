@@ -4,7 +4,7 @@ from scipy import linalg
 from time import time
 
 
-def fun_SPICEplusRes(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
+def fun_SPICE(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
     """
     SPICE+ (SParse Iterative Covariance-based Estimation) implementation.
     
@@ -23,7 +23,7 @@ def fun_SPICEplusRes(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
     normal: tag (1 if detection OK, 0 if failed)
     noisepower: estimated noise power
     """
-    t0 = time()
+    # t0 = time()
     flag_sigma_is_given = sigma_given is not None
     Numsources = len(DOA)
     
@@ -98,9 +98,9 @@ def fun_SPICEplusRes(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
         measured_change_norm = np.linalg.norm(p - p_prev) / np.linalg.norm(p)
         if measured_change_norm < EPS_NORM_CHANGE:
             break
-    print(f"spice: #iters= {jj}, time= {time() - t0} [sec]")
-    Detected_powers, Distance, normal = detect_DOAs(p, DOAscan, DOA)
+    # print(f"spice: #iters= {jj}, time= {time() - t0} [sec]")
+    # Detected_powers, Distance, normal = detect_DOAs(p, DOAscan, DOA)
 
     noisepower = sigma
     
-    return Detected_powers, Distance, p, normal, noisepower
+    return p, jj, noisepower

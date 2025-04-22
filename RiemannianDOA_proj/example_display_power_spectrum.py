@@ -11,13 +11,17 @@ def display_power_spectrum():
     seed = 0
     m = 12
     snr = 0
-    N = 20
+    N = 500
 
 
-    power_doa_db = np.array([0, -2, -4])
+    # power_doa_db = np.array([0, -2, -4])
+    # doa = np.array([40, 47, 55])
+
+    power_doa_db = np.array([0, 0])
+    doa = np.array([40.2, 45.3])
+
+
     sources_power = 10.0 ** (power_doa_db / 10.0)
-    doa = np.array([40, 47, 55])
-
     algo_list = get_algo_dict_list()
 
     num_algos = len(algo_list)
@@ -34,7 +38,7 @@ def display_power_spectrum():
     noise_power_db = np.max(power_doa_db) - snr
     noise_power = 10.0 ** (noise_power_db / 10.0)
 
-    _,_,p_vec_cell = run_single_mc_iteration(i_mc=seed, algo_list=list(algo_list.keys()), snr=snr, t_samples=N,
+    _,_,p_vec_cell,runtime_list, num_iters_list = run_single_mc_iteration(i_mc=seed, algo_list=list(algo_list.keys()), snr=snr, t_samples=N,
                                              m=m,cohr_flag=False,power_doa_db=power_doa_db,doa=doa, A_true= A_true, A=A,
                                              noise_power=noise_power,doa_scan=doa_scan, seed=seed)
 

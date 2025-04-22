@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from utils import *
-from OptimizeRiemannianLoss import optimize_adam_AFFINV, optimize_adam_LE, optimize_adam_LD
+from OptimizeRiemannianLoss import optimize_adam_AIRM, optimize_adam_LE, optimize_adam_JBLD
 from itertools import product
 
 
@@ -74,7 +74,7 @@ def test_hyper_params(input) -> None:
             R_hat = Y @ Y.conj().T / N
 
             # Optimize with this learning rate
-            p, tuple_history = optimize_func(A, R_hat, noise_power, DAS_init,
+            p, _, tuple_history = optimize_func(A, R_hat, noise_power, DAS_init,
                                                     _max_iter=MAX_ITERS, _lr=lr,
                                                     do_store_history=True)
             step_losses, rel_changes = tuple_history
@@ -209,7 +209,7 @@ def test_hyper_params(input) -> None:
 
 
 if __name__ == "__main__":
-    test_hyper_params({'name':'AFFINV','optimize_func':optimize_adam_AFFINV,'lr_values':[1e-4, 1e-3, 1e-2]})
-    test_hyper_params({'name':'LD','optimize_func':optimize_adam_LD,'lr_values':[1e-4, 1e-3, 1e-2]})
+    test_hyper_params({'name':'AFFINV','optimize_func':optimize_adam_AIRM, 'lr_values':[1e-4, 1e-3, 1e-2]})
+    test_hyper_params({'name':'LD','optimize_func':optimize_adam_JBLD, 'lr_values':[1e-4, 1e-3, 1e-2]})
     # test_hyper_params({'name':'LE','optimize_func':optimize_adam_LE,'lr_values':[1e-3]})
     plt.show()

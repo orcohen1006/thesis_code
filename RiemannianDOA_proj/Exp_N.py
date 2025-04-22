@@ -52,8 +52,9 @@ def exp_N(cohr_flag: bool, large_scale_flag: bool) -> None:
     crb_list = np.zeros(len(vec_n))
     
     # Source powers in dB
-    doa = np.array([40, 50])
     power_doa_db = np.array([0, 0])
+    doa = np.array([40.2, 45.3])
+
     for n_ind, n in enumerate(vec_n):
         print(f'=== Computing N == {n}')
 

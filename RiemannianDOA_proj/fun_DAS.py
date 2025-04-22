@@ -1,7 +1,7 @@
 import numpy as np
 from utils import *
 
-def fun_DASRes(Y, A, DAS_init, DOAscan, DOA):
+def fun_DAS(Y, A, DAS_init, DOAscan, DOA):
     """
     DAS (Delay-And-Sum) estimator implementation.
     
@@ -26,5 +26,8 @@ def fun_DASRes(Y, A, DAS_init, DOAscan, DOA):
     # Calculate modulus by DAS
     modulus_hat_das = np.sum(np.abs(A.conj().T @ Y / M), axis=1) / t_samples
     p_vec = np.abs(modulus_hat_das) ** 2
-    Detected_powers, Distance, normal = detect_DOAs(p_vec, DOAscan, DOA)
-    return Detected_powers, Distance, p_vec, normal, noisepower
+    # Detected_powers, Distance, normal = detect_DOAs(p_vec, DOAscan, DOA)
+
+    num_iters = 0
+
+    return p_vec, num_iters, noisepower

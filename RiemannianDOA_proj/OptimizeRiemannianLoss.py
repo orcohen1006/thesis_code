@@ -96,8 +96,8 @@ def loss_LD(p, A, R_hat, sigma2):
     loss = loss.real
     return loss
 
-def optimize_adam_AFFINV(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
-    t0 = time()
+def optimize_adam_AIRM(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
+    # t0 = time()
     pinv_sqrtm_R_hat = matrix_pinv_sqrtm(torch.as_tensor(_R_hat, dtype=torch.complex64))  # Compute R_hat^(-1/2)
     p = torch.as_tensor(_p_init, dtype=torch.float).clone().detach().requires_grad_(True)  # Use provided initialization
     A = torch.as_tensor(_A, dtype=torch.complex64)
@@ -131,13 +131,13 @@ def optimize_adam_AFFINV(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, 
             print(f"Step {step}: Loss = {loss.item()}")
         if rel_change < EPS_REL_CHANGE:
             break
-    print(f"affinv: #iters= {step}, time= {time() - t0} [sec]")
-    return p.detach(), (loss_history, rel_change_history)
+    # print(f"affinv: #iters= {step}, time= {time() - t0} [sec]")
+    return p.detach(), step, (loss_history, rel_change_history)
 
 
 
 def optimize_adam_LE(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
-    t0 = time()
+    # t0 = time()
     logm_R_hat = matrix_logm(torch.as_tensor(_R_hat, dtype=torch.complex64)) # Compute log(R_hat)
     p = torch.as_tensor(_p_init, dtype=torch.float).clone().detach().requires_grad_(True)  # Use provided initialization
     A = torch.as_tensor(_A, dtype=torch.complex64)
@@ -179,11 +179,11 @@ def optimize_adam_LE(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_s
             print(f"Step {step}: Loss = {loss.item()}")
         if rel_change < EPS_REL_CHANGE:
             break
-    print(f"le: #iters= {step}, time= {time() - t0} [sec]")
-    return p.detach(), (loss_history, rel_change_history)
+    # print(f"le: #iters= {step}, time= {time() - t0} [sec]")
+    return p.detach(), step, (loss_history, rel_change_history)
 
-def optimize_adam_LD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
-    t0 = time()
+def optimize_adam_JBLD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
+    # t0 = time()
 
     R_hat = torch.as_tensor(_R_hat, dtype=torch.complex64)
     p = torch.as_tensor(_p_init, dtype=torch.float).clone().detach().requires_grad_(True)  # Use provided initialization
@@ -217,5 +217,5 @@ def optimize_adam_LD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_s
             print(f"Step {step}: Loss = {loss.item()}")
         if rel_change < EPS_REL_CHANGE:
             break
-    print(f"ld: #iters= {step}, time= {time() - t0} [sec]")
-    return p.detach(), (loss_history, rel_change_history)
+    # print(f"ld: #iters= {step}, time= {time() - t0} [sec]")
+    return p.detach(), step, (loss_history, rel_change_history)

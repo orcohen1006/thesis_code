@@ -6,9 +6,9 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 from functools import partial
 
-from fun_DASRes import *
-from fun_SAM3Res import *
-from fun_SPICEplusRes import *
+from fun_DAS import *
+from fun_SAMV import *
+from fun_SPICE import *
 from fun_Riemannian import *
 from SAM_CRB import *
 
@@ -26,7 +26,7 @@ def run_single_mc_iteration(
         noise_power: float,
         doa_scan: np.ndarray,
         seed: int
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+):
     """
     Run a single Monte Carlo iteration with a specific random seed.
 
@@ -58,30 +58,31 @@ def run_single_mc_iteration(
     sqr_err = [None] * num_algos
     power_se = [None] * num_algos
     p_vec_cell = [None] * num_algos
+    runtime_list = [None] * num_algos
+    num_iters_list = [None] * num_algos
 
     for i_algo in range(num_algos):
-        detected_powers = np.nan
-        distance = np.nan
-        normal = np.nan
+        t_algo_start = time()
 
         if algo_list[i_algo] == "PER":
-            detected_powers, distance, p_vec, normal, _ = fun_DASRes(y_noisy, A, modulus_hat_das, doa_scan, doa)
+            p_vec, num_iters, _ = fun_DAS(y_noisy, A, modulus_hat_das, doa_scan, doa)
         elif algo_list[i_algo] == "SAMV":
-            detected_powers, distance, p_vec, normal, _ = fun_SAM3Res(y_noisy, A, modulus_hat_das, doa_scan, doa,
-                                                                      noise_power)
+            p_vec, num_iters, _ = fun_SAMV(y_noisy, A, modulus_hat_das, doa_scan, doa, noise_power)
         elif algo_list[i_algo] == "SPICE":
-            detected_powers, distance, p_vec, normal, _ = fun_SPICEplusRes(y_noisy, A, modulus_hat_das, doa_scan, doa,
-                                                                           noise_power)
+            p_vec, num_iters, _ = fun_SPICE(y_noisy, A, modulus_hat_das, doa_scan, doa,  noise_power)
         elif algo_list[i_algo] == "AIRM":
-            detected_powers, distance, p_vec, normal, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, doa,
-                                                                         noise_power, loss_name="AIRM")
+            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, doa, noise_power, loss_name="AIRM")
         elif algo_list[i_algo] == "JBLD":
-            detected_powers, distance, p_vec, normal, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, doa,
-                                                                         noise_power, loss_name="JBLD")
+            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, doa, noise_power, loss_name="JBLD")
         else:
             raise ValueError("Algorithm not implemented")
 
+        runtime_list[i_algo] = time() - t_algo_start
+        print(f"{algo_list[i_algo]}: #iters= {num_iters}, runtime= {runtime_list[i_algo]} [sec]")
+        num_iters_list[i_algo] = num_iters
+
         p_vec_cell[i_algo] = p_vec
+        detected_powers, distance, normal = detect_DOAs(p_vec, doa_scan, doa)
 
         if not normal:
             sqr_err[i_algo] = np.nan
@@ -115,7 +116,7 @@ def run_single_mc_iteration(
     dt = time() - t0
     print(f"i_MC = {i_mc + 1}, elapsed time: {dt:.2f} [sec]")
 
-    return se_all_m, nan_flag_col_vec, p_vec_cell
+    return se_all_m, nan_flag_col_vec, p_vec_cell, runtime_list, num_iters_list
 
 
 def compute_algos_std_err_parallel(
@@ -229,7 +230,7 @@ def compute_algos_std_err_parallel(
         raise ValueError(f"Unsupported parallelization method: {method}")
 
     # Process results
-    for i_mc, (se_all_m, nan_flag_col_vec,_) in enumerate(results):
+    for i_mc, (se_all_m, nan_flag_col_vec,_, _, _) in enumerate(results):
         failed_total_times = failed_total_times + nan_flag_col_vec
 
         # Change NaN to inf for sorting

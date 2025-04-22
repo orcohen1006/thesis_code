@@ -2,8 +2,9 @@ import os
 import subprocess
 
 def git_commit_and_push():
-    repo_path = r"\\wildwest\users\OrCohen\thesis_repo"
-
+    repo_path = os.path.dirname(os.path.abspath(__file__))
+    print(repo_path)
+    print("bye")
     commit_message = "Auto commit after script execution"
 
     try:

@@ -8,7 +8,7 @@ def detect_DOAs(p_vec, DOAscan, DOA):
     peak_values = p_vec[peaks_indices]
     sorted_idx = np.argsort(-peak_values)  # Sort in descending order
     peaks_indices = peaks_indices[sorted_idx]
-
+    peaks_indices = np.atleast_1d(peaks_indices)
     if (not isinstance(peaks_indices, np.ndarray)) or len(peaks_indices) < Numsources:
         # Not all peaks detected
         print("Not all peaks detected ")
