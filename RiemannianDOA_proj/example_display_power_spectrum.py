@@ -64,6 +64,7 @@ def display_power_spectrum():
     plt.title('Directions Power Spectrum Estimation')
     # plt.ylim([-15,15])
     plt.show()
+    print('ok...')
 
 if __name__ == "__main__":
     display_power_spectrum()
