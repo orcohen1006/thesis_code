@@ -5,7 +5,9 @@ from typing import List, Tuple, Dict, Any, Optional
 import multiprocessing as mp
 from joblib import Parallel, delayed
 from functools import partial
+from dataclasses import dataclass
 
+from utils import create_config
 from fun_DAS import *
 from fun_SAMV import *
 from fun_SPICE import *
@@ -15,15 +17,9 @@ from SAM_CRB import *
 def run_single_mc_iteration(
         i_mc: int,
         algo_list: List[str],
-        snr: float,
-        t_samples: int,
-        m: int,
-        cohr_flag: bool,
-        power_doa_db: np.ndarray,
-        doa: np.ndarray,
+        config: dict,
         A_true: np.ndarray,
         A: np.ndarray,
-        noise_power: float,
         doa_scan: np.ndarray,
         seed: int
 ):
@@ -34,6 +30,8 @@ def run_single_mc_iteration(
     -----------
     i_mc : int
         Monte Carlo iteration index
+    config : Config
+        Configuration structure containing simulation parameters
     ... (other parameters same as compute_algos_std_err)
     seed : int
         Random seed for this iteration
@@ -47,12 +45,15 @@ def run_single_mc_iteration(
 
     t0 = time()
     num_algos = len(algo_list)
-    num_sources = len(doa)
-    amplitude_doa = np.sqrt(10.0 ** (power_doa_db / 10.0))
+    num_sources = len(config["doa"])
+    amplitude_doa = np.sqrt(10.0 ** (config["power_doa_db"] / 10.0))
 
-    y_noisy = generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=cohr_flag, seed=seed)
+    noise_power_db = np.max(config["power_doa_db"]) - config["snr"]
+    noise_power = 10.0 ** (noise_power_db / 10.0)
 
-    modulus_hat_das = np.sum(np.abs(A.conj().T @ (y_noisy / m)), axis=1) / t_samples
+    y_noisy = generate_signal(A_true, config["power_doa_db"], config["N"], noise_power, cohr_flag=False, seed=seed)
+
+    modulus_hat_das = np.sum(np.abs(A.conj().T @ (y_noisy / config["m"])), axis=1) / config["N"]
 
     # Run on all algorithms
     sqr_err = [None] * num_algos
@@ -63,17 +64,16 @@ def run_single_mc_iteration(
 
     for i_algo in range(num_algos):
         t_algo_start = time()
-
         if algo_list[i_algo] == "PER":
-            p_vec, num_iters, _ = fun_DAS(y_noisy, A, modulus_hat_das, doa_scan, doa)
+            p_vec, num_iters, _ = fun_DAS(y_noisy, A, modulus_hat_das, doa_scan, config["doa"])
         elif algo_list[i_algo] == "SAMV":
-            p_vec, num_iters, _ = fun_SAMV(y_noisy, A, modulus_hat_das, doa_scan, doa, noise_power)
+            p_vec, num_iters, _ = fun_SAMV(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power)
         elif algo_list[i_algo] == "SPICE":
-            p_vec, num_iters, _ = fun_SPICE(y_noisy, A, modulus_hat_das, doa_scan, doa,  noise_power)
+            p_vec, num_iters, _ = fun_SPICE(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power)
         elif algo_list[i_algo] == "AIRM":
-            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, doa, noise_power, loss_name="AIRM")
+            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power, loss_name="AIRM")
         elif algo_list[i_algo] == "JBLD":
-            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, doa, noise_power, loss_name="JBLD")
+            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power, loss_name="JBLD")
         else:
             raise ValueError("Algorithm not implemented")
 
@@ -82,13 +82,13 @@ def run_single_mc_iteration(
         num_iters_list[i_algo] = num_iters
 
         p_vec_cell[i_algo] = p_vec
-        detected_powers, distance, normal = detect_DOAs(p_vec, doa_scan, doa)
+        detected_powers, distance, normal = detect_DOAs(p_vec, doa_scan, config["doa"])
 
         if not normal:
             sqr_err[i_algo] = np.nan
             power_se[i_algo] = np.nan
         else:
-            power_dif = detected_powers - 10.0 ** (power_doa_db / 10.0)
+            power_dif = detected_powers - 10.0 ** (config["power_doa_db"] / 10.0)
             distance = distance.astype(float)
             sqr_err[i_algo] = np.dot(distance, distance)
             power_se[i_algo] = np.dot(power_dif, power_dif)
@@ -102,7 +102,7 @@ def run_single_mc_iteration(
             plt_line, = plt.plot(doa_scan, 10 * np.log10(p_vec_cell[i_algo]), '-o', label=algo_list[i_algo])
             plts.append(plt_line)
 
-        plt_doa, = plt.plot(doa, power_doa_db, 'x', label='DOA')
+        plt_doa, = plt.plot(config["doa"], config["power_doa_db"], 'x', label='DOA')
         plts.append(plt_doa)
         plt.legend(handles=plts)
         plt.ylim([-15,15])
@@ -122,14 +122,9 @@ def run_single_mc_iteration(
 def compute_algos_std_err_parallel(
         algo_list: List[str],
         num_mc: int,
-        snr: float,
-        t_samples: int,
-        m: int,
-        cohr_flag: bool,
-        power_doa_db: np.ndarray,
-        doa: np.ndarray,
+        config: dict,
         method: str = 'joblib',
-        n_jobs: int = 4,
+        n_jobs: int = 20,
         random_seed: int = 42
 ) -> Tuple[np.ndarray, np.ndarray, float]:
     """
@@ -141,18 +136,8 @@ def compute_algos_std_err_parallel(
         List of algorithm names to evaluate
     num_mc : int
         Number of Monte Carlo iterations
-    snr : float
-        Signal-to-noise ratio in dB
-    t_samples : int
-        Number of time samples
-    m : int
-        Number of array elements
-    cohr_flag : bool
-        Flag indicating if sources are coherent
-    power_doa_db : np.ndarray
-        Source powers in dB
-    doa : np.ndarray
-        Direction of arrival angles in degrees
+    config : Config
+        Configuration structure containing simulation parameters
     method : str
         Parallelization method: 'joblib' or 'multiprocessing'
     n_jobs : int
@@ -172,21 +157,19 @@ def compute_algos_std_err_parallel(
     se_history = np.zeros((num_algos, num_mc))
 
     # Fixed Source powers
-    num_sources = len(doa)  # # of sources
+    num_sources = len(config["doa"])  # # of sources
 
-    power_doa = 10.0 ** (power_doa_db / 10.0)
+    power_doa = 10.0 ** (config["power_doa_db"] / 10.0)
 
     doa_scan = get_doa_grid()
 
-    doa = np.sort(doa)
+    config["doa"] = np.sort(config["doa"])
 
-    delta_vec = np.arange(m)
-    # True steering vector matrix
-    A_true = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(doa * np.pi / 180)))
-    # Steering vector matrix w.r.t all possible scanning DOA's
+    delta_vec = np.arange(config["m"])
+    A_true = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(config["doa"] * np.pi / 180)))
     A = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(doa_scan * np.pi / 180)))
 
-    noise_power_db = np.max(power_doa_db) - snr
+    noise_power_db = np.max(config["power_doa_db"]) - config["snr"]
     noise_power = 10.0 ** (noise_power_db / 10.0)
 
     # Generate a seed for each MC iteration for reproducibility
@@ -197,15 +180,9 @@ def compute_algos_std_err_parallel(
     run_mc_iteration = partial(
         run_single_mc_iteration,
         algo_list=algo_list,
-        snr=snr,
-        t_samples=t_samples,
-        m=m,
-        cohr_flag=cohr_flag,
-        power_doa_db=power_doa_db,
-        doa=doa,
+        config=config,
         A_true=A_true,
         A=A,
-        noise_power=noise_power,
         doa_scan=doa_scan
     )
     # Run parallel execution using the chosen method
@@ -263,6 +240,6 @@ def compute_algos_std_err_parallel(
 
         failing_rate_per_algo[i_algo] = failed_total_times[i_algo] / num_mc
 
-    crb_val = SAM_CRB(snr, t_samples, cohr_flag, power_doa_db, doa)
+    crb_val = SAM_CRB(config)
 
     return se_mean_per_algo, failing_rate_per_algo, crb_val

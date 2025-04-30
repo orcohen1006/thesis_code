@@ -1,11 +1,12 @@
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from datetime import datetime
 import os
 from typing import List, Optional
 # from ComputeAlgosStdErr import compute_algos_std_err
 from ComputeAlgosStdErr_parallel import compute_algos_std_err_parallel
-from utils import get_algo_dict_list
+from utils import get_algo_dict_list, create_config
 
 
 def exp_DeltaTheta(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
@@ -38,9 +39,10 @@ def exp_DeltaTheta(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
         vec_delta_theta = np.arange(2, 11)
     else:
         print('=========== SMALL SCALE MC tests@@@ !!! =======')
-        num_mc = 100
-        vec_delta_theta = np.arange(2, 11)
-
+        # num_mc = 100
+        # vec_delta_theta = np.arange(2, 11)
+        num_mc = 10
+        vec_delta_theta = np.arange(4, 8)
     
     snr = 0
     algo_list = get_algo_dict_list()
@@ -54,14 +56,14 @@ def exp_DeltaTheta(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
     
     # Source powers in dB
     power_doa_db = np.array([3, 4])
-    first_doa = 35
     
     for delta_theta_ind, delta_theta in enumerate(vec_delta_theta):
         print(f'=== Computing DeltaTheta == {delta_theta}')
-        doa = np.array([first_doa, first_doa + delta_theta])
-        
+        doa = np.array([35, 35 + delta_theta])
+        config = create_config(m=m, snr=snr, N=n, power_doa_db=power_doa_db, doa=doa)
+        config["cohr_flag"] = cohr_flag  # Add cohr_flag to the config dictionary
         se_mean_per_algo, failing_rate_per_algo, crb_val = compute_algos_std_err_parallel(
-            list(algo_list.keys()), num_mc, snr, n, m, cohr_flag, power_doa_db, doa
+            list(algo_list.keys()), num_mc, config
         )
         
         se_mean[delta_theta_ind, :] = se_mean_per_algo
@@ -100,4 +102,7 @@ def exp_DeltaTheta(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
 
 if __name__ == "__main__":
     # Example usage
-    exp_DeltaTheta(n=100, cohr_flag=False, large_scale_flag=False)
+    exp_DeltaTheta(n=20, cohr_flag=False, large_scale_flag=False)
+
+
+# %%

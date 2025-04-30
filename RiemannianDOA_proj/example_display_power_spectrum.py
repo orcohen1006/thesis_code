@@ -1,11 +1,16 @@
+# %%
 import numpy as np
 from time import time
+#%matplotlib widget
 import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict, Any, Optional
 
 from ComputeAlgosStdErr_parallel import run_single_mc_iteration
-from utils import get_doa_grid, get_algo_dict_list
+from utils import get_doa_grid, get_algo_dict_list, create_config
 
+plt.figure()
+plt.plot([1,2,3], [1,4,9], label='test')
+plt.show()
 
 def display_power_spectrum():
     seed = 42
@@ -40,9 +45,13 @@ def display_power_spectrum():
     noise_power_db = np.max(power_doa_db) - snr
     noise_power = 10.0 ** (noise_power_db / 10.0)
 
-    _,_,p_vec_cell,runtime_list, num_iters_list = run_single_mc_iteration(i_mc=seed, algo_list=list(algo_list.keys()), snr=snr, t_samples=N,
-                                             m=m,cohr_flag=False,power_doa_db=power_doa_db,doa=doa, A_true= A_true, A=A,
-                                             noise_power=noise_power,doa_scan=doa_scan, seed=seed)
+    config_dict = create_config(
+        m=m, snr=snr, N=N, power_doa_db=power_doa_db, doa=doa, cohr_flag=False,
+    )
+    _, _, p_vec_cell, runtime_list, num_iters_list = run_single_mc_iteration(
+        i_mc=seed, algo_list=list(algo_list.keys()), config=config_dict, A_true=A_true, A=A,
+        doa_scan=doa_scan, seed=seed
+    )
 
     plt.figure()
     plt.grid(True)
@@ -68,3 +77,5 @@ def display_power_spectrum():
 
 if __name__ == "__main__":
     display_power_spectrum()
+    
+# %%

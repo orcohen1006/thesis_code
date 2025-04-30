@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 from typing import List, Optional
 from ComputeAlgosStdErr_parallel import compute_algos_std_err_parallel
-from utils import get_algo_dict_list
+from utils import get_algo_dict_list, create_config
 
 
 def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
@@ -57,10 +57,11 @@ def exp_DeltaSNR(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
     firstSourcePower_db = 0
     for delta_snr_ind, delta_snr in enumerate(vec_delta_snr):
         print(f'=== Computing DeltaSNR == {delta_snr}')
-        power_doa_db = np.array([firstSourcePower_db, firstSourcePower_db+delta_snr])
-
+        power_doa_db = np.array([firstSourcePower_db, firstSourcePower_db + delta_snr])
+        config = create_config(m=m, snr=snr, N=n, power_doa_db=power_doa_db, doa=doa)
+        config["cohr_flag"] = cohr_flag  # Add cohr_flag to the config dictionary
         se_mean_per_algo, failing_rate_per_algo, crb_val = compute_algos_std_err_parallel(
-            list(algo_list.keys()), num_mc, snr, n, m, cohr_flag, power_doa_db, doa
+            list(algo_list.keys()), num_mc, config
         )
         
         se_mean[delta_snr_ind, :] = se_mean_per_algo

@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 from typing import List, Optional
 from ComputeAlgosStdErr_parallel import compute_algos_std_err_parallel
-from utils import get_algo_dict_list, get_doa_grid
+from utils import get_algo_dict_list, create_config
 
 
 def exp_N(cohr_flag: bool, large_scale_flag: bool) -> None:
@@ -57,11 +57,12 @@ def exp_N(cohr_flag: bool, large_scale_flag: bool) -> None:
 
     for n_ind, n in enumerate(vec_n):
         print(f'=== Computing N == {n}')
+        config = create_config(m=m, snr=snr, N=n, power_doa_db=power_doa_db, doa=doa)
+        config["cohr_flag"] = cohr_flag  # Add cohr_flag to the config dictionary
 
         se_mean_per_algo, failing_rate_per_algo, crb_val = compute_algos_std_err_parallel(
-            list(algo_list.keys()), num_mc, snr, n, m, cohr_flag, power_doa_db, doa
+            list(algo_list.keys()), num_mc, config
         )
-        
         se_mean[n_ind, :] = se_mean_per_algo
         failing_rate[n_ind, :] = failing_rate_per_algo
         crb_list[n_ind] = crb_val

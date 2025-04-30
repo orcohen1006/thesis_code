@@ -75,3 +75,24 @@ def get_algo_dict_list(flag_also_use_PER=False):
     if flag_also_use_PER:
         d = {"PER": {"linestyle": ":", "color": "y", "marker": "^"}, **d}
     return d
+
+
+def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False):
+    """
+    Create a configuration dictionary to hold parameters for simulations.
+
+    :param m: Number of sensors
+    :param snr: Signal-to-noise ratio
+    :param N: Number of snapshots
+    :param power_doa_db: Power of DOAs in dB
+    :param doa: Directions of arrival (DOAs) in degrees
+    :return: Configuration dictionary
+    """
+    return {
+        "m": m,
+        "snr": snr,
+        "N": N,
+        "power_doa_db": power_doa_db,
+        "doa": doa,
+        "cohr_flag": cohr_flag,
+    }

@@ -1,41 +1,43 @@
 import numpy as np
+from utils import create_config
 
-def SAM_CRB(SNR_in, t_sample_in, cohr_flag, PowerDOAdB=None, DOA=None):
+def SAM_CRB(config):
     """
     Simple CRB (Cramer-Rao Bound) for the SAMV paper draft
     using the stochastic CRB definitions
     
     Parameters:
-    SNR_in: input SNR value
-    t_sample_in: number of time samples
-    cohr_flag: coherent sources flag
-    PowerDOAdB: source powers in dB (optional)
-    DOA: true DOA angles (optional)
+    config: Configuration dictionary containing:
+        - snr: input SNR value
+        - N: number of time samples
+        - cohr_flag: coherent sources flag
+        - power_doa_db: source powers in dB (optional)
+        - doa: true DOA angles (optional)
     
     Returns:
     mse_CBRDOA: Mean Square Error Cramer-Rao Bound for DOA
     """
     m = 12
-    t_samples = t_sample_in
+    t_samples = config["N"]
     
     # Fixed Source powers
-    if PowerDOAdB is None:
-        PowerDOAdB = np.array([3, 4])  # in dB
+    if config["power_doa_db"] is None:
+        config["power_doa_db"] = np.array([3, 4])  # in dB
     
-    PowerDOA = 10 ** (PowerDOAdB / 10)
+    PowerDOA = 10 ** (config["power_doa_db"] / 10)
     amplitudeDOA = np.sqrt(PowerDOA)
     
     # Complex Gaussian Noise
-    SNR = SNR_in  # input parameters
-    noisePowerdB = np.max(PowerDOAdB) - SNR
+    SNR = config["snr"]  # input parameters
+    noisePowerdB = np.max(config["power_doa_db"]) - SNR
     noisePower = 10 ** (noisePowerdB / 10)
 
     delta_vec = np.arange(m)
 
-    if DOA is None:
-        DOA = np.array([35.11, 50.15])  # true DOA angles, off grid case
+    if config["doa"] is None:
+        config["doa"] = np.array([35.11, 50.15])  # true DOA angles, off grid case
     
-    DOA = np.sort(DOA)  # must be in ascending order to work right
+    DOA = np.sort(config["doa"])  # must be in ascending order to work right
     source_no = len(DOA)  # # of sources
     
     # Real steering vector matrix
@@ -45,7 +47,7 @@ def SAM_CRB(SNR_in, t_sample_in, cohr_flag, PowerDOAdB=None, DOA=None):
     PI_A = np.eye(m) - A @ np.linalg.inv(A.conj().T @ A) @ A.conj().T
     
     # Compute P, dependent on the cohr_flag
-    if not cohr_flag:  # independent sources
+    if not config.get("cohr_flag", False):  # independent sources
         Pmat = np.diag(PowerDOA)
     else:
         rho = 1  # 100% coherence assumption
