@@ -1,6 +1,9 @@
 import numpy as np
 from scipy.signal import find_peaks
 
+FILENAME_PBS_SCRIPT = "job.pbs"
+FILENAME_PBS_METADATA = "job_metadata.pkl"
+
 def detect_DOAs(p_vec, DOAscan, DOA):
     Numsources = len(DOA)
     # Find peaks in descending order

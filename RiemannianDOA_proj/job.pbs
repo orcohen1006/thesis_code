@@ -1,0 +1,14 @@
+#!/bin/bash
+#PBS -N OrCohenJob
+#PBS -q zeus_combined_q
+#PBS -l select=1:ncpus=1 
+#PBS -m n
+#PBS -o $HOME/thesis_code/RiemannianDOA_proj/job_logs/
+#PBS -e $HOME/thesis_code/RiemannianDOA_proj/job_logs/
+
+
+PBS_O_WORKDIR=$HOME/thesis_code/RiemannianDOA_proj
+cd $PBS_O_WORKDIR
+
+python3.11 RunSingleMCIteration.py "${PBS_ARRAY_INDEX}"
+

@@ -39,10 +39,10 @@ def exp_DeltaTheta(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
         vec_delta_theta = np.arange(2, 11)
     else:
         print('=========== SMALL SCALE MC tests@@@ !!! =======')
-        # num_mc = 100
-        # vec_delta_theta = np.arange(2, 11)
-        num_mc = 10
-        vec_delta_theta = np.arange(4, 8)
+        num_mc = 100
+        vec_delta_theta = np.arange(2, 11)
+        # num_mc = 10
+        # vec_delta_theta = np.arange(4, 8)
     
     snr = 0
     algo_list = get_algo_dict_list()
