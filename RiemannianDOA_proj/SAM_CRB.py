@@ -17,7 +17,7 @@ def SAM_CRB(config):
     Returns:
     mse_CBRDOA: Mean Square Error Cramer-Rao Bound for DOA
     """
-    m = 12
+    m = config["m"]  # number of sensors
     t_samples = config["N"]
     
     # Fixed Source powers

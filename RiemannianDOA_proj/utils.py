@@ -1,41 +1,99 @@
 import numpy as np
 from scipy.signal import find_peaks
+import torch
 
-FILENAME_PBS_SCRIPT = "job.pbs"
+FILENAME_PBS_SCRIPT = "job_byOrCohen.pbs"
 FILENAME_PBS_METADATA = "job_metadata.pkl"
 
-def detect_DOAs(p_vec, DOAscan, DOA):
-    Numsources = len(DOA)
+def convert_db_to_linear(power_doa_db):
+    """
+    Convert power in dB to linear scale.
+
+    :param power_doa_db: Power in dB
+    :return: Power in linear scale
+    """
+    return 10.0 ** (power_doa_db / 10.0)
+def convert_linear_to_db(power_doa):
+    """
+    Convert power in linear scale to dB.
+
+    :param power_doa: Power in linear scale
+    :return: Power in dB
+    """
+    return 10.0 * np.log10(power_doa)
+
+def estimate_doa_calc_errors(p_vec, grid_doa, doa, power):
+    if isinstance(p_vec, torch.Tensor):
+        p_vec = p_vec.numpy()
+    num_sources = len(doa)
     # Find peaks in descending order
-    peaks_indices, _ = find_peaks(p_vec)
-    peak_values = p_vec[peaks_indices]
-    sorted_idx = np.argsort(-peak_values)  # Sort in descending order
-    peaks_indices = peaks_indices[sorted_idx]
-    peaks_indices = np.atleast_1d(peaks_indices)
-    if (not isinstance(peaks_indices, np.ndarray)) or len(peaks_indices) < Numsources:
-        # Not all peaks detected
-        print("Not all peaks detected ")
-        normal = 0
-        Distance = np.nan
-        Detected_powers = np.nan
-        return Detected_powers, Distance, normal
+    peak_indices, _ = find_peaks(p_vec)
+    peak_values = p_vec[peak_indices]
+    sorted_indices = np.argsort(-peak_values)  # Sort in descending order
+    peak_indices = peak_indices[sorted_indices]
+    peak_indices = np.atleast_1d(peak_indices)
+    if (not isinstance(peak_indices, np.ndarray)) or len(peak_indices) < num_sources:
+        # print("Not all peaks detected")
+        detection_status = 0
+        detected_doas = np.full((num_sources,), np.nan)
+        detected_powers = np.full((num_sources,), np.nan)
+        doa_error = np.full((num_sources,), np.nan)
+        power_error = np.full((num_sources,), np.nan)
+    else:
+        detection_status = 1  # detection successful
 
-    # Check whether the detection is right
-    Detected_DOAs = DOAscan[peaks_indices[:Numsources]]
+        detected_doas = grid_doa[peak_indices[:num_sources]]
+        detected_powers = p_vec[peak_indices[:num_sources]]
 
-    # Sort detected DOAs in ascending order
-    sorted_idx = np.argsort(Detected_DOAs)
-    Detected_DOAs = Detected_DOAs[sorted_idx]
-    Distance = Detected_DOAs - DOA
+        # Sort doas ascending order (and powers accordingly)
+        sorted_indices = np.argsort(detected_doas)
+        detected_doas = detected_doas[sorted_indices]
+        detected_powers = detected_powers[sorted_indices]
 
-    normal = 1  # detection okay
-    # The powers from large value to small value
-    Detected_powers = p_vec[peaks_indices[:Numsources]]
-    # Sort the power according to the DOA
-    Detected_powers = Detected_powers[sorted_idx]
+        sorted_indices = np.argsort(doa)
+        doa = doa[sorted_indices]
+        power = power[sorted_indices]
 
-    return Detected_powers, Distance, normal
+        doa_error = detected_doas - doa
+        power_error = detected_powers - power
 
+        # Sort the power according to the DOA
+        
+    return detection_status, detected_doas, detected_powers, doa_error, power_error
+    
+
+# def detect_DOAs(p_vec, grid_doa, doa):
+#     num_sources = len(doa)
+#     # Find peaks in descending order
+#     peak_indices, _ = find_peaks(p_vec)
+#     peak_values = p_vec[peak_indices]
+#     sorted_indices = np.argsort(-peak_values)  # Sort in descending order
+#     peak_indices = peak_indices[sorted_indices]
+#     peak_indices = np.atleast_1d(peak_indices)
+#     if (not isinstance(peak_indices, np.ndarray)) or len(peak_indices) < num_sources:
+#         # Not all peaks detected
+#         print("Not all peaks detected")
+#         detection_status = 0
+#         doa_error = np.nan
+#         detected_powers = np.nan
+#         return detected_powers, doa_error, detection_status
+
+#     # Check whether the detection is correct
+#     detected_doas = grid_doa[peak_indices[:num_sources]]
+
+#     # Sort detected DOAs in ascending order
+#     sorted_indices = np.argsort(detected_doas)
+#     detected_doas = detected_doas[sorted_indices]
+#     doa_error = detected_doas - doa
+
+#     detection_status = 1  # detection successful
+#     # The powers from large value to small value
+#     detected_powers = p_vec[peak_indices[:num_sources]]
+#     # Sort the power according to the DOA
+#     detected_powers = detected_powers[sorted_indices]
+
+#     return detected_powers, doa_error, detection_status
+    
 
 def generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=False, seed=None):
     if seed is not None:

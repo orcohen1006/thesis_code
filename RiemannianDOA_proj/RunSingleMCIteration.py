@@ -42,7 +42,7 @@ def run_single_mc_iteration(
     y_noisy = generate_signal(A_true, config["power_doa_db"], config["N"], noise_power, cohr_flag=False, seed=i_mc)
 
     modulus_hat_das = np.sum(np.abs(A.conj().T @ (y_noisy / config["m"])), axis=1) / config["N"]
-
+    
     # Run on all algorithms
     p_vec_list = [None] * num_algos
     runtime_list = [None] * num_algos
@@ -68,9 +68,9 @@ def run_single_mc_iteration(
         p_vec_list[i_algo] = p_vec
         print(f"{algo_list[i_algo]}: #iters= {num_iters}, runtime= {runtime_list[i_algo]} [sec]")
 
-    print(f"i_MC = {i_mc + 1}, elapsed time: {time() - t0 :.2f} [sec]")
+    print(f"i_mc = {i_mc + 1}, elapsed time: {time() - t0 :.2f} [sec]")
     result = {}
-    result[i_mc] = i_mc
+    result["i_mc"] = i_mc
     result['config'] = config
     result['runtime_list'] = runtime_list
     result['num_iters_list'] = num_iters_list
@@ -102,23 +102,37 @@ def run_single_mc_iteration(
 
 if __name__ == "__main__":
         
-    task_id = int(sys.argv[1])
+    job_id = int(sys.argv[1])  # PBS job index
 
     with open(FILENAME_PBS_METADATA, "rb") as f:
         metadata = pickle.load(f)
+
+    num_configs = metadata["num_configs"]
     num_mc = metadata["num_mc"]
+    num_jobs = metadata["num_jobs"]
     workdir = metadata["workdir"]
-    i_config = task_id // num_mc
-    i_mc = task_id % num_mc
-    filepath_config = os.path.join(workdir, f"config_{i_config}.pkl")
-    filepath_result = os.path.join(workdir, f"config_{i_config}_mc{i_mc}.pkl")
 
-    with open(filepath_config, 'rb') as f:
-        config = pickle.load(f)
-    result = run_single_mc_iteration(i_mc=i_mc, config=config)
+    total_tasks = num_configs * num_mc
+    tasks_per_job = (total_tasks + num_jobs - 1) // num_jobs  # ceil division
 
-    with open(filepath_result, 'wb') as f:
-        pickle.dump(result, f)
+    start_task = job_id * tasks_per_job
+    end_task = min(start_task + tasks_per_job, total_tasks)
+
+    for task_id in range(start_task, end_task):
+        i_config = task_id // num_mc
+        i_mc = task_id % num_mc
+
+        config_path = f"{workdir}/config_{i_config}.pkl"
+        result_path = f"{workdir}/config_{i_config}_mc_{i_mc}.pkl"
+
+        # Load config and run
+        with open(config_path, 'rb') as f:
+            config = pickle.load(f)
+
+        result = run_single_mc_iteration(i_mc=i_mc, config=config)
+
+        with open(result_path, 'wb') as f:
+            pickle.dump(result, f)
     # %% Example usage
     # i_mc = 0
     # filepath_config = "tmp_config_file.pkl"
@@ -134,4 +148,9 @@ if __name__ == "__main__":
     # with open(filepath_result, 'rb') as f:
     #     loaded_result = pickle.load(f)
 
+# %%
+# total_tasks = 1000
+# num_jobs = 334
+# tasks_per_job = (total_tasks + num_jobs - 1) // num_jobs  # ceil division
+# print(tasks_per_job)
 # %%

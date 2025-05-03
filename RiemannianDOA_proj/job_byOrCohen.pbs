@@ -3,9 +3,10 @@
 #PBS -q zeus_combined_q
 #PBS -l select=1:ncpus=1 
 #PBS -m n
-#PBS -o $HOME/thesis_code/RiemannianDOA_proj/job_logs/
-#PBS -e $HOME/thesis_code/RiemannianDOA_proj/job_logs/
+#PBS -o /home/or.cohen/thesis_code/RiemannianDOA_proj/job_logs/
+#PBS -e /home/or.cohen/thesis_code/RiemannianDOA_proj/job_logs/
 
+rm -f /home/or.cohen/thesis_code/RiemannianDOA_proj/job_logs/*
 
 PBS_O_WORKDIR=$HOME/thesis_code/RiemannianDOA_proj
 cd $PBS_O_WORKDIR

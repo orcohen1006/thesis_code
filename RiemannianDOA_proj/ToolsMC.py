@@ -1,15 +1,19 @@
+# %%
 import os
 import pickle
 import subprocess
 import time
 from pathlib import Path
 from utils import *
-
-
-def save_job_metadata(workdir: str, num_mc: int):
+from collections import defaultdict
+DEFAULT_NUM_JOBS = 334
+# %%
+def save_job_metadata(workdir: str, config_list: list, num_mc: int, num_jobs: int):
     if os.path.exists(FILENAME_PBS_METADATA):
         os.remove(FILENAME_PBS_METADATA)
     metadata = {}
+    metadata["num_configs"] = len(config_list)
+    metadata["num_jobs"] = num_jobs
     metadata["num_mc"] = num_mc
     metadata["workdir"] = workdir
     with open(FILENAME_PBS_METADATA, "wb") as f:
@@ -21,9 +25,9 @@ def save_doa_configs(workdir: str, config_list: list):
         with open(f"{workdir}/config_{i}.pkl", "wb") as f:
             pickle.dump(cfg, f)
 
-def submit_job_array(workdir: str, config_list: list, num_mc: int):
-    total_jobs = len(config_list) * num_mc
-    res = subprocess.run(["qsub", "-J", f"0-{total_jobs-1}", FILENAME_PBS_SCRIPT], capture_output=True, text=True)
+def submit_job_array(workdir: str, config_list: list, num_mc: int, num_jobs: int):
+
+    res = subprocess.run(["qsub", "-J", f"0-{num_jobs-1}", FILENAME_PBS_SCRIPT], capture_output=True, text=True)
 
     if res.returncode != 0:
         print("Error submitting job array:", res.stderr)
@@ -35,31 +39,33 @@ def submit_job_array(workdir: str, config_list: list, num_mc: int):
 def wait_for_results(workdir: str, config_list: list, num_mc:int, t0: float):
     expected = len(config_list) * num_mc
     while True:
-        done = len(list(Path(workdir).glob("config_*_mc*.pkl")))
+        done = len(list(Path(workdir).glob("config_*_mc_*.pkl")))
         print(f"Waiting... {done}/{expected} results ready. elapsed time: {time.time() - t0:.2f} [sec]")
         if done >= expected:
             break
-        time.sleep(10) 
+        time.sleep(5) 
 
 def collect_results(workdir: str, config_list: list, num_mc:int):
     results = []
     for i in range(len(config_list)):
+        curr_config_results = []
         for j in range(num_mc):
-            result_file = Path(workdir) / f"config_{i}_mc{j}.pkl"
+            result_file = Path(workdir) / f"config_{i}_mc_{j}.pkl"
             with open(result_file, "rb") as f:
-                results.append(pickle.load(f))
+                curr_config_results.append(pickle.load(f))
             os.remove(result_file)
+        results.append(curr_config_results)
     return results
 
-def RunDoaConfigsPBS(workdir: str, config_list: list, num_mc:int):
+def RunDoaConfigsPBS(workdir: str, config_list: list, num_mc:int, num_jobs: int = DEFAULT_NUM_JOBS):
     t0 = time.time()
-    print("Starting job array with", len(config_list), "configurations and", num_mc, "Monte Carlo iterations.")
+    print("Starting job array with ", num_jobs, " jobs:", len(config_list), "configurations and", num_mc, "Monte Carlo iterations.")
     
-    save_job_metadata(workdir, num_mc)
+    save_job_metadata(workdir, config_list, num_mc, num_jobs)
 
     save_doa_configs(workdir, config_list)
     
-    job_id = submit_job_array(workdir, config_list, num_mc)
+    job_id = submit_job_array(workdir, config_list, num_mc, num_jobs)
     print("Submitted job ID:", job_id)
 
     wait_for_results(workdir, config_list, num_mc, t0)
@@ -74,22 +80,156 @@ def RunDoaConfigsPBS(workdir: str, config_list: list, num_mc:int):
     return results
 
 if __name__ == "__main__":
+    # %%
     num_mc = 100
-    num_configs = 5
-    workdir = 'TmpWorkDir'
+    vec_delta_theta = np.arange(2, 11)
+    num_configs = len(vec_delta_theta)
+    workdir = os.path.abspath('TmpWorkDir5')
     os.makedirs(workdir, exist_ok=True)
-
     config_list = []
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=12, snr=0, N=20, power_doa_db=np.array([3, 4]), doa=np.array([35, 40+i]), cohr_flag=False,
+                m=12, snr=0, N=20, 
+                power_doa_db=np.array([3, 4]),
+                doa=np.array([35, 35+vec_delta_theta[i]]),
+                cohr_flag=False,
                 )
         )
-    # Run the configurations
-    RunDoaConfigsPBS(workdir, config_list, num_mc)
+    # %% Run the configurations
+    RunDoaConfigsPBS(workdir, config_list, num_mc, num_jobs=DEFAULT_NUM_JOBS)
     # %%
-    with open('TmpWorkDir/results.pkl', 'rb') as f:
+    with open(f'{workdir}/results.pkl', 'rb') as f:
         results = pickle.load(f)
     print("Results loaded from file.")
+    # %%
+    algo_list = get_algo_dict_list()
+    num_algo = len(algo_list)
+    grid_doa = get_doa_grid()
+    num_configs = len(results)
+    num_mc = len(results[0])
+    for i_config in range(num_configs):
+        for i_mc in range(num_mc):
+            result = results[i_config][i_mc]
+            detection_status = [None] * num_algo
+            doa_error = [None] * num_algo
+            power_error = [None] * num_algo
+            for i_alg in range(num_algo):
+                detection_status[i_alg], _, _, doa_error[i_alg], power_error[i_alg] = \
+                    estimate_doa_calc_errors(
+                        result["p_vec_list"][i_alg], grid_doa,
+                        result["config"]["doa"],
+                        convert_db_to_linear(result["config"]["power_doa_db"]))
+            result["detection_status"] = detection_status
+            result["doa_error"] = doa_error
+            result["power_error"] = power_error
+
+    algos_error_data = {k: defaultdict(lambda: [None]*num_configs) for k in algo_list}
+    for i_config in range(len(results)):
+        # indices_mc_all_algos_detected = [
+        #     i_mc for i_mc in range(num_mc)
+        #     if all(results[i_config][i_mc]["detection_status"])
+        #     ]
+        threshold_theta_detect = 5
+        indices_mc_all_algos_detected = []
+        for i_mc in range(num_mc):
+            if all(results[i_config][i_mc]["detection_status"]) \
+                and (np.abs(np.stack(results[i_config][i_mc]["doa_error"])) < threshold_theta_detect).all():
+                indices_mc_all_algos_detected.append(i_mc)
+            # i_mc for i_mc in range(num_mc)
+            # if all(results[i_config][i_mc]["detection_status"]) >=1 
+            # and all(np.abs(np.stack(results[i_config][i_mc]["doa_error"])) < threshold_theta_detect)
+            # ]
+        print(f"Config {i_config}: {len(indices_mc_all_algos_detected)} out of {num_mc} MC iterations detected all sources.")
+        for i_algo, algo_name in enumerate(algo_list.keys()):
+            if len(indices_mc_all_algos_detected) == 0:
+                doa_errors = np.expand_dims(results[i_config][0]["doa_error"][i_algo] * np.nan, axis=0)
+                power_errors = np.expand_dims(results[i_config][0]["power_error"][i_algo] * np.nan, axis=0)
+            else:
+                doa_errors = np.stack([results[i_config][i_mc]["doa_error"][i_algo] 
+                                            for i_mc in indices_mc_all_algos_detected])
+                power_errors = np.stack([results[i_config][i_mc]["power_error"][i_algo] 
+                                            for i_mc in indices_mc_all_algos_detected])
+                mean_square_errors = np.mean(doa_errors**2, axis=1)
+                prcnt_worst_results_to_ignore = 2
+                bottom_q_percent_indices = np.argsort(mean_square_errors)[:int((100 - prcnt_worst_results_to_ignore) / 100 * len(mean_square_errors))]
+                doa_errors = np.stack([doa_errors[i] for i in bottom_q_percent_indices])
+                power_errors = np.stack([power_errors[i] for i in bottom_q_percent_indices])         
+
+            algos_error_data[algo_name]["mean_doa_errors"][i_config] = np.mean(doa_errors, axis=0)
+            algos_error_data[algo_name]["mean_power_errors"][i_config] = np.mean(power_errors, axis=0)
+            algos_error_data[algo_name]["mean_square_doa_errors"][i_config] = np.mean(doa_errors**2, axis=0)
+            algos_error_data[algo_name]["mean_square_power_errors"][i_config] = np.mean(power_errors**2, axis=0)
+            # tmp = algos_error_data[algo_name]["mean_doa_errors"][i_config]
+            # print(f"doa_errors:{doa_errors}   ,     mean_doa_errors:{tmp}")
+            threshold_theta_detect = 5
+            succ_detect = np.stack([1 
+                           if results[i_config][i_mc]["detection_status"][i_algo] >=1 
+                           and all(np.abs(results[i_config][i_mc]["doa_error"][i_algo]) < threshold_theta_detect) 
+                           else 0 
+                           for i_mc in range(num_mc)])
+            algos_error_data[algo_name]["prob_detect"][i_config] = np.mean(succ_detect)
+    # %%
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import matplotlib.gridspec as gridspec
+
+    fig = plt.figure(figsize=(12, 10))
+    gs = gridspec.GridSpec(3, 2, height_ratios=[1, 1, 1])  # 3 rows, 2 columns
+
+    # Axes for the 2x2 part
+    axs = [
+        [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])],
+        [fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])]
+    ]
+
+    # Axis for the bottom full-width plot
+    ax_total = fig.add_subplot(gs[2, :])  # spans both columns
+
+    for algo_name in algo_list.keys():
+        mean_doa_errors = np.stack(algos_error_data[algo_name]["mean_doa_errors"])  # (N, 2)
+        mse_doa_errors = np.stack(algos_error_data[algo_name]["mean_square_doa_errors"])  # (N, 2)
+        rmse_doa_errors = np.sqrt(mse_doa_errors)
+        
+        # Total RMSE = sqrt(mse1 + mse2)
+        total_rmse = np.sqrt(np.sum(mse_doa_errors, axis=1))  # shape: (N,)
+
+        # Source 1
+        axs[0][0].plot(mean_doa_errors[:, 0], label=algo_name, **algo_list[algo_name])
+        axs[1][0].plot(rmse_doa_errors[:, 0], label=algo_name, **algo_list[algo_name])
+
+        # Source 2
+        axs[0][1].plot(mean_doa_errors[:, 1], label=algo_name, **algo_list[algo_name])
+        axs[1][1].plot(rmse_doa_errors[:, 1], label=algo_name, **algo_list[algo_name])
+
+        # Total RMSE (source 1 + source 2)
+        ax_total.semilogy(total_rmse, label=algo_name, **algo_list[algo_name])
+
+    # Titles and labels
+    axs[0][0].set_title("Source 1: Mean DOA Error (Bias)")
+    axs[0][1].set_title("Source 2: Mean DOA Error (Bias)")
+    axs[1][0].set_title("Source 1: RMSE DOA Error")
+    axs[1][1].set_title("Source 2: RMSE DOA Error")
+    ax_total.set_title("Total RMSE (Combined Sources)")
+
+    # Add legends
+    for ax_row in axs:
+        for ax in ax_row:
+            ax.legend()
+            ax.grid(True)
+    ax_total.legend()
+    ax_total.grid(True)
+    plt.tight_layout()
+
+    plt.figure()
+    for algo_name in algo_list.keys():
+        prob_detect = np.stack(algos_error_data[algo_name]["prob_detect"])
+        plt.plot(prob_detect, label=algo_name, **algo_list[algo_name])
+    plt.legend()
+    plt.grid(True)
+    plt.title("Probability of Detection")
+
+    plt.tight_layout()
+    plt.show()
+
 # %%
