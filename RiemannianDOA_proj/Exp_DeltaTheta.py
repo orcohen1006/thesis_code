@@ -10,41 +10,20 @@ from utils import get_algo_dict_list, create_config
 
 
 def exp_DeltaTheta(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
-    """
-    Experiment to evaluate algorithm performance with varying angle separations.
     
-    Parameters:
-    -----------
-    n : int
-        Number of samples
-    cohr_flag : bool
-        Flag indicating if sources are coherent
-    large_scale_flag : bool
-        Flag indicating if this is a large-scale experiment
-    """
-    np.random.seed(42)
-    flag_save_fig = True
     m = 12
     
     timestamp = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
     results_dir = f'Exp_DeltaTheta_{timestamp}_{str_indp_cohr}_M{m}_N{n}_L{int(large_scale_flag)}'
     
-    if not os.path.exists(results_dir) and flag_save_fig:
+    if not os.path.exists(results_dir):
         os.makedirs(results_dir)
     
-    if large_scale_flag:
-        print('==== Large SCALE MC tests Running...')
-        num_mc = 500
-        vec_delta_theta = np.arange(2, 11)
-    else:
-        print('=========== SMALL SCALE MC tests@@@ !!! =======')
-        num_mc = 100
-        vec_delta_theta = np.arange(2, 11)
-        # num_mc = 10
-        # vec_delta_theta = np.arange(4, 8)
-    
+    num_mc = 100
+    vec_delta_theta = np.arange(2, 11)
     snr = 0
+    
     algo_list = get_algo_dict_list()
     
     num_algos = len(algo_list)
