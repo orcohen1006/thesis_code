@@ -79,6 +79,80 @@ def RunDoaConfigsPBS(workdir: str, config_list: list, num_mc:int, num_jobs: int 
     print(f"RunDoaConfigsPBS: Total elapsed time: {time.time() - t0:.2f} [sec]")
     return results
 
+# %%
+def analyze_algo_errors(results: list):
+    algo_list = get_algo_dict_list()
+    num_algo = len(algo_list)
+    grid_doa = get_doa_grid()
+    num_configs = len(results)
+    num_mc = len(results[0])
+    for i_config in range(num_configs):
+        for i_mc in range(num_mc):
+            result = results[i_config][i_mc]
+            detection_status = [None] * num_algo
+            doa_error = [None] * num_algo
+            power_error = [None] * num_algo
+            for i_alg in range(num_algo):
+                detection_status[i_alg], _, _, doa_error[i_alg], power_error[i_alg] = \
+                    estimate_doa_calc_errors(
+                        result["p_vec_list"][i_alg], grid_doa,
+                        result["config"]["doa"],
+                        convert_db_to_linear(result["config"]["power_doa_db"]))
+            result["detection_status"] = detection_status
+            result["doa_error"] = doa_error
+            result["power_error"] = power_error
+
+    algos_error_data = {k: defaultdict(lambda: [None]*num_configs) for k in algo_list}
+    for i_config in range(len(results)):
+        config = results[i_config][0]["config"]
+        tmp_doa = np.expand_dims(config["doa"],-1)
+        threshold_theta_detect = np.abs(tmp_doa - tmp_doa.T).max()
+        # print(f"Config {i_config}: threshold_theta_detect = {threshold_theta_detect}")
+        indices_mc_all_algos_detected = [
+            i_mc for i_mc in range(num_mc)
+            if all(results[i_config][i_mc]["detection_status"])
+            ]
+        # threshold_theta_detect = 5
+        # indices_mc_all_algos_detected = []
+        # for i_mc in range(num_mc):
+        #     if all(results[i_config][i_mc]["detection_status"]) \
+        #         and (np.abs(np.stack(results[i_config][i_mc]["doa_error"])) < threshold_theta_detect).all():
+        #         indices_mc_all_algos_detected.append(i_mc)
+
+        print(f"Config {i_config}: {len(indices_mc_all_algos_detected)} out of {num_mc} MC iterations detected all sources.")
+        for i_algo, algo_name in enumerate(algo_list.keys()):
+            if len(indices_mc_all_algos_detected) == 0:
+                doa_errors = np.expand_dims(results[i_config][0]["doa_error"][i_algo] * np.nan, axis=0)
+                power_errors = np.expand_dims(results[i_config][0]["power_error"][i_algo] * np.nan, axis=0)
+            else:
+                doa_errors = np.stack([results[i_config][i_mc]["doa_error"][i_algo] 
+                                            for i_mc in indices_mc_all_algos_detected])
+                power_errors = np.stack([results[i_config][i_mc]["power_error"][i_algo] 
+                                            for i_mc in indices_mc_all_algos_detected])
+                mean_square_errors = np.mean(doa_errors**2, axis=1)
+                prcnt_worst_results_to_ignore = 2
+                bottom_q_percent_indices = np.argsort(mean_square_errors)[:int((100 - prcnt_worst_results_to_ignore) / 100 * len(mean_square_errors))]
+                doa_errors = np.stack([doa_errors[i] for i in bottom_q_percent_indices])
+                power_errors = np.stack([power_errors[i] for i in bottom_q_percent_indices])         
+
+            algos_error_data[algo_name]["mean_doa_errors"][i_config] = np.mean(doa_errors, axis=0)
+            algos_error_data[algo_name]["mean_power_errors"][i_config] = np.mean(power_errors, axis=0)
+            algos_error_data[algo_name]["mean_square_doa_errors"][i_config] = np.mean(doa_errors**2, axis=0)
+            algos_error_data[algo_name]["mean_square_power_errors"][i_config] = np.mean(power_errors**2, axis=0)
+            # tmp = algos_error_data[algo_name]["mean_doa_errors"][i_config]
+            # print(f"doa_errors:{doa_errors}   ,     mean_doa_errors:{tmp}")
+            # threshold_theta_detect = 2
+            succ_detect = np.stack([1 
+                           if results[i_config][i_mc]["detection_status"][i_algo] >=1 
+                           and all(np.abs(results[i_config][i_mc]["doa_error"][i_algo]) < threshold_theta_detect) 
+                           else 0 
+                           for i_mc in range(num_mc)])
+            algos_error_data[algo_name]["prob_detect"][i_config] = np.mean(succ_detect)
+        # --
+    return results, algos_error_data
+# %%
+def plot_errors(algos_error_data: dict, )
+# %%
 if __name__ == "__main__":
     # %%
     num_mc = 100
@@ -103,76 +177,19 @@ if __name__ == "__main__":
         results = pickle.load(f)
     print("Results loaded from file.")
     # %%
-    algo_list = get_algo_dict_list()
-    num_algo = len(algo_list)
-    grid_doa = get_doa_grid()
-    num_configs = len(results)
-    num_mc = len(results[0])
-    for i_config in range(num_configs):
-        for i_mc in range(num_mc):
-            result = results[i_config][i_mc]
-            detection_status = [None] * num_algo
-            doa_error = [None] * num_algo
-            power_error = [None] * num_algo
-            for i_alg in range(num_algo):
-                detection_status[i_alg], _, _, doa_error[i_alg], power_error[i_alg] = \
-                    estimate_doa_calc_errors(
-                        result["p_vec_list"][i_alg], grid_doa,
-                        result["config"]["doa"],
-                        convert_db_to_linear(result["config"]["power_doa_db"]))
-            result["detection_status"] = detection_status
-            result["doa_error"] = doa_error
-            result["power_error"] = power_error
+    results, algos_error_data = analyze_algo_errors(results)
 
-    algos_error_data = {k: defaultdict(lambda: [None]*num_configs) for k in algo_list}
-    for i_config in range(len(results)):
-        # indices_mc_all_algos_detected = [
-        #     i_mc for i_mc in range(num_mc)
-        #     if all(results[i_config][i_mc]["detection_status"])
-        #     ]
-        threshold_theta_detect = 5
-        indices_mc_all_algos_detected = []
-        for i_mc in range(num_mc):
-            if all(results[i_config][i_mc]["detection_status"]) \
-                and (np.abs(np.stack(results[i_config][i_mc]["doa_error"])) < threshold_theta_detect).all():
-                indices_mc_all_algos_detected.append(i_mc)
-            # i_mc for i_mc in range(num_mc)
-            # if all(results[i_config][i_mc]["detection_status"]) >=1 
-            # and all(np.abs(np.stack(results[i_config][i_mc]["doa_error"])) < threshold_theta_detect)
-            # ]
-        print(f"Config {i_config}: {len(indices_mc_all_algos_detected)} out of {num_mc} MC iterations detected all sources.")
-        for i_algo, algo_name in enumerate(algo_list.keys()):
-            if len(indices_mc_all_algos_detected) == 0:
-                doa_errors = np.expand_dims(results[i_config][0]["doa_error"][i_algo] * np.nan, axis=0)
-                power_errors = np.expand_dims(results[i_config][0]["power_error"][i_algo] * np.nan, axis=0)
-            else:
-                doa_errors = np.stack([results[i_config][i_mc]["doa_error"][i_algo] 
-                                            for i_mc in indices_mc_all_algos_detected])
-                power_errors = np.stack([results[i_config][i_mc]["power_error"][i_algo] 
-                                            for i_mc in indices_mc_all_algos_detected])
-                mean_square_errors = np.mean(doa_errors**2, axis=1)
-                prcnt_worst_results_to_ignore = 2
-                bottom_q_percent_indices = np.argsort(mean_square_errors)[:int((100 - prcnt_worst_results_to_ignore) / 100 * len(mean_square_errors))]
-                doa_errors = np.stack([doa_errors[i] for i in bottom_q_percent_indices])
-                power_errors = np.stack([power_errors[i] for i in bottom_q_percent_indices])         
-
-            algos_error_data[algo_name]["mean_doa_errors"][i_config] = np.mean(doa_errors, axis=0)
-            algos_error_data[algo_name]["mean_power_errors"][i_config] = np.mean(power_errors, axis=0)
-            algos_error_data[algo_name]["mean_square_doa_errors"][i_config] = np.mean(doa_errors**2, axis=0)
-            algos_error_data[algo_name]["mean_square_power_errors"][i_config] = np.mean(power_errors**2, axis=0)
-            # tmp = algos_error_data[algo_name]["mean_doa_errors"][i_config]
-            # print(f"doa_errors:{doa_errors}   ,     mean_doa_errors:{tmp}")
-            threshold_theta_detect = 5
-            succ_detect = np.stack([1 
-                           if results[i_config][i_mc]["detection_status"][i_algo] >=1 
-                           and all(np.abs(results[i_config][i_mc]["doa_error"][i_algo]) < threshold_theta_detect) 
-                           else 0 
-                           for i_mc in range(num_mc)])
-            algos_error_data[algo_name]["prob_detect"][i_config] = np.mean(succ_detect)
     # %%
     import numpy as np
     import matplotlib.pyplot as plt
     import matplotlib.gridspec as gridspec
+    algo_list = get_algo_dict_list()
+    i_config = 3
+    i_mc = 1
+    ax = display_power_spectrum(results[i_config][i_mc]["config"], results[i_config][i_mc]["p_vec_list"])
+    # %%
+
+
 
     fig = plt.figure(figsize=(12, 10))
     gs = gridspec.GridSpec(3, 2, height_ratios=[1, 1, 1])  # 3 rows, 2 columns
@@ -187,12 +204,11 @@ if __name__ == "__main__":
     ax_total = fig.add_subplot(gs[2, :])  # spans both columns
 
     for algo_name in algo_list.keys():
-        mean_doa_errors = np.stack(algos_error_data[algo_name]["mean_doa_errors"])  # (N, 2)
-        mse_doa_errors = np.stack(algos_error_data[algo_name]["mean_square_doa_errors"])  # (N, 2)
+        mean_doa_errors = np.stack(algos_error_data[algo_name]["mean_doa_errors"]) 
+        mse_doa_errors = np.stack(algos_error_data[algo_name]["mean_square_doa_errors"])
         rmse_doa_errors = np.sqrt(mse_doa_errors)
         
-        # Total RMSE = sqrt(mse1 + mse2)
-        total_rmse = np.sqrt(np.sum(mse_doa_errors, axis=1))  # shape: (N,)
+        all_sources_doa_rmse = np.sqrt(np.sum(mse_doa_errors, axis=1))
 
         # Source 1
         axs[0][0].plot(mean_doa_errors[:, 0], label=algo_name, **algo_list[algo_name])
@@ -203,14 +219,14 @@ if __name__ == "__main__":
         axs[1][1].plot(rmse_doa_errors[:, 1], label=algo_name, **algo_list[algo_name])
 
         # Total RMSE (source 1 + source 2)
-        ax_total.semilogy(total_rmse, label=algo_name, **algo_list[algo_name])
+        ax_total.semilogy(all_sources_doa_rmse, label=algo_name, **algo_list[algo_name])
 
     # Titles and labels
     axs[0][0].set_title("Source 1: Mean DOA Error (Bias)")
     axs[0][1].set_title("Source 2: Mean DOA Error (Bias)")
     axs[1][0].set_title("Source 1: RMSE DOA Error")
     axs[1][1].set_title("Source 2: RMSE DOA Error")
-    ax_total.set_title("Total RMSE (Combined Sources)")
+    ax_total.set_title("Both Sources DOA RMSE")
 
     # Add legends
     for ax_row in axs:

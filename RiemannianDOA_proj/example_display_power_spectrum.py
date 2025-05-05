@@ -8,9 +8,7 @@ from typing import List, Tuple, Dict, Any, Optional
 from ComputeAlgosStdErr_parallel import run_single_mc_iteration
 from utils import get_doa_grid, get_algo_dict_list, create_config
 
-plt.figure()
-plt.plot([1,2,3], [1,4,9], label='test')
-plt.show()
+
 
 def display_power_spectrum():
     seed = 42

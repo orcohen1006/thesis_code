@@ -61,6 +61,43 @@ def estimate_doa_calc_errors(p_vec, grid_doa, doa, power):
         
     return detection_status, detected_doas, detected_powers, doa_error, power_error
     
+def display_power_spectrum(config, list_p_vec, epsilon_power=None):
+    """
+    Display the power spectrum of the DOA estimation.
+
+    :param config: Configuration dictionary
+    :param list_p_vec: List of power vectors for different algorithms
+    """
+    import matplotlib.pyplot as plt
+
+    power_doa_db = config["power_doa_db"]
+    doa = config["doa"]
+
+    doa_scan = get_doa_grid()
+
+    algo_list = get_algo_dict_list()
+    
+    if epsilon_power is None:
+        epsilon_power = 10.0 ** (-20 / 10.0)
+    
+    fig = plt.figure()
+    ax = plt.gca()
+
+    for i_algo, algo_name in enumerate(algo_list.keys()):
+        spectrum = list_p_vec[i_algo]
+        spectrum[spectrum < epsilon_power] = epsilon_power
+        spectrum = convert_linear_to_db(spectrum)
+        ax.plot(doa_scan, spectrum, label=algo_name, **algo_list[algo_name])
+
+    plt_doa, = ax.plot(doa, power_doa_db, 'x', color='black', label='DOA')
+    
+    plt.legend(handles=[plt_doa])
+    
+    plt.xlabel(r"$\theta$ [degrees]", fontsize=14)
+    plt.ylabel("power [dB]", fontsize=14)
+    
+    plt.title('Directions Power Spectrum Estimation')
+    return ax
 
 # def detect_DOAs(p_vec, grid_doa, doa):
 #     num_sources = len(doa)
