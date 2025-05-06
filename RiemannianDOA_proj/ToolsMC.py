@@ -82,6 +82,7 @@ def RunDoaConfigsPBS(workdir: str, config_list: list, num_mc:int, num_jobs: int 
 
 # %%
 def analyze_algo_errors(results: list):
+    from CRB import cramer_rao_lower_bound
     algo_list = get_algo_dict_list()
     num_algo = len(algo_list)
     grid_doa = get_doa_grid()
@@ -103,7 +104,8 @@ def analyze_algo_errors(results: list):
             result["doa_error"] = doa_error
             result["power_error"] = power_error
 
-    algos_error_data = {k: defaultdict(lambda: [None]*num_configs) for k in algo_list}
+    algos_error_data = {key: defaultdict(lambda: [None]*num_configs) for key in 
+                        ["mean_doa_errors", "mean_power_errors", "mean_square_doa_errors", "mean_square_power_errors", "prob_detect"]}
     for i_config in range(len(results)):
         config = results[i_config][0]["config"]
         tmp_doa = np.expand_dims(config["doa"],-1)
@@ -136,10 +138,11 @@ def analyze_algo_errors(results: list):
                 doa_errors = np.stack([doa_errors[i] for i in bottom_q_percent_indices])
                 power_errors = np.stack([power_errors[i] for i in bottom_q_percent_indices])         
 
-            algos_error_data[algo_name]["mean_doa_errors"][i_config] = np.mean(doa_errors, axis=0)
-            algos_error_data[algo_name]["mean_power_errors"][i_config] = np.mean(power_errors, axis=0)
-            algos_error_data[algo_name]["mean_square_doa_errors"][i_config] = np.mean(doa_errors**2, axis=0)
-            algos_error_data[algo_name]["mean_square_power_errors"][i_config] = np.mean(power_errors**2, axis=0)
+            algos_error_data["mean_doa_errors"][algo_name][i_config] = np.mean(doa_errors, axis=0)
+            algos_error_data["mean_power_errors"][algo_name][i_config] = np.mean(power_errors, axis=0)
+            algos_error_data["mean_square_doa_errors"][algo_name][i_config] = np.mean(doa_errors**2, axis=0)
+            algos_error_data["mean_square_power_errors"][algo_name][i_config] = np.mean(power_errors**2, axis=0)
+
             # tmp = algos_error_data[algo_name]["mean_doa_errors"][i_config]
             # print(f"doa_errors:{doa_errors}   ,     mean_doa_errors:{tmp}")
             # threshold_theta_detect = 2
@@ -148,7 +151,8 @@ def analyze_algo_errors(results: list):
                            and all(np.abs(results[i_config][i_mc]["doa_error"][i_algo]) < threshold_theta_detect) 
                            else 0 
                            for i_mc in range(num_mc)])
-            algos_error_data[algo_name]["prob_detect"][i_config] = np.mean(succ_detect)
+            algos_error_data["prob_detect"][algo_name][i_config] = np.mean(succ_detect)
+        algos_error_data["mean_square_doa_errors"]["CRB"][i_config] = cramer_rao_lower_bound(config)
         # --
     return results, algos_error_data
 # %%
@@ -160,12 +164,12 @@ def plot_prob_detection(algos_error_data: dict, parameter_name: str, parameter_u
 
     fig = plt.figure()
     for algo_name in algo_list.keys():
-        prob_detect = np.stack(algos_error_data[algo_name]["prob_detect"])
+        prob_detect = np.stack(algos_error_data["prob_detect"][algo_name])
         plt.plot(parameter_values, prob_detect, label=algo_name, **algo_list[algo_name])
     plt.legend()
     plt.grid(True)
     plt.title("Probability of Detection")
-    plt.xlabel(parameter_name + f" [{parameter_units}]")
+    plt.xlabel(parameter_name + f" {parameter_units}")
     plt.ylabel("Prob")
 
     plt.tight_layout()
@@ -189,25 +193,28 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
     ax_total = fig.add_subplot(gs[2, :])  # spans both columns
 
     for algo_name in algo_list.keys():
-        mean_doa_errors = np.stack(algos_error_data[algo_name]["mean_doa_errors"]) 
-        mse_doa_errors = np.stack(algos_error_data[algo_name]["mean_square_doa_errors"])
+        mean_doa_errors = np.stack(algos_error_data["mean_doa_errors"][algo_name]) 
+        mse_doa_errors = np.stack(algos_error_data["mean_square_doa_errors"][algo_name])
         rmse_doa_errors = np.sqrt(mse_doa_errors)
         
         all_sources_doa_rmse = np.sqrt(np.sum(mse_doa_errors, axis=1))
 
         # Source 1
         axs[0][0].plot(parameter_values, mean_doa_errors[:, 0], label=algo_name, **algo_list[algo_name])
-        axs[1][0].semilogy(parameter_values, rmse_doa_errors[:, 0], label=algo_name, **algo_list[algo_name])
+        axs[1][0].plot(parameter_values, rmse_doa_errors[:, 0], label=algo_name, **algo_list[algo_name])
 
         # Source 2
         axs[0][1].plot(parameter_values, mean_doa_errors[:, 1], label=algo_name, **algo_list[algo_name])
-        axs[1][1].semilogy(parameter_values, rmse_doa_errors[:, 1], label=algo_name, **algo_list[algo_name])
+        axs[1][1].plot(parameter_values, rmse_doa_errors[:, 1], label=algo_name, **algo_list[algo_name])
 
         # Total RMSE (source 1 + source 2)
         if normalize_rmse_by_parameter:
             all_sources_doa_rmse = all_sources_doa_rmse / parameter_values
-        ax_total.semilogy(parameter_values, all_sources_doa_rmse, label=algo_name, **algo_list[algo_name])
-
+        ax_total.plot(parameter_values, all_sources_doa_rmse, label=algo_name, **algo_list[algo_name])
+    crb_values = np.sqrt(np.stack(algos_error_data["mean_square_doa_errors"]["CRB"]))
+    if normalize_rmse_by_parameter:
+        crb_values = crb_values / parameter_values
+    ax_total.plot(parameter_values, crb_values, 'k--', label='CRB')
     # Titles and labels
     axs[0][0].set_title("Source 1: Mean DOA Error (Bias)")
     axs[0][0].set_ylabel("DOA Error [degrees]")
@@ -226,7 +233,7 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         ax_total.set_ylabel("DOA RMSE / " + parameter_name)
     else:
         ax_total.set_ylabel("DOA RMSE [degrees]")
-    ax_total.set_xlabel(parameter_name + f" [{parameter_units}]")
+    ax_total.set_xlabel(parameter_name + f" {parameter_units}")
     # Add legends
     for ax_row in axs:
         for ax in ax_row:
@@ -255,24 +262,24 @@ def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_uni
     ax_total = fig.add_subplot(gs[2, :])  # spans both columns
 
     for algo_name in algo_list.keys():
-        mean_power_errors = np.stack(algos_error_data[algo_name]["mean_power_errors"]) 
-        mse_power_errors = np.stack(algos_error_data[algo_name]["mean_square_power_errors"])
+        mean_power_errors = np.stack(algos_error_data["mean_power_errors"][algo_name]) 
+        mse_power_errors = np.stack(algos_error_data["mean_square_power_errors"][algo_name])
         rmse_power_errors = np.sqrt(mse_power_errors)
         
         all_sources_power_rmse = np.sqrt(np.sum(mse_power_errors, axis=1))
 
         # Source 1
         axs[0][0].plot(parameter_values, mean_power_errors[:, 0], label=algo_name, **algo_list[algo_name])
-        axs[1][0].semilogy(parameter_values, rmse_power_errors[:, 0], label=algo_name, **algo_list[algo_name])
+        axs[1][0].plot(parameter_values, rmse_power_errors[:, 0], label=algo_name, **algo_list[algo_name])
 
         # Source 2
         axs[0][1].plot(parameter_values, mean_power_errors[:, 1], label=algo_name, **algo_list[algo_name])
-        axs[1][1].semilogy(parameter_values, rmse_power_errors[:, 1], label=algo_name, **algo_list[algo_name])
+        axs[1][1].plot(parameter_values, rmse_power_errors[:, 1], label=algo_name, **algo_list[algo_name])
 
         # Total RMSE (source 1 + source 2)
         if normalize_rmse_by_parameter:
             all_sources_power_rmse = all_sources_power_rmse / parameter_values
-        ax_total.semilogy(parameter_values, all_sources_power_rmse, label=algo_name, **algo_list[algo_name])
+        ax_total.plot(parameter_values, all_sources_power_rmse, label=algo_name, **algo_list[algo_name])
 
     # Titles and labels
     axs[0][0].set_title("Source 1: Mean power Error (Bias)")
@@ -292,7 +299,7 @@ def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_uni
         ax_total.set_ylabel("power RMSE / " + parameter_name)
     else:
         ax_total.set_ylabel("power RMSE")
-    ax_total.set_xlabel(parameter_name + f" [{parameter_units}]")
+    ax_total.set_xlabel(parameter_name + f" {parameter_units}")
     # Add legends
     for ax_row in axs:
         for ax in ax_row:

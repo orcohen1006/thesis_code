@@ -6,23 +6,22 @@ from Exp_DeltaTheta import *
 from Exp_DeltaSNR import *
 from Exp_N import *
 from commit_repo_git import git_commit_and_push
-
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 def run_all_exp():
     np.random.seed(42)
-    Large_Scale_Flag = False
     t0_overall = time.time()
 
     for cohr_flag in [False]:
-        exp_N(cohr_flag, Large_Scale_Flag)
+        exp_N(cohr_flag)
         
     for cohr_flag in [False]:
         for N in [30]:
-            exp_DeltaSNR(N, cohr_flag, Large_Scale_Flag)
+            exp_DeltaSNR(N, cohr_flag)
 
     for cohr_flag in [False]:
         for N in [20, 40]:
-            exp_DeltaTheta(N, cohr_flag, Large_Scale_Flag)
+            exp_DeltaTheta(N, cohr_flag)
 
 
 

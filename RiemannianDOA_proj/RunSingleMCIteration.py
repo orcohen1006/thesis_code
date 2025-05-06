@@ -12,7 +12,6 @@ from fun_DAS import *
 from fun_SAMV import *
 from fun_SPICE import *
 from fun_Riemannian import *
-from SAM_CRB import *
 import os
 
 def run_single_mc_iteration(

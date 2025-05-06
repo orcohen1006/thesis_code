@@ -4,84 +4,51 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import os
 from typing import List, Optional
-# from ComputeAlgosStdErr import compute_algos_std_err
-from ComputeAlgosStdErr_parallel import compute_algos_std_err_parallel
-from utils import get_algo_dict_list, create_config
+from utils import *
+from ToolsMC import *
 
 
-def exp_DeltaTheta(n: int, cohr_flag: bool, large_scale_flag: bool) -> None:
+def exp_DeltaTheta(n: int, cohr_flag: bool) -> None:
     
-    m = 12
-    
-    timestamp = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
+    timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
-    results_dir = f'Exp_DeltaTheta_{timestamp}_{str_indp_cohr}_M{m}_N{n}_L{int(large_scale_flag)}'
-    
-    if not os.path.exists(results_dir):
-        os.makedirs(results_dir)
+    name_results_dir = f'Exp_DeltaTheta_{timestamp}_{str_indp_cohr}_N{n}'
+    path_results_dir = os.path.abspath(name_results_dir)
+    print(f"Results will be saved in: {path_results_dir}")
+    if not os.path.exists(path_results_dir):
+        os.makedirs(path_results_dir)
     
     num_mc = 100
     vec_delta_theta = np.arange(2, 11)
-    snr = 0
-    
-    algo_list = get_algo_dict_list()
-    
-    num_algos = len(algo_list)
-    
-    se_mean = np.zeros((len(vec_delta_theta), num_algos))
-    failing_rate = np.zeros((len(vec_delta_theta), num_algos))
-    
-    crb_list = np.zeros(len(vec_delta_theta))
-    
-    # Source powers in dB
-    power_doa_db = np.array([3, 4])
-    
-    for delta_theta_ind, delta_theta in enumerate(vec_delta_theta):
-        print(f'=== Computing DeltaTheta == {delta_theta}')
-        doa = np.array([35, 35 + delta_theta])
-        config = create_config(m=m, snr=snr, N=n, power_doa_db=power_doa_db, doa=doa)
-        config["cohr_flag"] = cohr_flag  # Add cohr_flag to the config dictionary
-        se_mean_per_algo, failing_rate_per_algo, crb_val = compute_algos_std_err_parallel(
-            list(algo_list.keys()), num_mc, config
+    num_configs = len(vec_delta_theta)
+    config_list = []
+    for i in range(num_configs):
+        config_list.append(
+            create_config(
+                m=12, snr=0, N=n, 
+                power_doa_db=np.array([0, 0]),
+                doa=np.array([35, 35+vec_delta_theta[i]]),
+                cohr_flag=False,
+                )
         )
-        
-        se_mean[delta_theta_ind, :] = se_mean_per_algo
-        failing_rate[delta_theta_ind, :] = failing_rate_per_algo
-        crb_list[delta_theta_ind] = crb_val
-    
-    if flag_save_fig:
-        np.savez(
-            os.path.join(results_dir, 'Algos_Data'),
-            vec_delta_theta=vec_delta_theta,
-            se_mean=se_mean,
-            failing_rate=failing_rate,
-            algo_list=algo_list,
-            crb_list=crb_list
-        )
-    
-
-    # Plot SE figure
-    plt.figure()
-
-    for i_algo, algo_name in enumerate(algo_list.keys()):
-        prepare = np.sqrt(se_mean[:, i_algo] + np.finfo(float).eps)
-        plt.semilogy(vec_delta_theta, prepare / vec_delta_theta, label=algo_name, **algo_list[algo_name])
-
-    # CRB plot
-    plt.semilogy(vec_delta_theta, np.sqrt(crb_list) / vec_delta_theta, 'k--', label='CRB')
-    
-    plt.xlabel(r'$\Delta \theta$ (degrees)')
-    plt.ylabel(r'Angle RMSE / $\Delta \theta$')
-    #plt.title(f'{str_indp_cohr}, M={m}, N={n}')
-    plt.legend()
-    plt.grid(True)
-    if flag_save_fig:
-        plt.savefig(os.path.join(results_dir, 'MSE_' + results_dir +  '.png'), dpi=300)
-        plt.savefig(os.path.join(results_dir, 'MSE_' + results_dir +  '.pdf'))
+    # %% Run the configurations
+    results = RunDoaConfigsPBS(path_results_dir, config_list, num_mc)
+    # %%
+    results, algos_error_data = analyze_algo_errors(results)
+    #
+    fig_doa_errors = plot_doa_errors(algos_error_data, r'$\Delta \theta$', "(degrees)", vec_delta_theta, normalize_rmse_by_parameter=True)
+    # 
+    fig_power_errors = plot_power_errors(algos_error_data, r'$\Delta \theta$', "(degrees)", vec_delta_theta, normalize_rmse_by_parameter=False)
+    # 
+    fig_prob_detection = plot_prob_detection(algos_error_data, r'$\Delta \theta$', "(degrees)", vec_delta_theta)
+    # %%
+    fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + name_results_dir +  '.png'), dpi=300)
+    fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + name_results_dir +  '.png'), dpi=300)
+    fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + name_results_dir +  '.png'), dpi=300)
 
 if __name__ == "__main__":
     # Example usage
-    exp_DeltaTheta(n=20, cohr_flag=False, large_scale_flag=False)
+    exp_DeltaTheta(n=20, cohr_flag=False)
 
 
 # %%

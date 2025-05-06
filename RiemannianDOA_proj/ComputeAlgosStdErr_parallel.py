@@ -12,7 +12,7 @@ from fun_DAS import *
 from fun_SAMV import *
 from fun_SPICE import *
 from fun_Riemannian import *
-from SAM_CRB import *
+from RiemannianDOA_proj.CRB import *
 
 def run_single_mc_iteration(
         i_mc: int,
@@ -240,6 +240,6 @@ def compute_algos_std_err_parallel(
 
         failing_rate_per_algo[i_algo] = failed_total_times[i_algo] / num_mc
 
-    crb_val = SAM_CRB(config)
+    crb_val = cramer_rao_lower_bound(config)
 
     return se_mean_per_algo, failing_rate_per_algo, crb_val

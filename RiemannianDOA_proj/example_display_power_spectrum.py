@@ -1,16 +1,22 @@
 # %%
 import numpy as np
 from time import time
-#%matplotlib widget
 import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict, Any, Optional
-
-from ComputeAlgosStdErr_parallel import run_single_mc_iteration
-from utils import get_doa_grid, get_algo_dict_list, create_config
-
-
-
+# %matplotlib ipympl
+from RunSingleMCIteration import run_single_mc_iteration
+from utils import *
+import os
+import pickle
+# %%
 def display_power_spectrum():
+    # %%
+    filepath_results_file = os.path.abspath('RiemannianDOA_proj/Exp_DeltaTheta_y2025-m05-d06_01-21-27_indp_N20/results.pkl')
+    with open(filepath_results_file, 'rb') as f:
+        results = pickle.load(f)
+    
+
+def display_power_spectrum_tmp():
     seed = 42
     m = 12
     snr = 0
