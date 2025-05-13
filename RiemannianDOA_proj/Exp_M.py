@@ -27,9 +27,11 @@ def exp_M(cohr_flag: bool) -> None:
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=vec_m[i], snr=-10, N=vec_m[i]*3, 
-                power_doa_db=np.array([0, 0, 0]),
-                doa=np.array([35.25, 40.25, 45.25]),
+                m=vec_m[i], snr=-20, N=vec_m[i]*3, 
+                # power_doa_db=np.array([0, 0, 0, 0, 0, 0]),
+                # doa=np.array([35, 35.5, 40, 40.5, 45, 45.5]),
+                power_doa_db=np.array([-20, -20]),
+                doa=np.array([35,150]),
                 cohr_flag=False,
                 )
         )
@@ -47,7 +49,7 @@ def exp_M(cohr_flag: bool) -> None:
     import matplotlib.pyplot as plt   
     algo_list = get_algo_dict_list()
  
-    plt.figure()
+    fig_runtime = plt.figure()
     plt.xlabel(r'$M$', fontsize=12)
     plt.ylabel('Runtime (seconds)', fontsize=12)
     for i_algo,algo_name in enumerate(algo_list.keys()):
@@ -65,7 +67,7 @@ def exp_M(cohr_flag: bool) -> None:
         plt.errorbar(vec_m, mean_runtime, yerr=std_runtime, label=algo_name, **algo_list[algo_name])
     plt.legend()
     
-    plt.figure()
+    fig_numIters = plt.figure()
     plt.xlabel(r'$M$', fontsize=12)
     plt.ylabel('Iterations', fontsize=12)
     for i_algo,algo_name in enumerate(algo_list.keys()):
@@ -74,7 +76,9 @@ def exp_M(cohr_flag: bool) -> None:
         plt.errorbar(vec_m, mean_iterations, yerr=std_iterations, label=algo_name, **algo_list[algo_name])
     plt.legend()
     # %%
+    fig_runtime.savefig(os.path.join(path_results_dir, 'Runtime_' + name_results_dir +  '.png'), dpi=300)
     fig_iterRuntime.savefig(os.path.join(path_results_dir, 'IterRuntime_' + name_results_dir +  '.png'), dpi=300)
+    fig_numIters.savefig(os.path.join(path_results_dir, 'NumIters_' + name_results_dir +  '.png'), dpi=300)
     fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + name_results_dir +  '.png'), dpi=300)
     fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + name_results_dir +  '.png'), dpi=300)
     fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + name_results_dir +  '.png'), dpi=300)

@@ -91,50 +91,47 @@ def analyze_algo_errors(results: list):
     for i_config in range(num_configs):
         for i_mc in range(num_mc):
             result = results[i_config][i_mc]
-            detection_status = [None] * num_algo
+            num_detected = [None] * num_algo
             doa_error = [None] * num_algo
             power_error = [None] * num_algo
             for i_alg in range(num_algo):
-                detection_status[i_alg], _, _, doa_error[i_alg], power_error[i_alg] = \
+                num_detected[i_alg], _, _, doa_error[i_alg], power_error[i_alg] = \
                     estimate_doa_calc_errors(
                         result["p_vec_list"][i_alg], grid_doa,
                         result["config"]["doa"],
                         convert_db_to_linear(result["config"]["power_doa_db"]))
-            result["detection_status"] = detection_status
+            result["num_detected"] = num_detected
             result["doa_error"] = doa_error
             result["power_error"] = power_error
 
     algos_error_data = {key: defaultdict(lambda: [None]*num_configs) for key in 
-                        ["mean_doa_errors", "mean_power_errors", "mean_square_doa_errors", "mean_square_power_errors", "prob_detect"]}
+                        ["mean_doa_errors", "mean_power_errors", "mean_square_doa_errors", "mean_square_power_errors", 
+                         "prob_detect","prob_false_alarm"]}
+
     for i_config in range(len(results)):
         config = results[i_config][0]["config"]
         tmp_doa = np.expand_dims(config["doa"],-1)
         threshold_theta_detect = np.abs(tmp_doa - tmp_doa.T).max()
         # print(f"Config {i_config}: threshold_theta_detect = {threshold_theta_detect}")
-        indices_mc_all_algos_detected = [
+        indices_mc_all_algos_detected_enough_sources = [
             i_mc for i_mc in range(num_mc)
-            if all(results[i_config][i_mc]["detection_status"])
+            if all([num_det >= len(config["doa"]) for num_det in results[i_config][i_mc]["num_detected"]])
             ]
-        # threshold_theta_detect = 5
-        # indices_mc_all_algos_detected = []
-        # for i_mc in range(num_mc):
-        #     if all(results[i_config][i_mc]["detection_status"]) \
-        #         and (np.abs(np.stack(results[i_config][i_mc]["doa_error"])) < threshold_theta_detect).all():
-        #         indices_mc_all_algos_detected.append(i_mc)
 
-        print(f"Config {i_config}: {len(indices_mc_all_algos_detected)} out of {num_mc} MC iterations detected all sources.")
+        print(f"Config {i_config}: {len(indices_mc_all_algos_detected_enough_sources)}/{num_mc} MC iterations where all algos detected enough sources.")
         for i_algo, algo_name in enumerate(algo_list.keys()):
-            if len(indices_mc_all_algos_detected) == 0:
+            if len(indices_mc_all_algos_detected_enough_sources) == 0:
                 doa_errors = np.expand_dims(results[i_config][0]["doa_error"][i_algo] * np.nan, axis=0)
                 power_errors = np.expand_dims(results[i_config][0]["power_error"][i_algo] * np.nan, axis=0)
             else:
                 doa_errors = np.stack([results[i_config][i_mc]["doa_error"][i_algo] 
-                                            for i_mc in indices_mc_all_algos_detected])
+                                            for i_mc in indices_mc_all_algos_detected_enough_sources])
                 power_errors = np.stack([results[i_config][i_mc]["power_error"][i_algo] 
-                                            for i_mc in indices_mc_all_algos_detected])
+                                            for i_mc in indices_mc_all_algos_detected_enough_sources])
                 mean_square_errors = np.mean(doa_errors**2, axis=1)
                 prcnt_worst_results_to_ignore = 2
-                bottom_q_percent_indices = np.argsort(mean_square_errors)[:int((100 - prcnt_worst_results_to_ignore) / 100 * len(mean_square_errors))]
+                index = np.ceil((100 - prcnt_worst_results_to_ignore) / 100 * len(mean_square_errors)).astype(int)
+                bottom_q_percent_indices = np.argsort(mean_square_errors)[:index]
                 doa_errors = np.stack([doa_errors[i] for i in bottom_q_percent_indices])
                 power_errors = np.stack([power_errors[i] for i in bottom_q_percent_indices])         
 
@@ -142,16 +139,20 @@ def analyze_algo_errors(results: list):
             algos_error_data["mean_power_errors"][algo_name][i_config] = np.mean(power_errors, axis=0)
             algos_error_data["mean_square_doa_errors"][algo_name][i_config] = np.mean(doa_errors**2, axis=0)
             algos_error_data["mean_square_power_errors"][algo_name][i_config] = np.mean(power_errors**2, axis=0)
-
-            # tmp = algos_error_data[algo_name]["mean_doa_errors"][i_config]
-            # print(f"doa_errors:{doa_errors}   ,     mean_doa_errors:{tmp}")
-            # threshold_theta_detect = 2
-            succ_detect = np.stack([1 
-                           if results[i_config][i_mc]["detection_status"][i_algo] >=1 
-                           and all(np.abs(results[i_config][i_mc]["doa_error"][i_algo]) < threshold_theta_detect) 
-                           else 0 
-                           for i_mc in range(num_mc)])
-            algos_error_data["prob_detect"][algo_name][i_config] = np.mean(succ_detect)
+            
+            # inds_detected_enough = [results[i_config][i_mc]["num_detected"][i_algo] >= len(config["doa"]) for i_mc in range(num_mc)]
+            prob_detection =  [np.sum(results[i_config][i_mc]["doa_error"][i_algo] < threshold_theta_detect)/len(config["doa"])
+                                for i_mc in range(num_mc)]
+            prob_false_alarm = [1 - np.sum(results[i_config][i_mc]["doa_error"][i_algo] < threshold_theta_detect)/(1e-10+results[i_config][i_mc]["num_detected"][i_algo])
+                                for i_mc in range(num_mc)]
+            
+            # succ_detect = np.stack([1 
+            #                if results[i_config][i_mc]["detection_status"][i_algo] >=1 
+            #                and all(np.abs(results[i_config][i_mc]["doa_error"][i_algo]) < threshold_theta_detect) 
+            #                else 0 
+            #                for i_mc in range(num_mc)])
+            algos_error_data["prob_detect"][algo_name][i_config] = np.mean(prob_detection)
+            algos_error_data["prob_false_alarm"][algo_name][i_config] = np.mean(prob_false_alarm)
         algos_error_data["mean_square_doa_errors"]["CRB"][i_config] = cramer_rao_lower_bound(config)
         # --
     return results, algos_error_data
@@ -163,15 +164,23 @@ def plot_prob_detection(algos_error_data: dict, parameter_name: str, parameter_u
     algo_list = get_algo_dict_list()    
 
     fig = plt.figure()
+    ax1 = fig.add_subplot(211)
+    ax1.set_title("Probability of Detection")
+    ax1.grid(True)
+    ax1.set_xlabel(parameter_name + f" {parameter_units}")
+    ax1.set_ylabel("$P_{D}$")
     for algo_name in algo_list.keys():
         prob_detect = np.stack(algos_error_data["prob_detect"][algo_name])
-        plt.plot(parameter_values, prob_detect, label=algo_name, **algo_list[algo_name])
-    plt.legend()
-    plt.grid(True)
-    plt.title("Probability of Detection")
-    plt.xlabel(parameter_name + f" {parameter_units}")
-    plt.ylabel("Prob")
-
+        ax1.plot(parameter_values, prob_detect, label=algo_name, **algo_list[algo_name])
+    ax2 = fig.add_subplot(212)
+    ax2.set_title("Probability of False Alarm")
+    ax2.grid(True)
+    ax2.set_xlabel(parameter_name + f" {parameter_units}")
+    ax2.set_ylabel("$P_{FA}$")
+    for algo_name in algo_list.keys():
+        prob_false_alarm = np.stack(algos_error_data["prob_false_alarm"][algo_name])
+        ax2.plot(parameter_values, prob_false_alarm, label=algo_name, **algo_list[algo_name])
+    ax2.legend()
     plt.tight_layout()
     return fig
 

@@ -132,6 +132,7 @@ if __name__ == "__main__":
 
         with open(result_path, 'wb') as f:
             pickle.dump(result, f)
+        print(f"(task_id:{task_id}) successfully saved result file: {result_path}")
     # %% Example usage
     # i_mc = 0
     # filepath_config = "tmp_config_file.pkl"

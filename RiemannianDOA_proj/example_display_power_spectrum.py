@@ -9,13 +9,21 @@ from utils import *
 import os
 import pickle
 # %%
-def display_power_spectrum():
+def example_display_power_spectrum():
     # %%
-    filepath_results_file = os.path.abspath('RiemannianDOA_proj/Exp_DeltaTheta_y2025-m05-d06_01-21-27_indp_N20/results.pkl')
+    filepath_results_file = os.path.abspath('Exp_DeltaSNR_y2025-m05-d06_09-13-08_indp_N30/results.pkl')
     with open(filepath_results_file, 'rb') as f:
         results = pickle.load(f)
+    # %%
+    algo_list = get_algo_dict_list()
+    i_config = 3
+    i_mc = 2
+    ax = display_power_spectrum(results[i_config][i_mc]["config"], results[i_config][i_mc]["p_vec_list"])
+    # %%
+    
     
 
+    # %%
 def display_power_spectrum_tmp():
     seed = 42
     m = 12
@@ -80,6 +88,6 @@ def display_power_spectrum_tmp():
     print('ok...')
 
 if __name__ == "__main__":
-    display_power_spectrum()
+    example_display_power_spectrum()
     
 # %%

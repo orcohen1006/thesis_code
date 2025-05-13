@@ -27,9 +27,9 @@ def exp_N(cohr_flag: bool) -> None:
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=12, snr=-5, N=vec_n[i], 
+                m=12, snr=0, N=vec_n[i], 
                 power_doa_db=np.array([0, 0]),
-                doa=np.array([40.2, 45.3]),
+                doa=np.array([40, 45]),
                 cohr_flag=False,
                 )
         )
