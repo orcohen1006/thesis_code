@@ -11,7 +11,7 @@ import pickle
 # %%
 def example_display_power_spectrum():
     # %%
-    filepath_results_file = os.path.abspath('Exp_DeltaSNR_y2025-m05-d06_09-13-08_indp_N30/results.pkl')
+    filepath_results_file = os.path.abspath('Exp_DeltaTheta_y2025-m05-d13_22-51-26_indp_N40/results.pkl')
     with open(filepath_results_file, 'rb') as f:
         results = pickle.load(f)
     # %%

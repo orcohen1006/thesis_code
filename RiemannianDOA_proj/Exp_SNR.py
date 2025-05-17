@@ -37,12 +37,12 @@ def exp_SNR(cohr_flag: bool) -> None:
     results = RunDoaConfigsPBS(path_results_dir, config_list, num_mc)
     # %%
     results, algos_error_data = analyze_algo_errors(results)
-    # %%
+    # 
     #
     fig_doa_errors = plot_doa_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False)
-    # 
+    #  
     fig_power_errors = plot_power_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False)
-    #  %%
+    #  
     fig_prob_detection = plot_prob_detection(algos_error_data, r'$SNR$', "", vec_snr)
     # %%
     fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + name_results_dir +  '.png'), dpi=300)

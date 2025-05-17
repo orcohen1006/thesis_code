@@ -23,75 +23,56 @@ def convert_linear_to_db(power_doa):
     """
     return 10.0 * np.log10(power_doa)
 
-# def estimate_doa_calc_errors(p_vec, grid_doa, doa, power, peak_thresh_relative=0.10):
-#     if isinstance(p_vec, torch.Tensor):
-#         p_vec = p_vec.numpy()
-#     num_sources = len(doa)
-#     # Find peaks in descending order
-#     threshold_peak = max(peak_thresh_relative * np.max(p_vec), 1e-10)
-#     peak_indices, _ = find_peaks(p_vec, height=threshold_peak)
-#     peak_values = p_vec[peak_indices]
-#     sorted_indices = np.argsort(-peak_values)  # Sort in descending order
-#     peak_indices = peak_indices[sorted_indices]
-#     peak_indices = np.atleast_1d(peak_indices)
-#     if (not isinstance(peak_indices, np.ndarray)) or len(peak_indices) < num_sources:
-#         # print("Not all peaks detected")
-#         detection_status = 0
-#         detected_doas = np.full((num_sources,), np.nan)
-#         detected_powers = np.full((num_sources,), np.nan)
-#         doa_error = np.full((num_sources,), np.nan)
-#         power_error = np.full((num_sources,), np.nan)
-#     else:
-#         detection_status = 1  # detection successful
 
-#         detected_doas = grid_doa[peak_indices[:num_sources]]
-#         detected_powers = p_vec[peak_indices[:num_sources]]
-
-#         # Sort doas ascending order (and powers accordingly)
-#         sorted_indices = np.argsort(detected_doas)
-#         detected_doas = detected_doas[sorted_indices]
-#         detected_powers = detected_powers[sorted_indices]
-
-#         sorted_indices = np.argsort(doa)
-#         doa = doa[sorted_indices]
-#         power = power[sorted_indices]
-
-#         doa_error = detected_doas - doa
-#         power_error = detected_powers - power
-
-#         # Sort the power according to the DOA
-        
-#     return detection_status, detected_doas, detected_powers, doa_error, power_error
-def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers, 
-                                allowed_peak_height_relative_to_max=0.10):
+def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
+                                threshold_theta_detect = 2,
+                                allowed_peak_height_relative_to_max=0.05):
     if isinstance(p_vec, torch.Tensor):
         p_vec = p_vec.numpy()
     num_sources = len(true_doas)
     # Find peaks in descending order
-    threshold_peak_height = max(allowed_peak_height_relative_to_max * np.max(p_vec), 1e-10)
+    threshold_peak_height = max(allowed_peak_height_relative_to_max * np.max(p_vec), 0)
     peak_indices, _ = find_peaks(p_vec, height=threshold_peak_height)
-    peak_indices = np.sort(peak_indices)
     num_detected_doas = len(peak_indices)
+    peak_indices = peak_indices[np.argsort(p_vec[peak_indices])[::-1]] # Sort the inidices by peaks values in descending order
+    all_detected_doas = grid_doa[peak_indices]
+    all_detected_powers = p_vec[peak_indices]
+    if num_detected_doas == 0:
+        all_detected_doas = np.array([np.nan])
+        all_detected_powers = np.array([np.nan])
+    # Here "error" is without matching detections to true DOAs:
+    all_detected_doa_diff_matrix = all_detected_doas[:, None] - true_doas[None, :]
 
-    if (not isinstance(peak_indices, np.ndarray)) or num_detected_doas < num_sources:
-        detected_doas = np.full((num_sources,), np.nan)
-        detected_powers = np.full((num_sources,), np.nan)
-        doa_error = np.full((num_sources,), np.nan)
-        power_error = np.full((num_sources,), np.nan)
+    # Use linear_sum_assignment to match detected DOAs to true DOAs
+    cost_matrix = np.abs(all_detected_doa_diff_matrix)
+    row_indices, col_indices = linear_sum_assignment(cost_matrix)
+    matched_detected_doas = all_detected_doas[row_indices]
+    matched_true_doas = true_doas[col_indices]
+    matched_doa_error = matched_detected_doas - matched_true_doas
+    all_detected_doa_error = all_detected_doas - true_doas[np.argmin(np.abs(all_detected_doa_diff_matrix), axis=1)]
+    true_doa_error = true_doas - all_detected_doas[np.argmin(np.abs(all_detected_doa_diff_matrix), axis=0)]
+
+    if num_detected_doas < num_sources:
+        selected_doa_error = np.full((num_sources,), np.nan)
+        selected_power_error = np.full((num_sources,), np.nan)
     else:
+        # Select the top num_sources peaks and match to true DOAs:
+        selected_detected_doas = all_detected_doas[:num_sources]
+        selected_detected_powers = all_detected_powers[:num_sources]
+        # Sort detected DOAs in ascending order
+        sorted_indices = np.argsort(selected_detected_doas)
+        selected_detected_doas = selected_detected_doas[sorted_indices]
+        selected_detected_powers = selected_detected_powers[sorted_indices]
+        # Sort true DOAs in ascending order
+        sorted_indices = np.argsort(true_doas)
+        true_doas = true_doas[sorted_indices]
+        true_powers = true_powers[sorted_indices]
+        # Compute selected DOA and power errors
+        selected_doa_error = selected_detected_doas - true_doas
+        selected_power_error = selected_detected_powers - true_powers
         
-        detected_doas = grid_doa[peak_indices]
-        detected_powers = p_vec[peak_indices]
-
-        doa_cost_matrix = np.abs(detected_doas[:, None] - true_doas[None, :])
-
-        # Match using Hungarian algorithm
-        inds_in_detected, inds_in_true = linear_sum_assignment(doa_cost_matrix)
         
-        doa_error = detected_doas[inds_in_detected] - true_doas[inds_in_true]
-        power_error = detected_powers[inds_in_detected] - true_powers[inds_in_true]
-        
-    return num_detected_doas, detected_doas, detected_powers, doa_error, power_error
+    return num_detected_doas, all_detected_doas, all_detected_powers, selected_doa_error, selected_power_error, all_detected_doa_error, true_doa_error
 
 
 def display_power_spectrum(config, list_p_vec, epsilon_power=None):

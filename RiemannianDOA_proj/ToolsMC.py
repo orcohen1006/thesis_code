@@ -92,26 +92,30 @@ def analyze_algo_errors(results: list):
         for i_mc in range(num_mc):
             result = results[i_config][i_mc]
             num_detected = [None] * num_algo
-            doa_error = [None] * num_algo
-            power_error = [None] * num_algo
+            selected_doa_error = [None] * num_algo
+            selected_power_error = [None] * num_algo
+            all_detected_doa_error = [None] * num_algo
+            true_doa_error = [None] * num_algo
             for i_alg in range(num_algo):
-                num_detected[i_alg], _, _, doa_error[i_alg], power_error[i_alg] = \
+                num_detected[i_alg], _, _, selected_doa_error[i_alg], selected_power_error[i_alg], all_detected_doa_error[i_alg], true_doa_error[i_alg] = \
                     estimate_doa_calc_errors(
                         result["p_vec_list"][i_alg], grid_doa,
                         result["config"]["doa"],
                         convert_db_to_linear(result["config"]["power_doa_db"]))
             result["num_detected"] = num_detected
-            result["doa_error"] = doa_error
-            result["power_error"] = power_error
+            result["selected_doa_error"] = selected_doa_error
+            result["selected_power_error"] = selected_power_error
+            result["all_detected_doa_error"] = all_detected_doa_error
+            result["true_doa_error"] = true_doa_error
 
     algos_error_data = {key: defaultdict(lambda: [None]*num_configs) for key in 
                         ["mean_doa_errors", "mean_power_errors", "mean_square_doa_errors", "mean_square_power_errors", 
-                         "prob_detect","prob_false_alarm"]}
+                         "prob_detect","prob_false_detection"]}
 
     for i_config in range(len(results)):
         config = results[i_config][0]["config"]
         tmp_doa = np.expand_dims(config["doa"],-1)
-        threshold_theta_detect = np.abs(tmp_doa - tmp_doa.T).max()
+        threshold_theta_detect = 1#np.abs(tmp_doa - tmp_doa.T).max()
         # print(f"Config {i_config}: threshold_theta_detect = {threshold_theta_detect}")
         indices_mc_all_algos_detected_enough_sources = [
             i_mc for i_mc in range(num_mc)
@@ -121,12 +125,12 @@ def analyze_algo_errors(results: list):
         print(f"Config {i_config}: {len(indices_mc_all_algos_detected_enough_sources)}/{num_mc} MC iterations where all algos detected enough sources.")
         for i_algo, algo_name in enumerate(algo_list.keys()):
             if len(indices_mc_all_algos_detected_enough_sources) == 0:
-                doa_errors = np.expand_dims(results[i_config][0]["doa_error"][i_algo] * np.nan, axis=0)
-                power_errors = np.expand_dims(results[i_config][0]["power_error"][i_algo] * np.nan, axis=0)
+                doa_errors = np.expand_dims(results[i_config][0]["selected_doa_error"][i_algo] * np.nan, axis=0)
+                power_errors = np.expand_dims(results[i_config][0]["selected_power_error"][i_algo] * np.nan, axis=0)
             else:
-                doa_errors = np.stack([results[i_config][i_mc]["doa_error"][i_algo] 
+                doa_errors = np.stack([results[i_config][i_mc]["selected_doa_error"][i_algo] 
                                             for i_mc in indices_mc_all_algos_detected_enough_sources])
-                power_errors = np.stack([results[i_config][i_mc]["power_error"][i_algo] 
+                power_errors = np.stack([results[i_config][i_mc]["selected_power_error"][i_algo] 
                                             for i_mc in indices_mc_all_algos_detected_enough_sources])
                 mean_square_errors = np.mean(doa_errors**2, axis=1)
                 prcnt_worst_results_to_ignore = 2
@@ -141,21 +145,19 @@ def analyze_algo_errors(results: list):
             algos_error_data["mean_square_power_errors"][algo_name][i_config] = np.mean(power_errors**2, axis=0)
             
             # inds_detected_enough = [results[i_config][i_mc]["num_detected"][i_algo] >= len(config["doa"]) for i_mc in range(num_mc)]
-            prob_detection =  [np.sum(results[i_config][i_mc]["doa_error"][i_algo] < threshold_theta_detect)/len(config["doa"])
+            prob_detection =  [np.sum(np.abs(results[i_config][i_mc]["true_doa_error"][i_algo]) < threshold_theta_detect)/len(config["doa"])
                                 for i_mc in range(num_mc)]
-            prob_false_alarm = [1 - np.sum(results[i_config][i_mc]["doa_error"][i_algo] < threshold_theta_detect)/(1e-10+results[i_config][i_mc]["num_detected"][i_algo])
+            prob_false_detection = [1 - np.sum(np.abs(results[i_config][i_mc]["all_detected_doa_error"][i_algo]) < threshold_theta_detect)/(1e-10+results[i_config][i_mc]["num_detected"][i_algo])
                                 for i_mc in range(num_mc)]
-            
-            # succ_detect = np.stack([1 
-            #                if results[i_config][i_mc]["detection_status"][i_algo] >=1 
-            #                and all(np.abs(results[i_config][i_mc]["doa_error"][i_algo]) < threshold_theta_detect) 
-            #                else 0 
-            #                for i_mc in range(num_mc)])
+
             algos_error_data["prob_detect"][algo_name][i_config] = np.mean(prob_detection)
-            algos_error_data["prob_false_alarm"][algo_name][i_config] = np.mean(prob_false_alarm)
+            algos_error_data["prob_false_detection"][algo_name][i_config] = np.mean(prob_false_detection)
         algos_error_data["mean_square_doa_errors"]["CRB"][i_config] = cramer_rao_lower_bound(config)
         # --
     return results, algos_error_data
+# %%
+def tmp123():
+    print("yep")
 # %%
 def plot_prob_detection(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list):
     import matplotlib.pyplot as plt
@@ -173,103 +175,186 @@ def plot_prob_detection(algos_error_data: dict, parameter_name: str, parameter_u
         prob_detect = np.stack(algos_error_data["prob_detect"][algo_name])
         ax1.plot(parameter_values, prob_detect, label=algo_name, **algo_list[algo_name])
     ax2 = fig.add_subplot(212)
-    ax2.set_title("Probability of False Alarm")
+    ax2.set_title("Probability of False Detection")
     ax2.grid(True)
     ax2.set_xlabel(parameter_name + f" {parameter_units}")
-    ax2.set_ylabel("$P_{FA}$")
+    ax2.set_ylabel("$P_{FD}$")
     for algo_name in algo_list.keys():
-        prob_false_alarm = np.stack(algos_error_data["prob_false_alarm"][algo_name])
-        ax2.plot(parameter_values, prob_false_alarm, label=algo_name, **algo_list[algo_name])
+        prob_false_detection = np.stack(algos_error_data["prob_false_detection"][algo_name])
+        ax2.plot(parameter_values, prob_false_detection, label=algo_name, **algo_list[algo_name])
     ax2.legend()
     plt.tight_layout()
     return fig
 
+# def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False):
+#     import matplotlib.pyplot as plt
+#     import matplotlib.gridspec as gridspec
+    
+#     algo_list = get_algo_dict_list()
+#     fig = plt.figure(figsize=(12, 10))
+#     gs = gridspec.GridSpec(3, 2, height_ratios=[1, 1, 1])  # 3 rows, 2 columns
+
+#     # Axes for the 2x2 part
+#     axs = [
+#         [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])],
+#         [fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])]
+#     ]
+
+#     # Axis for the bottom full-width plot
+#     ax_total = fig.add_subplot(gs[2, :])  # spans both columns
+
+#     for algo_name in algo_list.keys():
+#         mean_doa_errors = np.stack(algos_error_data["mean_doa_errors"][algo_name]) 
+#         mse_doa_errors = np.stack(algos_error_data["mean_square_doa_errors"][algo_name])
+#         rmse_doa_errors = np.sqrt(mse_doa_errors)
+        
+#         all_sources_doa_rmse = np.sqrt(np.sum(mse_doa_errors, axis=1))
+
+#         # Source 1
+#         axs[0][0].plot(parameter_values, mean_doa_errors[:, 0], label=algo_name, **algo_list[algo_name])
+#         axs[1][0].plot(parameter_values, rmse_doa_errors[:, 0], label=algo_name, **algo_list[algo_name])
+
+#         # Source 2
+#         axs[0][1].plot(parameter_values, mean_doa_errors[:, 1], label=algo_name, **algo_list[algo_name])
+#         axs[1][1].plot(parameter_values, rmse_doa_errors[:, 1], label=algo_name, **algo_list[algo_name])
+
+#         # Total RMSE (source 1 + source 2)
+#         if normalize_rmse_by_parameter:
+#             all_sources_doa_rmse = all_sources_doa_rmse / parameter_values
+#         ax_total.plot(parameter_values, all_sources_doa_rmse, label=algo_name, **algo_list[algo_name])
+#     crb_values = np.sqrt(np.stack(algos_error_data["mean_square_doa_errors"]["CRB"]))
+#     if normalize_rmse_by_parameter:
+#         crb_values = crb_values / parameter_values
+#     ax_total.plot(parameter_values, crb_values, 'k--', label='CRB')
+#     # Titles and labels
+#     axs[0][0].set_title("Source 1: Mean DOA Error (Bias)")
+#     axs[0][0].set_ylabel("DOA Error [degrees]")
+    
+#     axs[0][1].set_title("Source 2: Mean DOA Error (Bias)")
+#     axs[0][1].set_ylabel("DOA Error [degrees]")
+
+#     axs[1][0].set_title("Source 1: RMSE DOA Error")
+#     axs[1][0].set_ylabel("DOA RMSE [degrees]")
+
+#     axs[1][1].set_title("Source 2: RMSE DOA Error")
+#     axs[1][1].set_ylabel("DOA RMSE [degrees]")
+
+#     ax_total.set_title("Both Sources DOA RMSE")
+#     if normalize_rmse_by_parameter:
+#         ax_total.set_ylabel("DOA RMSE / " + parameter_name)
+#     else:
+#         ax_total.set_ylabel("DOA RMSE [degrees]")
+#     ax_total.set_xlabel(parameter_name + f" {parameter_units}")
+#     # Add legends
+#     for ax_row in axs:
+#         for ax in ax_row:
+#             ax.legend()
+#             ax.grid(True)
+#     ax_total.legend()
+#     ax_total.grid(True)
+#     plt.tight_layout()
+#     return fig
 def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False):
     import matplotlib.pyplot as plt
-    import matplotlib.gridspec as gridspec
     
     algo_list = get_algo_dict_list()
-    fig = plt.figure(figsize=(12, 10))
-    gs = gridspec.GridSpec(3, 2, height_ratios=[1, 1, 1])  # 3 rows, 2 columns
-
-    # Axes for the 2x2 part
-    axs = [
-        [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])],
-        [fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])]
-    ]
-
-    # Axis for the bottom full-width plot
-    ax_total = fig.add_subplot(gs[2, :])  # spans both columns
-
+    fig = plt.figure()
+    ax = plt.gca()
     for algo_name in algo_list.keys():
         mean_doa_errors = np.stack(algos_error_data["mean_doa_errors"][algo_name]) 
         mse_doa_errors = np.stack(algos_error_data["mean_square_doa_errors"][algo_name])
         rmse_doa_errors = np.sqrt(mse_doa_errors)
         
         all_sources_doa_rmse = np.sqrt(np.sum(mse_doa_errors, axis=1))
-
-        # Source 1
-        axs[0][0].plot(parameter_values, mean_doa_errors[:, 0], label=algo_name, **algo_list[algo_name])
-        axs[1][0].plot(parameter_values, rmse_doa_errors[:, 0], label=algo_name, **algo_list[algo_name])
-
-        # Source 2
-        axs[0][1].plot(parameter_values, mean_doa_errors[:, 1], label=algo_name, **algo_list[algo_name])
-        axs[1][1].plot(parameter_values, rmse_doa_errors[:, 1], label=algo_name, **algo_list[algo_name])
-
-        # Total RMSE (source 1 + source 2)
         if normalize_rmse_by_parameter:
             all_sources_doa_rmse = all_sources_doa_rmse / parameter_values
-        ax_total.plot(parameter_values, all_sources_doa_rmse, label=algo_name, **algo_list[algo_name])
+        ax.plot(parameter_values, all_sources_doa_rmse, label=algo_name, **algo_list[algo_name])
     crb_values = np.sqrt(np.stack(algos_error_data["mean_square_doa_errors"]["CRB"]))
     if normalize_rmse_by_parameter:
         crb_values = crb_values / parameter_values
-    ax_total.plot(parameter_values, crb_values, 'k--', label='CRB')
-    # Titles and labels
-    axs[0][0].set_title("Source 1: Mean DOA Error (Bias)")
-    axs[0][0].set_ylabel("DOA Error [degrees]")
-    
-    axs[0][1].set_title("Source 2: Mean DOA Error (Bias)")
-    axs[0][1].set_ylabel("DOA Error [degrees]")
-
-    axs[1][0].set_title("Source 1: RMSE DOA Error")
-    axs[1][0].set_ylabel("DOA RMSE [degrees]")
-
-    axs[1][1].set_title("Source 2: RMSE DOA Error")
-    axs[1][1].set_ylabel("DOA RMSE [degrees]")
-
-    ax_total.set_title("Both Sources DOA RMSE")
+    ax.plot(parameter_values, crb_values, 'k--', label='CRB')
     if normalize_rmse_by_parameter:
-        ax_total.set_ylabel("DOA RMSE / " + parameter_name)
+        ax.set_ylabel("DOA RMSE / " + parameter_name)
     else:
-        ax_total.set_ylabel("DOA RMSE [degrees]")
-    ax_total.set_xlabel(parameter_name + f" {parameter_units}")
-    # Add legends
-    for ax_row in axs:
-        for ax in ax_row:
-            ax.legend()
-            ax.grid(True)
-    ax_total.legend()
-    ax_total.grid(True)
-    plt.tight_layout()
+        ax.set_ylabel("DOA RMSE [degrees]")
+    ax.set_xlabel(parameter_name + f" {parameter_units}")
+    ax.legend()
+    ax.grid(True)
     return fig
+
+# def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False):
+#     import matplotlib.pyplot as plt
+#     import matplotlib.gridspec as gridspec
+
+#     algo_list = get_algo_dict_list()
+#     fig = plt.figure(figsize=(12, 10))
+#     gs = gridspec.GridSpec(3, 2, height_ratios=[1, 1, 1])  # 3 rows, 2 columns
+
+#     # Axes for the 2x2 part
+#     axs = [
+#         [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])],
+#         [fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])]
+#     ]
+
+#     # Axis for the bottom full-width plot
+#     ax_total = fig.add_subplot(gs[2, :])  # spans both columns
+
+#     for algo_name in algo_list.keys():
+#         mean_power_errors = np.stack(algos_error_data["mean_power_errors"][algo_name]) 
+#         mse_power_errors = np.stack(algos_error_data["mean_square_power_errors"][algo_name])
+#         rmse_power_errors = np.sqrt(mse_power_errors)
+        
+#         all_sources_power_rmse = np.sqrt(np.sum(mse_power_errors, axis=1))
+
+#         # Source 1
+#         axs[0][0].plot(parameter_values, mean_power_errors[:, 0], label=algo_name, **algo_list[algo_name])
+#         axs[1][0].plot(parameter_values, rmse_power_errors[:, 0], label=algo_name, **algo_list[algo_name])
+
+#         # Source 2
+#         axs[0][1].plot(parameter_values, mean_power_errors[:, 1], label=algo_name, **algo_list[algo_name])
+#         axs[1][1].plot(parameter_values, rmse_power_errors[:, 1], label=algo_name, **algo_list[algo_name])
+
+#         # Total RMSE (source 1 + source 2)
+#         if normalize_rmse_by_parameter:
+#             all_sources_power_rmse = all_sources_power_rmse / parameter_values
+#         ax_total.plot(parameter_values, all_sources_power_rmse, label=algo_name, **algo_list[algo_name])
+
+#     # Titles and labels
+#     axs[0][0].set_title("Source 1: Mean power Error (Bias)")
+#     axs[0][0].set_ylabel("power Error")
+    
+#     axs[0][1].set_title("Source 2: Mean power Error (Bias)")
+#     axs[0][1].set_ylabel("power Error")
+
+#     axs[1][0].set_title("Source 1: RMSE power Error")
+#     axs[1][0].set_ylabel("power RMSE")
+
+#     axs[1][1].set_title("Source 2: RMSE power Error")
+#     axs[1][1].set_ylabel("power RMSE")
+
+#     ax_total.set_title("Both Sources power RMSE")
+#     if normalize_rmse_by_parameter:
+#         ax_total.set_ylabel("power RMSE / " + parameter_name)
+#     else:
+#         ax_total.set_ylabel("power RMSE")
+#     ax_total.set_xlabel(parameter_name + f" {parameter_units}")
+#     # Add legends
+#     for ax_row in axs:
+#         for ax in ax_row:
+#             ax.legend()
+#             ax.grid(True)
+#     ax_total.legend()
+#     ax_total.grid(True)
+#     plt.tight_layout()
+#     return fig
+
 
 def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False):
     import matplotlib.pyplot as plt
-    import matplotlib.gridspec as gridspec
 
     algo_list = get_algo_dict_list()
-    fig = plt.figure(figsize=(12, 10))
-    gs = gridspec.GridSpec(3, 2, height_ratios=[1, 1, 1])  # 3 rows, 2 columns
-
-    # Axes for the 2x2 part
-    axs = [
-        [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])],
-        [fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])]
-    ]
-
-    # Axis for the bottom full-width plot
-    ax_total = fig.add_subplot(gs[2, :])  # spans both columns
-
+    fig = plt.figure()
+    ax = plt.gca()
     for algo_name in algo_list.keys():
         mean_power_errors = np.stack(algos_error_data["mean_power_errors"][algo_name]) 
         mse_power_errors = np.stack(algos_error_data["mean_square_power_errors"][algo_name])
@@ -277,47 +362,20 @@ def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_uni
         
         all_sources_power_rmse = np.sqrt(np.sum(mse_power_errors, axis=1))
 
-        # Source 1
-        axs[0][0].plot(parameter_values, mean_power_errors[:, 0], label=algo_name, **algo_list[algo_name])
-        axs[1][0].plot(parameter_values, rmse_power_errors[:, 0], label=algo_name, **algo_list[algo_name])
-
-        # Source 2
-        axs[0][1].plot(parameter_values, mean_power_errors[:, 1], label=algo_name, **algo_list[algo_name])
-        axs[1][1].plot(parameter_values, rmse_power_errors[:, 1], label=algo_name, **algo_list[algo_name])
-
-        # Total RMSE (source 1 + source 2)
         if normalize_rmse_by_parameter:
             all_sources_power_rmse = all_sources_power_rmse / parameter_values
-        ax_total.plot(parameter_values, all_sources_power_rmse, label=algo_name, **algo_list[algo_name])
+        ax.plot(parameter_values, all_sources_power_rmse, label=algo_name, **algo_list[algo_name])
 
-    # Titles and labels
-    axs[0][0].set_title("Source 1: Mean power Error (Bias)")
-    axs[0][0].set_ylabel("power Error")
-    
-    axs[0][1].set_title("Source 2: Mean power Error (Bias)")
-    axs[0][1].set_ylabel("power Error")
-
-    axs[1][0].set_title("Source 1: RMSE power Error")
-    axs[1][0].set_ylabel("power RMSE")
-
-    axs[1][1].set_title("Source 2: RMSE power Error")
-    axs[1][1].set_ylabel("power RMSE")
-
-    ax_total.set_title("Both Sources power RMSE")
     if normalize_rmse_by_parameter:
-        ax_total.set_ylabel("power RMSE / " + parameter_name)
+        ax.set_ylabel("power RMSE / " + parameter_name)
     else:
-        ax_total.set_ylabel("power RMSE")
-    ax_total.set_xlabel(parameter_name + f" {parameter_units}")
-    # Add legends
-    for ax_row in axs:
-        for ax in ax_row:
-            ax.legend()
-            ax.grid(True)
-    ax_total.legend()
-    ax_total.grid(True)
-    plt.tight_layout()
+        ax.set_ylabel("power RMSE")
+    ax.set_xlabel(parameter_name + f" {parameter_units}")
+
+    ax.legend()
+    ax.grid(True)
     return fig
+
 
 # %%
 if __name__ == "__main__":

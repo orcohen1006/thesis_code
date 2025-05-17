@@ -1,11 +1,19 @@
 # %%
+import importlib
+
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from datetime import datetime
 import os
 from typing import List, Optional
+
+import utils
+importlib.reload(utils)
 from utils import *
+
+import ToolsMC
+importlib.reload(ToolsMC)
 from ToolsMC import *
 
 # %%
@@ -39,7 +47,7 @@ def exp_N(cohr_flag: bool) -> None:
     results, algos_error_data = analyze_algo_errors(results)
     #
     fig_doa_errors = plot_doa_errors(algos_error_data, r'$N$', "", vec_n, normalize_rmse_by_parameter=False)
-    # 
+    #  %%
     fig_power_errors = plot_power_errors(algos_error_data, r'$N$', "", vec_n, normalize_rmse_by_parameter=False)
     # 
     fig_prob_detection = plot_prob_detection(algos_error_data, r'$N$', "", vec_n)
