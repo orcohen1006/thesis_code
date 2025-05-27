@@ -48,7 +48,7 @@ def exp_DeltaTheta(n: int, cohr_flag: bool) -> None:
 
 if __name__ == "__main__":
     # Example usage
-    exp_DeltaTheta(n=20, cohr_flag=False)
+    exp_DeltaTheta(n=30, cohr_flag=False)
 
 
 # %%

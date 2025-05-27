@@ -20,7 +20,7 @@ def exp_DeltaSNR(n: int, cohr_flag: bool) -> None:
         os.makedirs(path_results_dir)
     # %%
     num_mc = 100
-    vec_delta_snr = np.arange(start=-10, stop=0, step=2)
+    vec_delta_snr = np.arange(start=-8, stop=0+1, step=1)
     num_configs = len(vec_delta_snr)
     config_list = []
     for i in range(num_configs):
@@ -28,7 +28,7 @@ def exp_DeltaSNR(n: int, cohr_flag: bool) -> None:
             create_config(
                 m=12, snr=0, N=n, 
                 power_doa_db=np.array([0, 0+vec_delta_snr[i]]),
-                doa=np.array([35, 40]),
+                doa=np.array([35, 43]),
                 cohr_flag=False,
                 )
         )

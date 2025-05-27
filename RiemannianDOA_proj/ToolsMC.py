@@ -89,24 +89,28 @@ def analyze_algo_errors(results: list):
     num_configs = len(results)
     num_mc = len(results[0])
     for i_config in range(num_configs):
+        config = results[i_config][0]["config"]
+        tmp_doa = np.expand_dims(config["doa"],-1)
+        threshold_theta_detect = 3 #np.abs(tmp_doa - tmp_doa.T).max()
+        print(f"Config {i_config}: threshold_theta_detect = {threshold_theta_detect}")
         for i_mc in range(num_mc):
             result = results[i_config][i_mc]
             num_detected = [None] * num_algo
             selected_doa_error = [None] * num_algo
             selected_power_error = [None] * num_algo
-            all_detected_doa_error = [None] * num_algo
-            true_doa_error = [None] * num_algo
+            succ_match_detected_doa = [None] * num_algo
+            succ_match_true_doa = [None] * num_algo
             for i_alg in range(num_algo):
-                num_detected[i_alg], _, _, selected_doa_error[i_alg], selected_power_error[i_alg], all_detected_doa_error[i_alg], true_doa_error[i_alg] = \
+                num_detected[i_alg], _, _, selected_doa_error[i_alg], selected_power_error[i_alg], succ_match_detected_doa[i_alg], succ_match_true_doa[i_alg] =\
                     estimate_doa_calc_errors(
                         result["p_vec_list"][i_alg], grid_doa,
                         result["config"]["doa"],
-                        convert_db_to_linear(result["config"]["power_doa_db"]))
+                        convert_db_to_linear(result["config"]["power_doa_db"]), threshold_theta_detect=threshold_theta_detect)
             result["num_detected"] = num_detected
             result["selected_doa_error"] = selected_doa_error
             result["selected_power_error"] = selected_power_error
-            result["all_detected_doa_error"] = all_detected_doa_error
-            result["true_doa_error"] = true_doa_error
+            result["succ_match_detected_doa"] = succ_match_detected_doa
+            result["succ_match_true_doa"] = succ_match_true_doa
 
     algos_error_data = {key: defaultdict(lambda: [None]*num_configs) for key in 
                         ["mean_doa_errors", "mean_power_errors", "mean_square_doa_errors", "mean_square_power_errors", 
@@ -114,9 +118,6 @@ def analyze_algo_errors(results: list):
 
     for i_config in range(len(results)):
         config = results[i_config][0]["config"]
-        tmp_doa = np.expand_dims(config["doa"],-1)
-        threshold_theta_detect = 1#np.abs(tmp_doa - tmp_doa.T).max()
-        # print(f"Config {i_config}: threshold_theta_detect = {threshold_theta_detect}")
         indices_mc_all_algos_detected_enough_sources = [
             i_mc for i_mc in range(num_mc)
             if all([num_det >= len(config["doa"]) for num_det in results[i_config][i_mc]["num_detected"]])
@@ -124,7 +125,8 @@ def analyze_algo_errors(results: list):
 
         print(f"Config {i_config}: {len(indices_mc_all_algos_detected_enough_sources)}/{num_mc} MC iterations where all algos detected enough sources.")
         for i_algo, algo_name in enumerate(algo_list.keys()):
-            if len(indices_mc_all_algos_detected_enough_sources) == 0:
+            if len(indices_mc_all_algos_detected_enough_sources) < 0.4 * num_mc:
+                # If not enough MC iterations to look at, this config is irelevant
                 doa_errors = np.expand_dims(results[i_config][0]["selected_doa_error"][i_algo] * np.nan, axis=0)
                 power_errors = np.expand_dims(results[i_config][0]["selected_power_error"][i_algo] * np.nan, axis=0)
             else:
@@ -145,9 +147,9 @@ def analyze_algo_errors(results: list):
             algos_error_data["mean_square_power_errors"][algo_name][i_config] = np.mean(power_errors**2, axis=0)
             
             # inds_detected_enough = [results[i_config][i_mc]["num_detected"][i_algo] >= len(config["doa"]) for i_mc in range(num_mc)]
-            prob_detection =  [np.sum(np.abs(results[i_config][i_mc]["true_doa_error"][i_algo]) < threshold_theta_detect)/len(config["doa"])
+            prob_detection =  [np.sum(results[i_config][i_mc]["succ_match_true_doa"][i_algo])/len(config["doa"])
                                 for i_mc in range(num_mc)]
-            prob_false_detection = [1 - np.sum(np.abs(results[i_config][i_mc]["all_detected_doa_error"][i_algo]) < threshold_theta_detect)/(1e-10+results[i_config][i_mc]["num_detected"][i_algo])
+            prob_false_detection = [1 - np.sum(results[i_config][i_mc]["succ_match_detected_doa"][i_algo])/(1e-10+results[i_config][i_mc]["num_detected"][i_algo])
                                 for i_mc in range(num_mc)]
 
             algos_error_data["prob_detect"][algo_name][i_config] = np.mean(prob_detection)

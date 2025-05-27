@@ -11,14 +11,19 @@ import pickle
 # %%
 def example_display_power_spectrum():
     # %%
-    filepath_results_file = os.path.abspath('Exp_DeltaTheta_y2025-m05-d13_22-51-26_indp_N40/results.pkl')
+    filepath_results_file = os.path.abspath('Exp_N_y2025-m05-d13_22-44-08_indp/results.pkl')
     with open(filepath_results_file, 'rb') as f:
         results = pickle.load(f)
     # %%
     algo_list = get_algo_dict_list()
-    i_config = 3
-    i_mc = 2
+    i_config = 0
+    i_mc = 1
     ax = display_power_spectrum(results[i_config][i_mc]["config"], results[i_config][i_mc]["p_vec_list"])
+    doas = results[i_config][i_mc]["config"]["doa"]
+    power_doa_db = results[i_config][i_mc]["config"]["power_doa_db"]
+    ax.set_xlim([np.min(doas)-5, np.max(doas)+5])
+    ax.set_ylim([-20, np.max(power_doa_db)+3])
+    
     # %%
     
     

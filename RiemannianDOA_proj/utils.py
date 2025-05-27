@@ -26,7 +26,7 @@ def convert_linear_to_db(power_doa):
 
 def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
                                 threshold_theta_detect = 2,
-                                allowed_peak_height_relative_to_max=0.05):
+                                allowed_peak_height_relative_to_max=0.01):
     if isinstance(p_vec, torch.Tensor):
         p_vec = p_vec.numpy()
     num_sources = len(true_doas)
@@ -40,18 +40,22 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
     if num_detected_doas == 0:
         all_detected_doas = np.array([np.nan])
         all_detected_powers = np.array([np.nan])
-    # Here "error" is without matching detections to true DOAs:
-    all_detected_doa_diff_matrix = all_detected_doas[:, None] - true_doas[None, :]
 
-    # Use linear_sum_assignment to match detected DOAs to true DOAs
-    cost_matrix = np.abs(all_detected_doa_diff_matrix)
-    row_indices, col_indices = linear_sum_assignment(cost_matrix)
-    matched_detected_doas = all_detected_doas[row_indices]
-    matched_true_doas = true_doas[col_indices]
-    matched_doa_error = matched_detected_doas - matched_true_doas
-    all_detected_doa_error = all_detected_doas - true_doas[np.argmin(np.abs(all_detected_doa_diff_matrix), axis=1)]
-    true_doa_error = true_doas - all_detected_doas[np.argmin(np.abs(all_detected_doa_diff_matrix), axis=0)]
-
+    succ_match_detected_doa = np.zeros((num_detected_doas,), dtype=bool)
+    succ_match_true_doa = np.zeros((num_sources,), dtype=bool)
+    tmp_all_detected_doas = all_detected_doas.copy()
+    for i_true_doa in range(num_sources):
+        # Find the closest detected DOA to the true DOA
+        absdiff = np.abs(tmp_all_detected_doas - true_doas[i_true_doa])
+        min_absdiff_index = np.argmin(absdiff)
+        min_absdiff = absdiff[min_absdiff_index]
+        if min_absdiff < threshold_theta_detect:
+            # If the detected DOA is within the threshold, mark it as a match
+            succ_match_detected_doa[min_absdiff_index] = True
+            succ_match_true_doa[i_true_doa] = True
+            # Remove the matched detected DOA from further consideration
+            tmp_all_detected_doas[min_absdiff_index] = np.inf
+        
     if num_detected_doas < num_sources:
         selected_doa_error = np.full((num_sources,), np.nan)
         selected_power_error = np.full((num_sources,), np.nan)
@@ -72,7 +76,8 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
         selected_power_error = selected_detected_powers - true_powers
         
         
-    return num_detected_doas, all_detected_doas, all_detected_powers, selected_doa_error, selected_power_error, all_detected_doa_error, true_doa_error
+    return num_detected_doas, all_detected_doas, all_detected_powers, selected_doa_error, selected_power_error, \
+            succ_match_detected_doa, succ_match_true_doa
 
 
 def display_power_spectrum(config, list_p_vec, epsilon_power=None):
