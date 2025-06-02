@@ -28,9 +28,9 @@ def exp_SNR(cohr_flag: bool, basedir:str = '') -> None:
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=12, snr=vec_snr[i], N=40, 
+                m=12, snr=vec_snr[i], N=30, 
                 power_doa_db=np.array([0, 0]),
-                doa=np.array([35, 40]),
+                doa=np.array([40, 45]),
                 cohr_flag=False,
                 )
         )

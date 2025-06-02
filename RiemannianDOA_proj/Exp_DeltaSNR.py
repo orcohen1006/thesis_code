@@ -29,7 +29,7 @@ def exp_DeltaSNR(n: int=30, cohr_flag: bool = False, basedir:str = '') -> None:
             create_config(
                 m=12, snr=0, N=n, 
                 power_doa_db=np.array([0, 0+vec_delta_snr[i]]),
-                doa=np.array([35, 40]),
+                doa=np.array([50, 60]),
                 cohr_flag=False,
                 )
         )

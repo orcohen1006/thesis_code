@@ -1,7 +1,0 @@
-Traceback (most recent call last):
-  File "/home/or.cohen/thesis_code/RiemannianDOA_proj/RunSingleMCIteration.py", line 137, in <module>
-    result = run_single_mc_iteration(i_mc=i_mc, config=config)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/or.cohen/thesis_code/RiemannianDOA_proj/RunSingleMCIteration.py", line 32, in run_single_mc_iteration
-    delta_vec *= config["first_sensor_linear_gain"]
-numpy.core._exceptions._UFuncOutputCastingError: Cannot cast ufunc 'multiply' output from dtype('float64') to dtype('int64') with casting rule 'same_kind'

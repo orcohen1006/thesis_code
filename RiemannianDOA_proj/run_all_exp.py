@@ -28,7 +28,7 @@ def run_all_exp():
 
     for cohr_flag in [False]:
         for N in [30]: #[20, 40]:
-            for theta0 in [35, 40, 90]:
+            for theta0 in [50, 60]:
                 exp_DeltaTheta(n=N, cohr_flag=cohr_flag, theta0=theta0, basedir=basedir)
 
     for cohr_flag in [False]:
@@ -41,4 +41,4 @@ def run_all_exp():
     return basedir
 if __name__ == "__main__":
     basedir = run_all_exp()
-    git_commit_and_push()
+    git_commit_and_push(commit_message=basedir)
