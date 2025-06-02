@@ -30,7 +30,7 @@ def exp_SNR(cohr_flag: bool, basedir:str = '') -> None:
             create_config(
                 m=12, snr=vec_snr[i], N=30, 
                 power_doa_db=np.array([0, 0]),
-                doa=np.array([40, 45]),
+                doa=np.array([35, 40]),
                 cohr_flag=False,
                 )
         )
