@@ -10,11 +10,12 @@ from ToolsMC import *
 
 # %%
 
-def exp_SNR(cohr_flag: bool) -> None:
+def exp_SNR(cohr_flag: bool, basedir:str = '') -> None:
     
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
     name_results_dir = f'Exp_SNR_{timestamp}_{str_indp_cohr}'
+    name_results_dir = os.path.join(basedir, name_results_dir)
     path_results_dir = os.path.abspath(name_results_dir)
     print(f"Results will be saved in: {path_results_dir}")
     if not os.path.exists(path_results_dir):
@@ -45,9 +46,10 @@ def exp_SNR(cohr_flag: bool) -> None:
     #  
     fig_prob_detection = plot_prob_detection(algos_error_data, r'$SNR$', "", vec_snr)
     # %%
-    fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + name_results_dir +  '.png'), dpi=300)
-    fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + name_results_dir +  '.png'), dpi=300)
-    fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + name_results_dir +  '.png'), dpi=300)
+    str_desc_name = os.path.basename(name_results_dir)
+    fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + str_desc_name +  '.png'), dpi=300)
+    fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + str_desc_name +  '.png'), dpi=300)
+    fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + str_desc_name +  '.png'), dpi=300)
 
 if __name__ == "__main__":
     # Example usage

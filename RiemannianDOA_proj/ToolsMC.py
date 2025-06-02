@@ -37,11 +37,13 @@ def submit_job_array(workdir: str, config_list: list, num_mc: int, num_jobs: int
     print("Job submission output:", res.stdout)
     return res.stdout.strip()
 
-def wait_for_results(workdir: str, config_list: list, num_mc:int, t0: float):
+def wait_for_results(workdir: str, config_list: list, num_mc:int, job_id:str, t0: float):
     expected = len(config_list) * num_mc
     while True:
         done = len(list(Path(workdir).glob("config_*_mc_*.pkl")))
-        print(f"Waiting... {done}/{expected} results ready. elapsed time: {time.time() - t0:.2f} [sec]")
+        # workdir is a string of a path, get string of the last two parts of the path
+        workdir_parts = Path(workdir).parts[-2:] 
+        print(f"Job {job_id} Waiting... {workdir_parts},   {done}/{expected} results ready. elapsed time: {time.time() - t0:.2f} [sec]")
         if done >= expected:
             break
         time.sleep(5) 
@@ -69,7 +71,7 @@ def RunDoaConfigsPBS(workdir: str, config_list: list, num_mc:int, num_jobs: int 
     job_id = submit_job_array(workdir, config_list, num_mc, num_jobs)
     print("Submitted job ID:", job_id)
 
-    wait_for_results(workdir, config_list, num_mc, t0)
+    wait_for_results(workdir, config_list, num_mc, job_id, t0)
     print("All results ready. Collecting...")
 
     results = collect_results(workdir, config_list, num_mc)
@@ -91,7 +93,7 @@ def analyze_algo_errors(results: list):
     for i_config in range(num_configs):
         config = results[i_config][0]["config"]
         tmp_doa = np.expand_dims(config["doa"],-1)
-        threshold_theta_detect = 3 #np.abs(tmp_doa - tmp_doa.T).max()
+        threshold_theta_detect = 3 # np.abs(tmp_doa - tmp_doa.T).max()
         print(f"Config {i_config}: threshold_theta_detect = {threshold_theta_detect}")
         for i_mc in range(num_mc):
             result = results[i_config][i_mc]

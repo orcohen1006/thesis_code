@@ -5,10 +5,8 @@ def tmp():
     print(repo_path)
     print("bye")
 
-def git_commit_and_push():
+def git_commit_and_push(commit_message="Auto commit msg"):
     repo_path = os.path.dirname(os.path.abspath(__file__))
-
-    commit_message = "Auto commit after script execution"
 
     try:
         # Change directory to the repo

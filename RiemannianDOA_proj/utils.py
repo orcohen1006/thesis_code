@@ -194,7 +194,7 @@ def get_algo_dict_list(flag_also_use_PER=False):
     return d
 
 
-def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False):
+def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False, first_sensor_linear_gain=1.0):
     """
     Create a configuration dictionary to hold parameters for simulations.
 
@@ -212,4 +212,5 @@ def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False):
         "power_doa_db": power_doa_db,
         "doa": doa,
         "cohr_flag": cohr_flag,
+        "first_sensor_linear_gain": first_sensor_linear_gain
     }

@@ -8,11 +8,12 @@ from utils import *
 from ToolsMC import *
 
 
-def exp_DeltaTheta(n: int, cohr_flag: bool) -> None:
+def exp_DeltaTheta(n: int, cohr_flag: bool, theta0: float = 35, basedir:str = '') -> None:
     
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
-    name_results_dir = f'Exp_DeltaTheta_{timestamp}_{str_indp_cohr}_N{n}'
+    name_results_dir = f'Exp_DeltaTheta_{timestamp}_{str_indp_cohr}_N{n}_theta0{theta0}'
+    name_results_dir = os.path.join(basedir, name_results_dir)
     path_results_dir = os.path.abspath(name_results_dir)
     print(f"Results will be saved in: {path_results_dir}")
     if not os.path.exists(path_results_dir):
@@ -27,7 +28,7 @@ def exp_DeltaTheta(n: int, cohr_flag: bool) -> None:
             create_config(
                 m=12, snr=0, N=n, 
                 power_doa_db=np.array([0, 0]),
-                doa=np.array([35, 35+vec_delta_theta[i]]),
+                doa=np.array([theta0, theta0+vec_delta_theta[i]]),
                 cohr_flag=False,
                 )
         )
@@ -42,13 +43,15 @@ def exp_DeltaTheta(n: int, cohr_flag: bool) -> None:
     # 
     fig_prob_detection = plot_prob_detection(algos_error_data, r'$\Delta \theta$', "(degrees)", vec_delta_theta)
     # %%
-    fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + name_results_dir +  '.png'), dpi=300)
-    fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + name_results_dir +  '.png'), dpi=300)
-    fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + name_results_dir +  '.png'), dpi=300)
+    str_desc_name = os.path.basename(name_results_dir)
+    fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + str_desc_name +  '.png'), dpi=300)
+    fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + str_desc_name +  '.png'), dpi=300)
+    fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + str_desc_name +  '.png'), dpi=300)
+
 
 if __name__ == "__main__":
     # Example usage
-    exp_DeltaTheta(n=30, cohr_flag=False)
+    exp_DeltaTheta(n=30, cohr_flag=False, theta0=99)
 
 
 # %%

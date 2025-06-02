@@ -1,3 +1,4 @@
+# %%
 from dataclasses import dataclass
 from datetime import datetime
 import dill
@@ -9,7 +10,7 @@ from dataclasses import dataclass
 from typing import Callable
 from utils import *
 import scipy
-
+# %%
 m = 12
 snr = -5
 N = 20
@@ -19,6 +20,9 @@ doas_true = np.array([40, 45])
 doa_scan = np.linspace(start=doas_true.min() - 15, stop=doas_true.max() + 15, num=int(1e2))
 doa_scan = np.clip(doa_scan, 0, 180)
 A_true = np.exp(1j * np.pi * np.outer(np.arange(m), np.cos(doas_true * np.pi / 180)))
+# ===================
+#A_true[0,:] *= 5  # Example of gain for the first sensor
+# ===================
 noise_power_db = np.max(power_doa_db) - snr
 noise_power = 10.0 ** (noise_power_db / 10.0)
 Y = generate_signal(A_true, power_doa_db, N, noise_power, False, seed=42)
@@ -27,10 +31,10 @@ R_hat = Y @ Y.conj().T / N
 pinv_sqrtm_fun = lambda x: scipy.linalg.sqrtm(np.linalg.pinv(x))
 pinv_sqrtm_R_hat = pinv_sqrtm_fun(R_hat)
 
-fun_AIRM = lambda R: np.linalg.matrix_norm(scipy.linalg.logm(pinv_sqrtm_R_hat @ R @ pinv_sqrtm_R_hat)) ** 2
+fun_AIRM = lambda R: np.linalg.norm(scipy.linalg.logm(pinv_sqrtm_R_hat @ R @ pinv_sqrtm_R_hat)) ** 2
 fun_JBLD = lambda R: np.linalg.slogdet(0.5*(R_hat + R))[1] -0.5*np.linalg.slogdet(R_hat@R)[1]
-fun_SPICE = lambda R: np.linalg.matrix_norm(pinv_sqrtm_fun(R) @ (R - R_hat) @ pinv_sqrtm_R_hat ) ** 2
-fun_MV = lambda R: np.linalg.matrix_norm(pinv_sqrtm_fun(R) @ (R - R_hat) @ pinv_sqrtm_R_hat) ** 2
+fun_SPICE = lambda R: np.linalg.norm(pinv_sqrtm_fun(R) @ (R - R_hat) @ pinv_sqrtm_R_hat ) ** 2
+fun_MV = lambda R: np.linalg.norm(pinv_sqrtm_fun(R) @ (R - R_hat) @ pinv_sqrtm_R_hat) ** 2
 fun_ML = lambda R: np.linalg.slogdet(R)[1] + np.trace(np.linalg.pinv(R) @ R_hat)
 
 @dataclass
@@ -40,6 +44,7 @@ class Metric:
     color: str
     resultMat: np.ndarray
 
+# %%
 
 def calculate_metrics():
     np.random.seed(42)
@@ -106,7 +111,7 @@ def visualize_metrics(metrics):
 
     # plt.tight_layout(w_pad=1, h_pad=1)  # Added padding between subplots
     # plt.tight_layout()
-
+# %%
 
 
 if __name__ == "__main__":
@@ -118,11 +123,13 @@ if __name__ == "__main__":
     os.makedirs(dir_name)
     with open(os.path.join(dir_name, 'data.pkl'), 'wb') as f:
         dill.dump(metrics, f)
-    # ================
-    # dir_name = 'visualize_metrics_theta01-04-2025_18-58-09'
-    # with open(os.path.join(dir_name, 'data.pkl'), 'rb') as f:
-    #     metrics = dill.load(f)
+    # %%  ================
+    dir_name = 'visualize_metrics_theta02-06-2025_09-17-55'
+    with open(os.path.join(dir_name, 'data.pkl'), 'rb') as f:
+        metrics = dill.load(f)
     # ================
     visualize_metrics(metrics)
     plt.savefig(os.path.join(dir_name, 'metrics.png'), dpi=300)
     plt.show()
+    # %%
+    import numpy as np
