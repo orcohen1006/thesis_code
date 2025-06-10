@@ -38,7 +38,7 @@ def exp_N(cohr_flag: bool = False, basedir:str = '') -> None:
             create_config(
                 m=12, snr=0, N=vec_n[i], 
                 power_doa_db=np.array([0, 0]),
-                doa=np.array([30, 35]),
+                doa=np.array([40.25, 45.25]),
                 cohr_flag=False,
                 )
         )
@@ -60,6 +60,7 @@ def exp_N(cohr_flag: bool = False, basedir:str = '') -> None:
 
 if __name__ == "__main__":
     # Example usage
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     exp_N(cohr_flag=False)
 
 
