@@ -93,8 +93,10 @@ def analyze_algo_errors(results: list):
     for i_config in range(num_configs):
         config = results[i_config][0]["config"]
         tmp_doa = np.expand_dims(config["doa"],-1)
-        threshold_theta_detect = 3 # np.abs(tmp_doa - tmp_doa.T).max()
+        threshold_theta_detect = 5 # np.abs(tmp_doa - tmp_doa.T).max()
         print(f"Config {i_config}: threshold_theta_detect = {threshold_theta_detect}")
+        A = np.exp(1j * np.pi * np.outer(np.arange(config["m"]), np.cos(grid_doa * np.pi / 180)))
+        noise_power = 10.0 ** ((np.max(config["power_doa_db"]) - config["snr"]) / 10.0)
         for i_mc in range(num_mc):
             result = results[i_config][i_mc]
             num_detected = [None] * num_algo
@@ -102,17 +104,24 @@ def analyze_algo_errors(results: list):
             selected_power_error = [None] * num_algo
             succ_match_detected_doa = [None] * num_algo
             succ_match_true_doa = [None] * num_algo
+            # num_detected_aic = [None] * num_algo
+            # num_detected_mdl = [None] * num_algo
             for i_alg in range(num_algo):
                 num_detected[i_alg], _, _, selected_doa_error[i_alg], selected_power_error[i_alg], succ_match_detected_doa[i_alg], succ_match_true_doa[i_alg] =\
                     estimate_doa_calc_errors(
                         result["p_vec_list"][i_alg], grid_doa,
                         result["config"]["doa"],
                         convert_db_to_linear(result["config"]["power_doa_db"]), threshold_theta_detect=threshold_theta_detect)
+                # R = A @ np.diag(result["p_vec_list"][i_alg]) @ A.conj().T + noise_power* np.eye(config["m"])
+                # num_detected_aic[i_alg], num_detected_mdl[i_alg] = model_order_selection(R, config["N"])
             result["num_detected"] = num_detected
             result["selected_doa_error"] = selected_doa_error
             result["selected_power_error"] = selected_power_error
             result["succ_match_detected_doa"] = succ_match_detected_doa
             result["succ_match_true_doa"] = succ_match_true_doa
+            # result["num_detected_aic"] = num_detected_aic
+            # result["num_detected_mdl"] = num_detected_mdl
+
 
     algos_error_data = {key: defaultdict(lambda: [None]*num_configs) for key in 
                         ["mean_doa_errors", "mean_power_errors", "mean_square_doa_errors", "mean_square_power_errors", 
@@ -153,7 +162,9 @@ def analyze_algo_errors(results: list):
                                 for i_mc in range(num_mc)]
             prob_false_detection = [1 - np.sum(results[i_config][i_mc]["succ_match_detected_doa"][i_algo])/(1e-10+results[i_config][i_mc]["num_detected"][i_algo])
                                 for i_mc in range(num_mc)]
-            is_full_detection = [np.sum(results[i_config][i_mc]["succ_match_true_doa"][i_algo]) == len(config["doa"])
+            # is_full_detection = [np.sum(results[i_config][i_mc]["succ_match_true_doa"][i_algo]) == len(config["doa"])
+            #                     for i_mc in range(num_mc)]
+            is_full_detection = [np.sum(results[i_config][i_mc]["num_detected"][i_algo]) == len(config["doa"])
                                 for i_mc in range(num_mc)]
             algos_error_data["prob_detect"][algo_name][i_config] = np.mean(prob_detection)
             algos_error_data["prob_false_detection"][algo_name][i_config] = np.mean(prob_false_detection)
@@ -195,7 +206,7 @@ def plot_prob_detection(algos_error_data: dict, parameter_name: str, parameter_u
     ax1.set_xlabel(parameter_name + f" {parameter_units}")
     ax1.set_ylabel("$P_{D}$")
     for algo_name in algo_list.keys():
-        prob_detect = np.stack(algos_error_data["prob_full_detection"][algo_name])
+        prob_detect = np.stack(algos_error_data["prob_detect"][algo_name])
         ax1.plot(parameter_values, prob_detect, label=algo_name, **algo_list[algo_name])
 
     return fig

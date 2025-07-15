@@ -1,3 +1,4 @@
+# %%
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -6,7 +7,7 @@ import os
 from typing import List, Optional
 from utils import *
 from ToolsMC import *
-
+# %%
 
 def exp_DeltaTheta(n: int, cohr_flag: bool, theta0: float = 35, basedir:str = '') -> None:
     

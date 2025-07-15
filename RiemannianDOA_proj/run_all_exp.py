@@ -31,9 +31,9 @@ def run_all_exp():
     #         for theta0 in [40]:
     #             exp_DeltaTheta(n=N, cohr_flag=cohr_flag, theta0=theta0, basedir=basedir)
 
-    for cohr_flag in [False]:
-        for N in [20, 40, 100]:
-            for secondsourcesnr in [0]: #[0, -3]:
+    for cohr_flag in [False, True]:
+        for N in [40]:
+            for secondsourcesnr in [0, -3]:
                 exp_SNR(cohr_flag=cohr_flag, N=N, secondsourcesnr=secondsourcesnr, basedir=basedir)
 
     # for cohr_flag in [False]:
