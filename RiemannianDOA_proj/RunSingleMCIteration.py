@@ -1,3 +1,4 @@
+# %%
 import sys
 import numpy as np
 from time import time
@@ -12,16 +13,17 @@ from fun_DAS import *
 from fun_SAMV import *
 from fun_SPICE import *
 from fun_Riemannian import *
+#from fun_JBLD import *
 import os
-
+# %%
 def run_single_mc_iteration(
         i_mc: int,
         config: dict,
+        algo_list : Optional[List[str]] = None,
 ):
- 
 
     t0 = time()
-    num_sources = len(config["doa"]) 
+    num_sources = len(config["doa"])
 
     power_doa = 10.0 ** (config["power_doa_db"] / 10.0)
 
@@ -35,7 +37,8 @@ def run_single_mc_iteration(
     noise_power_db = np.max(config["power_doa_db"]) - config["snr"]
     noise_power = 10.0 ** (noise_power_db / 10.0)
 
-    algo_list = list(get_algo_dict_list().keys())
+    if algo_list is None:
+        algo_list = list(get_algo_dict_list().keys())
 
     num_algos = len(algo_list)
 
@@ -63,6 +66,7 @@ def run_single_mc_iteration(
             p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power, loss_name="AIRM")
         elif algo_list[i_algo] == "JBLD":
             p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power, loss_name="JBLD")
+            # p_vec, num_iters, _ = fun_JBLD(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power)
         else:
             raise ValueError("Algorithm not implemented")
 
@@ -151,6 +155,29 @@ if __name__ == "__main__":
 
     # with open(filepath_result, 'rb') as f:
     #     loaded_result = pickle.load(f)
+
+def tmp():
+    # %%
+    from RunSingleMCIteration import run_single_mc_iteration
+    from example_display_power_spectrum import display_power_spectrum
+    
+    config = create_config(
+        m=12, snr=0, N=40, power_doa_db=np.array([3, 4]), doa=np.array([35, 40]), cohr_flag=False,
+    )
+    algo_list = get_algo_dict_list(flag_also_use_PER=True)
+    # remain only with keys "PER" and "JBLD"
+    algo_list = {k: algo_list[k] for k in ["PER", "JBLD"] if k in algo_list}
+    # %%
+    result = run_single_mc_iteration(0, config, algo_list=list(algo_list.keys()))
+    
+    ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list)
+
+    # doas = result["config"]["doa"]
+    # power_doa_db = result["config"]["power_doa_db"]
+    # ax.set_xlim([np.min(doas)-10, np.max(doas)+10])
+    # ax.set_ylim([-20, np.max(power_doa_db)+3])
+
+    
 
 # %%
 # total_tasks = 1000

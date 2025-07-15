@@ -116,7 +116,7 @@ def analyze_algo_errors(results: list):
 
     algos_error_data = {key: defaultdict(lambda: [None]*num_configs) for key in 
                         ["mean_doa_errors", "mean_power_errors", "mean_square_doa_errors", "mean_square_power_errors", 
-                         "prob_detect","prob_false_detection"]}
+                         "prob_detect","prob_false_detection", "prob_full_detection"]}
 
     for i_config in range(len(results)):
         config = results[i_config][0]["config"]
@@ -153,9 +153,11 @@ def analyze_algo_errors(results: list):
                                 for i_mc in range(num_mc)]
             prob_false_detection = [1 - np.sum(results[i_config][i_mc]["succ_match_detected_doa"][i_algo])/(1e-10+results[i_config][i_mc]["num_detected"][i_algo])
                                 for i_mc in range(num_mc)]
-
+            is_full_detection = [np.sum(results[i_config][i_mc]["succ_match_true_doa"][i_algo]) == len(config["doa"])
+                                for i_mc in range(num_mc)]
             algos_error_data["prob_detect"][algo_name][i_config] = np.mean(prob_detection)
             algos_error_data["prob_false_detection"][algo_name][i_config] = np.mean(prob_false_detection)
+            algos_error_data["prob_full_detection"][algo_name][i_config] = np.mean(is_full_detection)
         algos_error_data["mean_square_doa_errors"]["CRB"][i_config] = cramer_rao_lower_bound(config)
         # --
     return results, algos_error_data
@@ -164,31 +166,65 @@ def tmp123():
     print("yep")
 # %%
 def plot_prob_detection(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list):
+    # import matplotlib.pyplot as plt
+    # import matplotlib.gridspec as gridspec
+    
+    # algo_list = get_algo_dict_list()    
+
+    # fig = plt.figure()
+    # ax1 = fig.gca()
+    # ax1.grid(True)
+    # ax1.set_xlabel("FPR")
+    # ax1.set_ylabel("TPR")
+    # for algo_name in algo_list.keys():
+    #     tpr = np.stack(algos_error_data["prob_detect"][algo_name])
+    #     fpr = np.stack(algos_error_data["prob_false_detection"][algo_name])
+    #     ax1.plot(fpr, tpr, label=algo_name, **algo_list[algo_name])
+   
+    # return fig
+
     import matplotlib.pyplot as plt
     import matplotlib.gridspec as gridspec
-    
+
     algo_list = get_algo_dict_list()    
 
     fig = plt.figure()
-    ax1 = fig.add_subplot(211)
+    ax1 = fig.gca()
     ax1.set_title("Probability of Detection")
     ax1.grid(True)
     ax1.set_xlabel(parameter_name + f" {parameter_units}")
     ax1.set_ylabel("$P_{D}$")
     for algo_name in algo_list.keys():
-        prob_detect = np.stack(algos_error_data["prob_detect"][algo_name])
+        prob_detect = np.stack(algos_error_data["prob_full_detection"][algo_name])
         ax1.plot(parameter_values, prob_detect, label=algo_name, **algo_list[algo_name])
-    ax2 = fig.add_subplot(212)
-    ax2.set_title("Probability of False Detection")
-    ax2.grid(True)
-    ax2.set_xlabel(parameter_name + f" {parameter_units}")
-    ax2.set_ylabel("$P_{FD}$")
-    for algo_name in algo_list.keys():
-        prob_false_detection = np.stack(algos_error_data["prob_false_detection"][algo_name])
-        ax2.plot(parameter_values, prob_false_detection, label=algo_name, **algo_list[algo_name])
-    ax2.legend()
-    plt.tight_layout()
+
     return fig
+
+    # import matplotlib.pyplot as plt
+    # import matplotlib.gridspec as gridspec
+    
+    # algo_list = get_algo_dict_list()    
+
+    # fig = plt.figure()
+    # ax1 = fig.add_subplot(211)
+    # ax1.set_title("Probability of Detection")
+    # ax1.grid(True)
+    # ax1.set_xlabel(parameter_name + f" {parameter_units}")
+    # ax1.set_ylabel("$P_{D}$")
+    # for algo_name in algo_list.keys():
+    #     prob_detect = np.stack(algos_error_data["prob_detect"][algo_name])
+    #     ax1.plot(parameter_values, prob_detect, label=algo_name, **algo_list[algo_name])
+    # ax2 = fig.add_subplot(212)
+    # ax2.set_title("Probability of False Detection")
+    # ax2.grid(True)
+    # ax2.set_xlabel(parameter_name + f" {parameter_units}")
+    # ax2.set_ylabel("$P_{FD}$")
+    # for algo_name in algo_list.keys():
+    #     prob_false_detection = np.stack(algos_error_data["prob_false_detection"][algo_name])
+    #     ax2.plot(parameter_values, prob_false_detection, label=algo_name, **algo_list[algo_name])
+    # ax2.legend()
+    # plt.tight_layout()
+    # return fig
 
 # def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False):
 #     import matplotlib.pyplot as plt

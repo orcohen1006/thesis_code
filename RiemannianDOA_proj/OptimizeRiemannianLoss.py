@@ -3,50 +3,14 @@ import numpy as np
 from time import time
 
 EPS_REL_CHANGE = 1e-4
-
-# correction_matrix = None
-# def get_fixed_noise(size, noise_scale=1e-7):
-#     global correction_matrix
-#     if correction_matrix is None:
-#         noise = (torch.randn(size, size) + 1j*torch.randn(size, size))/np.sqrt(2.0)
-#         correction_matrix = noise_scale * (noise + noise.T)
-#     return correction_matrix
-
-
-# import scipy.linalg
-# def adjoint(A, E, f): # https://stackoverflow.com/questions/73288332/is-there-a-way-to-compute-the-matrix-logarithm-of-a-pytorch-tensor
-#     A_H = A.T.conj().to(E.dtype)
-#     n = A.size(0)
-#     M = torch.zeros(2*n, 2*n, dtype=E.dtype, device=E.device)
-#     M[:n, :n] = A_H
-#     M[n:, n:] = A_H
-#     M[:n, n:] = E
-#     return f(M)[:n, n:].to(A.dtype)
-#
-# def logm_scipy(A):
-#     return torch.from_numpy(scipy.linalg.logm(A.cpu(), disp=False)[0]).to(A.device)
-#
-# class Logm(torch.autograd.Function):
-#     @staticmethod
-#     def forward(ctx, A):
-#         assert A.ndim == 2 and A.size(0) == A.size(1)  # Square matrix
-#         assert A.dtype in (torch.float32, torch.float64, torch.complex64, torch.complex128)
-#         ctx.save_for_backward(A)
-#         return logm_scipy(A)
-#
-#     @staticmethod
-#     def backward(ctx, G):
-#         A, = ctx.saved_tensors
-#         return adjoint(A, G, logm_scipy)
-#
-# matrix_logm = Logm.apply
+TORCH_DTYPE = torch.complex64
 
 def matrix_logm(B_in):
     # B_in += get_fixed_noise(size=B_in.shape[0], noise_scale=1e-7)
     eigvals, eigvecs = torch.linalg.eigh(B_in)
     # print(torch.min(torch.abs(eigvals[:,None] - eigvals[None,:]).masked_fill((torch.eye(len(eigvals), dtype=bool)), float('inf'))))
     eigvals_new = torch.log(torch.clamp(eigvals.real, min=1e-10))
-    Lam_new = torch.diag(eigvals_new).type(torch.complex64)
+    Lam_new = torch.diag(eigvals_new).type(TORCH_DTYPE)
     B_out = eigvecs @ Lam_new @ eigvecs.conj().T
     return B_out
 
@@ -56,7 +20,7 @@ def matrix_pinv_sqrtm(B_in):
     eigvals, eigvecs = torch.linalg.eigh(B_in)
     eigvals_new = 1.0 / torch.sqrt(torch.clamp(eigvals.real, min=1e-10))
     eigvals_new[eigvals.real < 1e-10] = 0
-    Lam_new = torch.diag(eigvals_new).type(torch.complex64)
+    Lam_new = torch.diag(eigvals_new).type(TORCH_DTYPE)
     B_out = eigvecs @ Lam_new @ eigvecs.conj().T
     return B_out
 
@@ -65,10 +29,10 @@ def matrix_pinv_sqrtm(B_in):
 
 def loss_AFFINV(p, A, pinv_sqrtm_R_hat, sigma2):
     M, D = A.shape
-    P_diag = torch.diag(p).to(torch.complex64)  # Diagonal matrix from p
+    P_diag = torch.diag(p).to(TORCH_DTYPE)  # Diagonal matrix from p
 
     # Compute Q
-    Q = pinv_sqrtm_R_hat @ (A @ P_diag @ A.conj().T + sigma2 * torch.eye(M, dtype=torch.complex64)) @ pinv_sqrtm_R_hat
+    Q = pinv_sqrtm_R_hat @ (A @ P_diag @ A.conj().T + sigma2 * torch.eye(M, dtype=TORCH_DTYPE)) @ pinv_sqrtm_R_hat
 
     # Eigenvalues of Q
     eigvals = torch.linalg.eigvalsh(Q).real  # Ensure real part (Q should be Hermitian)
@@ -79,9 +43,9 @@ def loss_AFFINV(p, A, pinv_sqrtm_R_hat, sigma2):
 
 def loss_LE(p, A, logm_R_hat, sigma2):
     M, D = A.shape
-    P_diag = torch.diag(p).to(torch.complex64)  # Diagonal matrix from p
+    P_diag = torch.diag(p).to(TORCH_DTYPE)  # Diagonal matrix from p
 
-    logm_R = matrix_logm((A @ P_diag @ A.conj().T + sigma2 * torch.eye(M, dtype=torch.complex64)))
+    logm_R = matrix_logm((A @ P_diag @ A.conj().T + sigma2 * torch.eye(M, dtype=TORCH_DTYPE)))
     diff_matrix = logm_R - logm_R_hat
     # loss = torch.linalg.matrix_norm(diff_matrix, ord='fro') ** 2
     loss = torch.sum(diff_matrix * diff_matrix).real
@@ -90,17 +54,17 @@ def loss_LE(p, A, logm_R_hat, sigma2):
 
 def loss_LD(p, A, R_hat, sigma2):
     M, D = A.shape
-    P_diag = torch.diag(p).to(torch.complex64)  # Diagonal matrix from p
-    R = (A @ P_diag @ A.conj().T + sigma2 * torch.eye(M, dtype=torch.complex64))
+    P_diag = torch.diag(p).to(TORCH_DTYPE)  # Diagonal matrix from p
+    R = (A @ P_diag @ A.conj().T + sigma2 * torch.eye(M, dtype=TORCH_DTYPE))
     loss = torch.logdet(0.5*(R_hat + R)) -0.5*torch.logdet(R_hat @ R)
     loss = loss.real
     return loss
 
 def optimize_adam_AIRM(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
     # t0 = time()
-    pinv_sqrtm_R_hat = matrix_pinv_sqrtm(torch.as_tensor(_R_hat, dtype=torch.complex64))  # Compute R_hat^(-1/2)
+    pinv_sqrtm_R_hat = matrix_pinv_sqrtm(torch.as_tensor(_R_hat, dtype=TORCH_DTYPE))  # Compute R_hat^(-1/2)
     p = torch.as_tensor(_p_init, dtype=torch.float).clone().detach().requires_grad_(True)  # Use provided initialization
-    A = torch.as_tensor(_A, dtype=torch.complex64)
+    A = torch.as_tensor(_A, dtype=TORCH_DTYPE)
 
     p_prev = p.clone().detach()
     optimizer = torch.optim.Adam([p], lr=_lr)
@@ -138,9 +102,9 @@ def optimize_adam_AIRM(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do
 
 def optimize_adam_LE(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
     # t0 = time()
-    logm_R_hat = matrix_logm(torch.as_tensor(_R_hat, dtype=torch.complex64)) # Compute log(R_hat)
+    logm_R_hat = matrix_logm(torch.as_tensor(_R_hat, dtype=TORCH_DTYPE)) # Compute log(R_hat)
     p = torch.as_tensor(_p_init, dtype=torch.float).clone().detach().requires_grad_(True)  # Use provided initialization
-    A = torch.as_tensor(_A, dtype=torch.complex64)
+    A = torch.as_tensor(_A, dtype=TORCH_DTYPE)
 
     M = A.shape[0]
     tmp_matrix = torch.randn(M, M) + torch.randn(M, M)*1j
@@ -185,9 +149,9 @@ def optimize_adam_LE(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_s
 def optimize_adam_JBLD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
     # t0 = time()
 
-    R_hat = torch.as_tensor(_R_hat, dtype=torch.complex64)
+    R_hat = torch.as_tensor(_R_hat, dtype=TORCH_DTYPE)
     p = torch.as_tensor(_p_init, dtype=torch.float).clone().detach().requires_grad_(True)  # Use provided initialization
-    A = torch.as_tensor(_A, dtype=torch.complex64)
+    A = torch.as_tensor(_A, dtype=TORCH_DTYPE)
 
     p_prev = p.clone().detach()
     optimizer = torch.optim.Adam([p], lr=_lr)

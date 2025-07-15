@@ -18,7 +18,7 @@ def exp_DeltaTheta(n: int, cohr_flag: bool, theta0: float = 35, basedir:str = ''
     print(f"Results will be saved in: {path_results_dir}")
     if not os.path.exists(path_results_dir):
         os.makedirs(path_results_dir)
-    
+    # %%
     num_mc = 100
     vec_delta_theta = np.arange(2, 11)
     num_configs = len(vec_delta_theta)

@@ -80,7 +80,7 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
             succ_match_detected_doa, succ_match_true_doa
 
 
-def display_power_spectrum(config, list_p_vec, epsilon_power=None):
+def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=None):
     """
     Display the power spectrum of the DOA estimation.
 
@@ -94,8 +94,9 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None):
 
     doa_scan = get_doa_grid()
 
-    algo_list = get_algo_dict_list()
-    
+    if algo_list is None:
+        algo_list = get_algo_dict_list()
+
     if epsilon_power is None:
         epsilon_power = 10.0 ** (-20 / 10.0)
     

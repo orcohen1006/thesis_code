@@ -4,6 +4,7 @@ from time import time
 import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict, Any, Optional
 # %matplotlib ipympl
+
 from RunSingleMCIteration import run_single_mc_iteration
 from utils import *
 import os
@@ -11,13 +12,18 @@ import pickle
 # %%
 def example_display_power_spectrum():
     # %%
-    filepath_results_file = os.path.abspath('Exp_N_y2025-m06-d03_09-28-47_indp/results.pkl')
+    # filepath_results_file = os.path.abspath('Exp_N_y2025-m06-d03_09-28-47_indp/results.pkl')
+    filepath_results_file = '/home/or.cohen/thesis_code/RiemannianDOA_proj/Exp_SNR_y2025-m06-d16_23-19-44_indp_secondsourcesnr_-5' + '/results.pkl'
     with open(filepath_results_file, 'rb') as f:
         results = pickle.load(f)
     # %%
+    for i_config in range(len(results)):
+        print(f"-------------- Config {i_config}:")
+        print(results[i_config][0]["config"])
+    # %%
     algo_list = get_algo_dict_list()
-    i_config = 1
-    i_mc = 6
+    i_config = 4
+    i_mc = 0
     ax = display_power_spectrum(results[i_config][i_mc]["config"], results[i_config][i_mc]["p_vec_list"])
 
     doas = results[i_config][i_mc]["config"]["doa"]

@@ -62,19 +62,6 @@ def fun_SPICE(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
         R = A @ P @ A.conj().T + sigma * np.eye(M)
         R_hat_sqrt = linalg.sqrtm(R_hat)
         Rinv_R_hat_sqrt = np.linalg.solve(R, R_hat_sqrt)
-        
-        # Compute rho
-        # rho = 0
-        # am_Rinv_R_hat_sqrt = np.zeros((N, M), dtype=complex)
-        # norm_am_Rinv_R_hat_sqrt = np.zeros(N)
-        #
-        # for idx in range(N):
-        #     am_Rinv_R_hat_sqrt[idx, :] = A[:, idx].conj().T @ Rinv_R_hat_sqrt
-        #     norm_am_Rinv_R_hat_sqrt[idx] = np.sqrt(np.sum(np.diag(
-        #         am_Rinv_R_hat_sqrt[idx, :].reshape(-1, 1) @
-        #         am_Rinv_R_hat_sqrt[idx, :].conj().reshape(1, -1)
-        #     )))
-        #     rho = rho + np.sqrt(weight[idx]) * p[idx] * norm_am_Rinv_R_hat_sqrt[idx]
 
         am_Rinv_R_hat_sqrt = A.conj().T @ Rinv_R_hat_sqrt
         norm_am_Rinv_R_hat_sqrt = np.linalg.norm(am_Rinv_R_hat_sqrt, axis=1)
