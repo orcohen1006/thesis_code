@@ -22,9 +22,9 @@ def run_all_exp():
     for cohr_flag in [False]:
         exp_N(cohr_flag=cohr_flag, basedir=basedir)
         
-    for cohr_flag in [False]:
-        for N in [40, 50]:
-            exp_DeltaSNR(n=N, cohr_flag=cohr_flag, basedir=basedir)
+    # for cohr_flag in [False]:
+    #     for N in [40, 50]:
+    #         exp_DeltaSNR(n=N, cohr_flag=cohr_flag, basedir=basedir)
 
     for cohr_flag in [False]:
         for N in [40, 50]: #[20, 40]:
