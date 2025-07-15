@@ -26,14 +26,16 @@ def run_all_exp():
     #     for N in [40, 50]:
     #         exp_DeltaSNR(n=N, cohr_flag=cohr_flag, basedir=basedir)
 
-    for cohr_flag in [False]:
-        for N in [40, 50]: #[20, 40]:
-            for theta0 in [40]:
-                exp_DeltaTheta(n=N, cohr_flag=cohr_flag, theta0=theta0, basedir=basedir)
+    # for cohr_flag in [False]:
+    #     for N in [40, 50]: #[20, 40]:
+    #         for theta0 in [40]:
+    #             exp_DeltaTheta(n=N, cohr_flag=cohr_flag, theta0=theta0, basedir=basedir)
 
     for cohr_flag in [False]:
-        exp_SNR(cohr_flag=cohr_flag, basedir=basedir)
-    
+        for N in [20, 40, 100]:
+            for secondsourcesnr in [-3]: #[0, -3]:
+                exp_SNR(cohr_flag=cohr_flag, N=N, secondsourcesnr=secondsourcesnr, basedir=basedir)
+
     # for cohr_flag in [False]:
     #     exp_M(cohr_flag=cohr_flag, basedir=basedir)
     # ---------------------------------------

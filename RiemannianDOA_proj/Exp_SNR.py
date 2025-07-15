@@ -10,11 +10,11 @@ from ToolsMC import *
 
 # %%
 
-def exp_SNR(cohr_flag: bool, basedir:str = '', secondsourcesnr:float = 0.0) -> None:
+def exp_SNR(cohr_flag: bool, basedir:str = '', N=40, secondsourcesnr:float = 0.0) -> None:
     
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
-    name_results_dir = f'Exp_SNR_{timestamp}_{str_indp_cohr}_secondsourcesnr_{secondsourcesnr}'
+    name_results_dir = f'Exp_SNR_{timestamp}_{str_indp_cohr}_N_{N}_secondsourcesnr_{secondsourcesnr}'
     name_results_dir = os.path.join(basedir, name_results_dir)
     path_results_dir = os.path.abspath(name_results_dir)
     print(f"Results will be saved in: {path_results_dir}")
@@ -28,7 +28,7 @@ def exp_SNR(cohr_flag: bool, basedir:str = '', secondsourcesnr:float = 0.0) -> N
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=12, snr=vec_snr[i], N=40, 
+                m=12, snr=vec_snr[i], N=N, 
                 power_doa_db=np.array([0, secondsourcesnr]),
                 doa=np.array([35, 40]),
                 cohr_flag=False,
