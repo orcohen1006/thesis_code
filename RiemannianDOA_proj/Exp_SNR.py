@@ -31,7 +31,7 @@ def exp_SNR(cohr_flag: bool, basedir:str = '', N=40, secondsourcesnr:float = 0.0
                 m=12, snr=vec_snr[i], N=N, 
                 power_doa_db=np.array([0, secondsourcesnr]),
                 doa=np.array([35, 40]),
-                cohr_flag=False,
+                cohr_flag=cohr_flag,
                 )
         )
     # %% Run the configurations

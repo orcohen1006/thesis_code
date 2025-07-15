@@ -45,7 +45,7 @@ def run_single_mc_iteration(
     # # #
     # A_true[0,:] *= config["first_sensor_linear_gain"]
     # # #
-    y_noisy = generate_signal(A_true, config["power_doa_db"], config["N"], noise_power, cohr_flag=False, seed=i_mc)
+    y_noisy = generate_signal(A_true, config["power_doa_db"], config["N"], noise_power, cohr_flag=config["cohr_flag"], seed=i_mc)
 
     modulus_hat_das = np.sum(np.abs(A.conj().T @ (y_noisy / config["m"])), axis=1) / config["N"]
     

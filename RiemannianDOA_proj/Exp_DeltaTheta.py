@@ -30,7 +30,7 @@ def exp_DeltaTheta(n: int, cohr_flag: bool, theta0: float = 35, basedir:str = ''
                 m=12, snr=0, N=n, 
                 power_doa_db=np.array([0, 0]),
                 doa=np.array([theta0, theta0+vec_delta_theta[i]]),
-                cohr_flag=False,
+                cohr_flag=cohr_flag,
                 )
         )
     # %% Run the configurations
