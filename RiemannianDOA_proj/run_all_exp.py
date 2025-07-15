@@ -19,8 +19,8 @@ def run_all_exp():
     if not os.path.exists(basedir):
         os.makedirs(basedir) 
     # ---------------------------------------
-    for cohr_flag in [False]:
-        exp_N(cohr_flag=cohr_flag, basedir=basedir)
+    # for cohr_flag in [False]:
+    #     exp_N(cohr_flag=cohr_flag, basedir=basedir)
         
     # for cohr_flag in [False]:
     #     for N in [40, 50]:
@@ -33,7 +33,7 @@ def run_all_exp():
 
     for cohr_flag in [False]:
         for N in [20, 40, 100]:
-            for secondsourcesnr in [-3]: #[0, -3]:
+            for secondsourcesnr in [0]: #[0, -3]:
                 exp_SNR(cohr_flag=cohr_flag, N=N, secondsourcesnr=secondsourcesnr, basedir=basedir)
 
     # for cohr_flag in [False]:
