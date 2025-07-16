@@ -51,7 +51,7 @@ def compute_list_HPBW(p_vec, grid_doa, peak_indices):
         right_theta = x0 + (half_power_value - y0) / (y1 - y0) if y1 != y0 else x1
 
         hpbw_values.append(right_theta - left_theta)
-
+        
     return hpbw_values
 
 def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,

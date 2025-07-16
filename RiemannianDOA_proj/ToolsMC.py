@@ -193,13 +193,14 @@ def plot_l0_norm(result):
         ax.boxplot(l0_norm, positions=[i_algo], widths=0.5, patch_artist=True,
                    whis=[10,90],
                    showfliers=False,
-                   boxprops=dict(facecolor='lightblue', color='blue'),
-                   medianprops=dict(color='red'), whiskerprops=dict(color='blue'))
+                   boxprops=dict(facecolor='lightblue', color='black'),
+                   medianprops=dict(color='red'), whiskerprops=dict(color='black'))
     # add a line for the number of sources
-    ax.axhline(y=num_sources, color='green', linestyle=':', label='Number of Sources')
+    ax.axhline(y=num_sources, color='green', linestyle=':', label=f'Number of Sources = {num_sources}')
     ax.set_xticks(range(len(algo_list)))
     ax.set_xticklabels(algo_list.keys())
     ax.set_ylabel("$l_0$ Norm")
+    ax.legend()
     return fig
 
 def plot_hpbw(result):
@@ -214,13 +215,14 @@ def plot_hpbw(result):
         ax.boxplot(hpbw, positions=[i_algo], widths=0.5, patch_artist=True, 
                    whis=[10,90],
                    showfliers=False,
-                   boxprops=dict(facecolor='lightblue', color='blue'),
-                   medianprops=dict(color='red'), whiskerprops=dict(color='blue'))
-    gris_res = np.median(np.diff(get_doa_grid()))
-    ax.axhline(y=gris_res, color='green', linestyle=':', label='Grid Resolution')
+                   boxprops=dict(facecolor='lightblue', color='black'),
+                   medianprops=dict(color='red'), whiskerprops=dict(color='black'))
+    grid_res = np.median(np.diff(get_doa_grid()))
+    ax.axhline(y=grid_res, color='green', linestyle=':', label=f'Grid Resolution = {grid_res:.2f} degrees')
     ax.set_xticks(range(len(algo_list)))
     ax.set_xticklabels(algo_list.keys())
     ax.set_ylabel("HPBW (degrees)")
+    ax.legend()
     return fig
     
 def plot_prob_detection(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list):

@@ -55,7 +55,7 @@ def exp_SNR(cohr_flag: bool, basedir:str = '', N=40, secondsourcesnr:float = 0.0
     fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + str_desc_name +  '.png'), dpi=300)
     fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + str_desc_name +  '.png'), dpi=300)
     fig_l0_norm.savefig(os.path.join(path_results_dir, 'L0_' + str_desc_name +  '.png'), dpi=300)
-
+    fig_hpbw.savefig(os.path.join(path_results_dir, 'HPBW_' + str_desc_name +  '.png'), dpi=300)
 if __name__ == "__main__":
     # Example usage
     exp_SNR(cohr_flag=False, secondsourcesnr=-5)
