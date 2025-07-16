@@ -33,7 +33,7 @@ def exp_M(cohr_flag: bool, basedir:str = '') -> None:
                 # doa=np.array([35, 35.5, 40, 40.5, 45, 45.5]),
                 power_doa_db=np.array([-20, -20]),
                 doa=np.array([35,150]),
-                cohr_flag=False,
+                cohr_flag=cohr_flag,
                 )
         )
     # %% Run the configurations

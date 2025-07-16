@@ -30,7 +30,7 @@ def exp_Gain(cohr_flag: bool, basedir:str = '') -> None:
                 m=12, snr=0, N=30, 
                 power_doa_db=np.array([0, 0]),
                 doa=np.array([35, 40]),
-                cohr_flag=False,
+                cohr_flag=cohr_flag,
                 first_sensor_linear_gain=vec_gain[i]  # Gain for the first sensor
                 )
         )

@@ -10,10 +10,18 @@ from utils import *
 import os
 import pickle
 # %%
+import utils
+import ToolsMC
+import importlib
+importlib.reload(utils)
+importlib.reload(ToolsMC)
+from utils import *
+from ToolsMC import *
+# %%
 def example_display_power_spectrum():
     # %%
     # filepath_results_file = os.path.abspath('Exp_N_y2025-m06-d03_09-28-47_indp/results.pkl')
-    filepath_results_file = '/home/or.cohen/thesis_code/RiemannianDOA_proj/Exp_SNR_y2025-m06-d16_23-19-44_indp_secondsourcesnr_-5' + '/results.pkl'
+    filepath_results_file = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m07-d15_16-52-19/Exp_SNR_y2025-m07-d15_16-52-19_indp_N_40_secondsourcesnr_0' + '/results.pkl'
     with open(filepath_results_file, 'rb') as f:
         results = pickle.load(f)
     # %%
@@ -22,8 +30,8 @@ def example_display_power_spectrum():
         print(results[i_config][0]["config"])
     # %%
     algo_list = get_algo_dict_list()
-    i_config = 4
-    i_mc = 0
+    i_config = 2
+    i_mc = 6
     ax = display_power_spectrum(results[i_config][i_mc]["config"], results[i_config][i_mc]["p_vec_list"])
 
     doas = results[i_config][i_mc]["config"]["doa"]

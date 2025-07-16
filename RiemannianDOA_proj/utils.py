@@ -23,9 +23,36 @@ def convert_linear_to_db(power_doa):
     """
     return 10.0 * np.log10(power_doa)
 
-def thresholded_l0_norm(p_vec, alpha=0.01):
-    threshold = alpha * np.max(p_vec)
+def thresholded_l0_norm(p_vec, threshold=None):
+    if threshold is None:
+        threshold = 0.01 * np.max(p_vec)
     return np.sum(p_vec > threshold)
+
+def compute_list_HPBW(p_vec, grid_doa, peak_indices):
+    hpbw_values = []
+    for peak_index in peak_indices:
+        half_power_value = p_vec[peak_index] / 2
+        # Find the left and right indices of the half-power points
+        left_candidates = np.where((p_vec[:peak_index] <= half_power_value))[0]
+        left_index = left_candidates[-1] if left_candidates.size > 0 else None
+        # Find right side
+        right_candidates = np.where((p_vec[peak_index+1:] <= half_power_value))[0]
+        right_index = (peak_index + 1 + right_candidates[0]) if right_candidates.size > 0 else None
+        if left_index is None or right_index is None:
+            continue
+        # Linear interpolation on the left
+        x0, y0 = grid_doa[left_index], p_vec[left_index]
+        x1, y1 = grid_doa[left_index + 1], p_vec[left_index + 1]
+        left_theta = x0 + (half_power_value - y0) / (y1 - y0) if y1 != y0 else x0
+
+        # Linear interpolation on the right
+        x0, y0 = grid_doa[right_index - 1], p_vec[right_index - 1]
+        x1, y1 = grid_doa[right_index], p_vec[right_index]
+        right_theta = x0 + (half_power_value - y0) / (y1 - y0) if y1 != y0 else x1
+
+        hpbw_values.append(right_theta - left_theta)
+
+    return hpbw_values
 
 def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
                                 threshold_theta_detect = 2,
@@ -78,9 +105,9 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
         selected_doa_error = selected_detected_doas - true_doas
         selected_power_error = selected_detected_powers - true_powers
         
-        
+    mean_HPBW = compute_list_HPBW(p_vec, grid_doa, peak_indices)    
     return num_detected_doas, all_detected_doas, all_detected_powers, selected_doa_error, selected_power_error, \
-            succ_match_detected_doa, succ_match_true_doa
+            succ_match_detected_doa, succ_match_true_doa, mean_HPBW
 
 
 def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=None):

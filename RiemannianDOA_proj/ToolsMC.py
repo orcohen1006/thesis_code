@@ -106,12 +106,16 @@ def analyze_algo_errors(results: list):
             succ_match_true_doa = [None] * num_algo
             # num_detected_aic = [None] * num_algo
             # num_detected_mdl = [None] * num_algo
+            l0_norm = [None] * num_algo
+            list_HPBW = [None] * num_algo
             for i_alg in range(num_algo):
-                num_detected[i_alg], _, _, selected_doa_error[i_alg], selected_power_error[i_alg], succ_match_detected_doa[i_alg], succ_match_true_doa[i_alg] =\
+                num_detected[i_alg], _, _, selected_doa_error[i_alg], selected_power_error[i_alg], \
+                    succ_match_detected_doa[i_alg], succ_match_true_doa[i_alg], list_HPBW[i_alg] =\
                     estimate_doa_calc_errors(
                         result["p_vec_list"][i_alg], grid_doa,
                         result["config"]["doa"],
                         convert_db_to_linear(result["config"]["power_doa_db"]), threshold_theta_detect=threshold_theta_detect)
+                l0_norm[i_alg] = thresholded_l0_norm(result["p_vec_list"][i_alg], threshold=convert_db_to_linear(np.min(config["power_doa_db"]))*0.01)
                 # R = A @ np.diag(result["p_vec_list"][i_alg]) @ A.conj().T + noise_power* np.eye(config["m"])
                 # num_detected_aic[i_alg], num_detected_mdl[i_alg] = model_order_selection(R, config["N"])
             result["num_detected"] = num_detected
@@ -119,6 +123,8 @@ def analyze_algo_errors(results: list):
             result["selected_power_error"] = selected_power_error
             result["succ_match_detected_doa"] = succ_match_detected_doa
             result["succ_match_true_doa"] = succ_match_true_doa
+            result["l0_norm"] = l0_norm
+            result["list_HPBW"] = list_HPBW
             # result["num_detected_aic"] = num_detected_aic
             # result["num_detected_mdl"] = num_detected_mdl
 
@@ -176,6 +182,47 @@ def analyze_algo_errors(results: list):
 def tmp123():
     print("yep")
 # %%
+def plot_l0_norm(result):
+    # for each algorithm: display a boxplot of the l0_norm
+    import matplotlib.pyplot as plt
+    algo_list = get_algo_dict_list()
+    num_sources = len(result[0]["config"]["doa"])
+    fig, ax = plt.subplots()
+    for i_algo, algo_name in enumerate(algo_list.keys()):
+        l0_norm = np.stack([result[i_mc]["l0_norm"][i_algo] for i_mc in range(len(result))])
+        ax.boxplot(l0_norm, positions=[i_algo], widths=0.5, patch_artist=True,
+                   whis=[10,90],
+                   showfliers=False,
+                   boxprops=dict(facecolor='lightblue', color='blue'),
+                   medianprops=dict(color='red'), whiskerprops=dict(color='blue'))
+    # add a line for the number of sources
+    ax.axhline(y=num_sources, color='green', linestyle=':', label='Number of Sources')
+    ax.set_xticks(range(len(algo_list)))
+    ax.set_xticklabels(algo_list.keys())
+    ax.set_ylabel("$l_0$ Norm")
+    return fig
+
+def plot_hpbw(result):
+    # for each algorithm: display a boxplot of the hpbw
+    import matplotlib.pyplot as plt
+    algo_list = get_algo_dict_list()
+    fig, ax = plt.subplots()
+    for i_algo, algo_name in enumerate(algo_list.keys()):
+        hpbw = [result[i_mc]["list_HPBW"][i_algo] for i_mc in range(len(result))]
+        # hpbw is now a list of lists. create a single list of hpbw values
+        hpbw = np.array([item for sublist in hpbw for item in sublist])
+        ax.boxplot(hpbw, positions=[i_algo], widths=0.5, patch_artist=True, 
+                   whis=[10,90],
+                   showfliers=False,
+                   boxprops=dict(facecolor='lightblue', color='blue'),
+                   medianprops=dict(color='red'), whiskerprops=dict(color='blue'))
+    gris_res = np.median(np.diff(get_doa_grid()))
+    ax.axhline(y=gris_res, color='green', linestyle=':', label='Grid Resolution')
+    ax.set_xticks(range(len(algo_list)))
+    ax.set_xticklabels(algo_list.keys())
+    ax.set_ylabel("HPBW (degrees)")
+    return fig
+    
 def plot_prob_detection(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list):
     # import matplotlib.pyplot as plt
     # import matplotlib.gridspec as gridspec

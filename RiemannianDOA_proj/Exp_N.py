@@ -39,7 +39,7 @@ def exp_N(cohr_flag: bool = False, basedir:str = '') -> None:
                 m=12, snr=0, N=vec_n[i], 
                 power_doa_db=np.array([0, 0]),
                 doa=np.array([40, 50]),
-                cohr_flag=False,
+                cohr_flag=cohr_flag,
                 )
         )
     # %% Run the configurations
