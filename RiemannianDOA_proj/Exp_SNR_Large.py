@@ -10,7 +10,7 @@ from ToolsMC import *
 
 # %%
 
-def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40) -> None:
+def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40, theta0=30, delta_theta = 5) -> None:
     
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
@@ -30,7 +30,7 @@ def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40) -> None:
             create_config(
                 m=12, snr=vec_snr[i], N=N, 
                 power_doa_db=np.array([0, -1, -2, -5]),
-                doa=np.array([75, 80, 85, 90]),
+                doa=np.arange(theta0, theta0 + 3 * delta_theta + 1, delta_theta),
                 cohr_flag=cohr_flag,
                 )
         )
@@ -58,7 +58,7 @@ def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40) -> None:
     fig_hpbw.savefig(os.path.join(path_results_dir, 'HPBW_' + str_desc_name +  '.png'), dpi=300)
 if __name__ == "__main__":
     # Example usage
-    exp_SNR_Large(cohr_flag=False, N=60)
+    exp_SNR_Large(cohr_flag=False, N=40)
 
 
 # %%

@@ -21,7 +21,7 @@ from ToolsMC import *
 def example_display_power_spectrum():
     # %%
     # filepath_results_file = os.path.abspath('Exp_N_y2025-m06-d03_09-28-47_indp/results.pkl')
-    filepath_results_file = '/home/or.cohen/thesis_code/RiemannianDOA_proj/Exp_SNR_Large_y2025-m07-d16_17-40-39_indp_N_60' + '/results.pkl'
+    filepath_results_file = '/home/or.cohen/thesis_code/RiemannianDOA_proj/Exp_SNR_Large_y2025-m07-d16_17-54-13_indp_N_50' + '/results.pkl'
     with open(filepath_results_file, 'rb') as f:
         results = pickle.load(f)
     # %%
@@ -30,8 +30,8 @@ def example_display_power_spectrum():
         print(results[i_config][0]["config"])
     # %%
     algo_list = get_algo_dict_list()
-    i_config = 2 
-    i_mc = 6
+    i_config = 2
+    i_mc = 11
     ax = display_power_spectrum(results[i_config][i_mc]["config"], results[i_config][i_mc]["p_vec_list"])
 
     doas = results[i_config][i_mc]["config"]["doa"]

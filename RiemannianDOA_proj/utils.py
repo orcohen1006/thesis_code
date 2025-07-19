@@ -54,6 +54,37 @@ def compute_list_HPBW(p_vec, grid_doa, peak_indices):
         
     return hpbw_values
 
+def parabolic_peak_interpolation(p_vec, grid_doa, peak_index):
+    """
+    Perform parabolic interpolation to find the peak value.
+
+    :param p_vec: Power vector
+    :param grid_doa: DOA grid
+    :param peak_index: Index of the peak
+    :return: Interpolated peak DOA and power
+    """
+    if peak_index == 0 or peak_index == len(p_vec) - 1:
+        # If the peak is at the boundary, we cannot interpolate
+        return grid_doa[peak_index], p_vec[peak_index]
+    
+    x0, y0 = grid_doa[peak_index - 1], p_vec[peak_index - 1]
+    x1, y1 = grid_doa[peak_index], p_vec[peak_index]
+    x2, y2 = grid_doa[peak_index + 1], p_vec[peak_index + 1]
+    
+    denom = (x2 - x0) * (x1 - x0) * (x2 - x1)
+    if denom < 1e-10:
+        return grid_doa[peak_index], p_vec[peak_index]
+    
+    a = (y2 - y0) / denom
+    b = (y1 - y0) / (x1 - x0) - a * (x1 + x0)
+    c = y0
+    if a < 1e-10:
+        return grid_doa[peak_index], p_vec[peak_index]
+    peak_x = -b / (2 * a)
+    peak_y = a * peak_x**2 + b * peak_x + c
+    
+    return peak_x, peak_y
+
 def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
                                 threshold_theta_detect = 2,
                                 allowed_peak_height_relative_to_max=0.01):
@@ -65,8 +96,19 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
     peak_indices, _ = find_peaks(p_vec, height=threshold_peak_height)
     num_detected_doas = len(peak_indices)
     peak_indices = peak_indices[np.argsort(p_vec[peak_indices])[::-1]] # Sort the inidices by peaks values in descending order
+    
     all_detected_doas = grid_doa[peak_indices]
     all_detected_powers = p_vec[peak_indices]
+    
+    # all_detected_doas = []
+    # all_detected_powers = []
+    # for i_detected_doa in range(num_detected_doas):
+    #     detected_doa, detected_power = parabolic_peak_interpolation(p_vec, grid_doa, peak_indices[i_detected_doa])
+    #     all_detected_doas.append(detected_doa)
+    #     all_detected_powers.append(detected_power)
+    # all_detected_doas = np.array(all_detected_doas)
+    # all_detected_powers = np.array(all_detected_powers)
+    
     if num_detected_doas == 0:
         all_detected_doas = np.array([np.nan])
         all_detected_powers = np.array([np.nan])

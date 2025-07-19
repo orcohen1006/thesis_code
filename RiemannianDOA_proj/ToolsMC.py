@@ -142,15 +142,20 @@ def analyze_algo_errors(results: list):
 
         print(f"Config {i_config}: {len(indices_mc_all_algos_detected_enough_sources)}/{num_mc} MC iterations where all algos detected enough sources.")
         for i_algo, algo_name in enumerate(algo_list.keys()):
-            if len(indices_mc_all_algos_detected_enough_sources) < 0.4 * num_mc:
+            inds = indices_mc_all_algos_detected_enough_sources
+            # inds = [
+            #     i_mc for i_mc in range(num_mc)
+            #     if results[i_config][i_mc]["num_detected"][i_algo] >= len(config["doa"])
+            #     ]
+            if len(inds) < 0.4 * num_mc:
                 # If not enough MC iterations to look at, this config is irelevant
                 doa_errors = np.expand_dims(results[i_config][0]["selected_doa_error"][i_algo] * np.nan, axis=0)
                 power_errors = np.expand_dims(results[i_config][0]["selected_power_error"][i_algo] * np.nan, axis=0)
             else:
                 doa_errors = np.stack([results[i_config][i_mc]["selected_doa_error"][i_algo] 
-                                            for i_mc in indices_mc_all_algos_detected_enough_sources])
+                                            for i_mc in inds])
                 power_errors = np.stack([results[i_config][i_mc]["selected_power_error"][i_algo] 
-                                            for i_mc in indices_mc_all_algos_detected_enough_sources])
+                                            for i_mc in inds])
                 mean_square_errors = np.mean(doa_errors**2, axis=1)
                 prcnt_worst_results_to_ignore = 2
                 index = np.ceil((100 - prcnt_worst_results_to_ignore) / 100 * len(mean_square_errors)).astype(int)
@@ -354,7 +359,8 @@ def plot_prob_detection(algos_error_data: dict, parameter_name: str, parameter_u
 #     ax_total.grid(True)
 #     plt.tight_layout()
 #     return fig
-def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False):
+def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False,
+                    do_ylogscale: bool = False):
     import matplotlib.pyplot as plt
     
     algo_list = get_algo_dict_list()
@@ -369,6 +375,8 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         if normalize_rmse_by_parameter:
             all_sources_doa_rmse = all_sources_doa_rmse / parameter_values
         ax.plot(parameter_values, all_sources_doa_rmse, label=algo_name, **algo_list[algo_name])
+        if do_ylogscale:
+            ax.set_yscale('log')
     crb_values = np.sqrt(np.stack(algos_error_data["mean_square_doa_errors"]["CRB"]))
     if normalize_rmse_by_parameter:
         crb_values = crb_values / parameter_values
