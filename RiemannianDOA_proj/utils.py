@@ -54,7 +54,7 @@ def compute_list_HPBW(p_vec, grid_doa, peak_indices):
         
     return hpbw_values
 
-def parabolic_peak_interpolation(p_vec, grid_doa, peak_index):
+def OLD_parabolic_peak_interpolation(p_vec, grid_doa, peak_index):
     """
     Perform parabolic interpolation to find the peak value.
 
@@ -85,9 +85,66 @@ def parabolic_peak_interpolation(p_vec, grid_doa, peak_index):
     
     return peak_x, peak_y
 
+
+def parabolic_peak_interpolation(p_vec, grid_doa, peak_index):
+    """
+    Perform parabolic interpolation to refine the peak position.
+
+    :param p_vec: Power vector (1D numpy array)
+    :param grid_doa: DOA grid (same shape as p_vec)
+    :param peak_index: Index of the peak (integer)
+    :return: interpolated_doa (float), interpolated_power (float)
+    """
+    # Ensure inputs are valid
+    if not (0 < peak_index < len(p_vec) - 1):
+        # Cannot interpolate at the edge; return grid value
+        return grid_doa[peak_index], p_vec[peak_index]
+
+    # Neighboring values
+    p1, p2, p3 = p_vec[peak_index - 1], p_vec[peak_index], p_vec[peak_index + 1]
+    x1, x2, x3 = grid_doa[peak_index - 1], grid_doa[peak_index], grid_doa[peak_index + 1]
+
+    # Fit a parabola: y = a*x^2 + b*x + c
+    # Use vertex formula: x_vertex = x2 - 0.5 * (p3 - p1) / (p3 - 2*p2 + p1)
+    denom = p3 - 2 * p2 + p1
+    if denom == 0:
+        # Prevent division by zero: return grid peak
+        return x2, p2
+
+    delta = 0.5 * (p1 - p3) / denom  # offset from x2 (grid_doa[peak_index])
+    # Clamp delta to avoid going out of bounds (optional)
+    delta = np.clip(delta, -1.0, 1.0)
+
+    interpolated_doa = x2 + delta * (x3 - x2)  # assumes uniform grid
+    # Estimate interpolated power (optional)
+    interpolated_power = p2 - 0.25 * (p1 - p3) * delta
+
+    return interpolated_doa, interpolated_power
+
+def naive_peak_interpolation(p_vec, grid_doa, peak_index):
+    if peak_index == 0 or peak_index == len(p_vec) - 1:
+        # If the peak is at the boundary, we cannot interpolate
+        return grid_doa[peak_index], p_vec[peak_index]
+    x0, y0 = grid_doa[peak_index - 1], p_vec[peak_index - 1]
+    x1, y1 = grid_doa[peak_index], p_vec[peak_index]
+    x2, y2 = grid_doa[peak_index + 1], p_vec[peak_index + 1]
+    
+    w0 = y0 / (y0 + y1 + y2)
+    w1 = y1 / (y0 + y1 + y2)
+    w2 = y2 / (y0 + y1 + y2)
+
+    peak_x = w0 * x0 + w1 * x1 + w2 * x2
+    peak_y = y1
+
+    return peak_x, peak_y
+
 def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
                                 threshold_theta_detect = 2,
                                 allowed_peak_height_relative_to_max=0.01):
+    
+    dummy_estimated_doa = 90.0
+    dummy_estimated_power = convert_db_to_linear(-10)
+
     if isinstance(p_vec, torch.Tensor):
         p_vec = p_vec.numpy()
     num_sources = len(true_doas)
@@ -100,6 +157,7 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
     all_detected_doas = grid_doa[peak_indices]
     all_detected_powers = p_vec[peak_indices]
     
+
     # all_detected_doas = []
     # all_detected_powers = []
     # for i_detected_doa in range(num_detected_doas):
@@ -109,45 +167,42 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
     # all_detected_doas = np.array(all_detected_doas)
     # all_detected_powers = np.array(all_detected_powers)
     
-    if num_detected_doas == 0:
-        all_detected_doas = np.array([np.nan])
-        all_detected_powers = np.array([np.nan])
+    
+
+    if num_detected_doas >= num_sources:
+        selected_detected_doas = all_detected_doas[:num_sources]
+        selected_detected_powers = all_detected_powers[:num_sources]
+    else:
+        pad_size = num_sources - num_detected_doas
+        selected_detected_doas = np.concatenate([
+            all_detected_doas,
+            np.full(pad_size, dummy_estimated_doa)
+        ])
+        selected_detected_powers = np.concatenate([
+            all_detected_powers,
+            np.full(pad_size, dummy_estimated_power)
+        ])
+
+
+    cost_matrix = np.abs(true_doas[:, np.newaxis] - selected_detected_doas[np.newaxis, :])
+    row_ind, col_ind = linear_sum_assignment(cost_matrix)
+
+    selected_doa_error = true_doas[row_ind] - selected_detected_doas[col_ind]
+    selected_power_error = true_powers[row_ind] - selected_detected_powers[col_ind]
+        
 
     succ_match_detected_doa = np.zeros((num_detected_doas,), dtype=bool)
     succ_match_true_doa = np.zeros((num_sources,), dtype=bool)
-    tmp_all_detected_doas = all_detected_doas.copy()
-    for i_true_doa in range(num_sources):
-        # Find the closest detected DOA to the true DOA
-        absdiff = np.abs(tmp_all_detected_doas - true_doas[i_true_doa])
-        min_absdiff_index = np.argmin(absdiff)
-        min_absdiff = absdiff[min_absdiff_index]
-        if min_absdiff < threshold_theta_detect:
-            # If the detected DOA is within the threshold, mark it as a match
-            succ_match_detected_doa[min_absdiff_index] = True
-            succ_match_true_doa[i_true_doa] = True
-            # Remove the matched detected DOA from further consideration
-            tmp_all_detected_doas[min_absdiff_index] = np.inf
-        
-    if num_detected_doas < num_sources:
-        selected_doa_error = np.full((num_sources,), np.nan)
-        selected_power_error = np.full((num_sources,), np.nan)
-    else:
-        # Select the top num_sources peaks and match to true DOAs:
-        selected_detected_doas = all_detected_doas[:num_sources]
-        selected_detected_powers = all_detected_powers[:num_sources]
-        # Sort detected DOAs in ascending order
-        sorted_indices = np.argsort(selected_detected_doas)
-        selected_detected_doas = selected_detected_doas[sorted_indices]
-        selected_detected_powers = selected_detected_powers[sorted_indices]
-        # Sort true DOAs in ascending order
-        sorted_indices = np.argsort(true_doas)
-        true_doas = true_doas[sorted_indices]
-        true_powers = true_powers[sorted_indices]
-        # Compute selected DOA and power errors
-        selected_doa_error = selected_detected_doas - true_doas
-        selected_power_error = selected_detected_powers - true_powers
-        
+    for true_idx, detected_idx in zip(row_ind, col_ind):
+        if detected_idx < num_detected_doas:  # Only valid detected indices (exclude dummy)
+            err = abs(true_doas[true_idx] - selected_detected_doas[detected_idx])
+            if err < threshold_theta_detect:
+                succ_match_detected_doa[detected_idx] = True
+                succ_match_true_doa[true_idx] = True
+    
+
     mean_HPBW = compute_list_HPBW(p_vec, grid_doa, peak_indices)    
+
     return num_detected_doas, all_detected_doas, all_detected_powers, selected_doa_error, selected_power_error, \
             succ_match_detected_doa, succ_match_true_doa, mean_HPBW
 
@@ -263,8 +318,8 @@ def generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=Fals
     return y_noisy
 
 def get_doa_grid():
-    doa_scan = np.arange(0, 180.5, 0.5)  # doa grid
-    # doa_scan = np.arange(0, 181, 1)  # doa grid
+    res = 0.5  # resolution in degrees
+    doa_scan = np.arange(0, 180+res, res)  # doa grid
     return doa_scan
 
 def get_algo_dict_list(flag_also_use_PER=False):
@@ -301,3 +356,12 @@ def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False, first_sensor_li
         "cohr_flag": cohr_flag,
         "first_sensor_linear_gain": first_sensor_linear_gain
     }
+
+def configs_string_to_file(config_list, directory="", filename="configurations_output.txt"):
+    import os
+    config_strs = []
+    for i_config in range(len(config_list)):
+        config_strs.append(f"-------------- Config {i_config}:\n{config_list[i_config]}\n")
+    configs_output = "\n".join(config_strs)
+    with open(os.path.join(directory, filename), "w") as f:
+        f.write(configs_output)

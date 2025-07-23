@@ -40,15 +40,15 @@ def exp_SNR(cohr_flag: bool, basedir:str = '', N=40, secondsourcesnr:float = 0.0
     results, algos_error_data = analyze_algo_errors(results)
     # 
     #
-    fig_doa_errors = plot_doa_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False)
+    fig_doa_errors = plot_doa_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False, do_ylogscale=True)
     #  
     fig_power_errors = plot_power_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False)
     #  
     fig_prob_detection = plot_prob_detection(algos_error_data, r'$SNR$', "", vec_snr)
     #
-    i_config_snr_zero = np.where(np.array(vec_snr) == 0)[0][0]
-    fig_l0_norm = plot_l0_norm(results[i_config_snr_zero])
-    fig_hpbw = plot_hpbw(results[i_config_snr_zero])
+    i_config = np.where(np.array(vec_snr) == 0)[0][0]
+    fig_l0_norm = plot_l0_norm(results[i_config])
+    fig_hpbw = plot_hpbw(results[i_config])
     # %%
     str_desc_name = os.path.basename(name_results_dir)
     fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + str_desc_name +  '.png'), dpi=300)
@@ -56,6 +56,9 @@ def exp_SNR(cohr_flag: bool, basedir:str = '', N=40, secondsourcesnr:float = 0.0
     fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + str_desc_name +  '.png'), dpi=300)
     fig_l0_norm.savefig(os.path.join(path_results_dir, 'L0_' + str_desc_name +  '.png'), dpi=300)
     fig_hpbw.savefig(os.path.join(path_results_dir, 'HPBW_' + str_desc_name +  '.png'), dpi=300)
+    # %%
+    configs_string_to_file(config_list=config_list, directory=path_results_dir)
+
 if __name__ == "__main__":
     # Example usage
     exp_SNR(cohr_flag=False, secondsourcesnr=-5)

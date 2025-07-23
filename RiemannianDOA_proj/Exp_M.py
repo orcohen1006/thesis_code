@@ -85,6 +85,8 @@ def exp_M(cohr_flag: bool, basedir:str = '') -> None:
     fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + str_desc_name +  '.png'), dpi=300)
     fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + str_desc_name +  '.png'), dpi=300)
     fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + str_desc_name +  '.png'), dpi=300)
+    # %%
+    configs_string_to_file(config_list=config_list, directory=path_results_dir)
 
 if __name__ == "__main__":
     # Example usage

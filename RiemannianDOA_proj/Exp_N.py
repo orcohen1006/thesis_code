@@ -37,8 +37,8 @@ def exp_N(cohr_flag: bool = False, basedir:str = '') -> None:
         config_list.append(
             create_config(
                 m=12, snr=0, N=vec_n[i], 
-                power_doa_db=np.array([0, 0]),
-                doa=np.array([40, 50]),
+                power_doa_db=np.array([0]),
+                doa=np.array([80]),
                 cohr_flag=cohr_flag,
                 )
         )
@@ -48,7 +48,7 @@ def exp_N(cohr_flag: bool = False, basedir:str = '') -> None:
     results, algos_error_data = analyze_algo_errors(results)
     #
     fig_doa_errors = plot_doa_errors(algos_error_data, r'$N$', "", vec_n, normalize_rmse_by_parameter=False)
-    #  %%
+    # 
     fig_power_errors = plot_power_errors(algos_error_data, r'$N$', "", vec_n, normalize_rmse_by_parameter=False)
     # 
     fig_prob_detection = plot_prob_detection(algos_error_data, r'$N$', "", vec_n)
@@ -57,6 +57,8 @@ def exp_N(cohr_flag: bool = False, basedir:str = '') -> None:
     fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + str_desc_name +  '.png'), dpi=300)
     fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + str_desc_name +  '.png'), dpi=300)
     fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + str_desc_name +  '.png'), dpi=300)
+    # %%
+    configs_string_to_file(config_list=config_list, directory=path_results_dir)
 
 if __name__ == "__main__":
     # Example usage

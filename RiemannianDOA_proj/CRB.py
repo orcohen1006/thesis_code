@@ -2,6 +2,41 @@ import numpy as np
 from utils import *
 
 def cramer_rao_lower_bound(config):
+    if (config["cohr_flag"]):
+        return np.nan  # Not implemented for coherent sources
+    m = config["m"]
+    N = config["N"]
+    doa_deg = np.sort(config["doa"])
+    K = len(doa_deg)
+    p_vec = convert_db_to_linear(config["power_doa_db"])
+    
+    SNR = config["snr"]
+    noise_power_db = np.max(config["power_doa_db"]) - SNR
+    noise_power = convert_db_to_linear(noise_power_db)
+
+    doa_rad = np.deg2rad(doa_deg) # Convert to radians
+    delta_vec = np.arange(m)
+    A = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(doa_rad)))
+    dA = -1j * np.pi * np.outer(delta_vec, np.sin(doa_rad)) * A  # shape (m, K)
+
+    A_H = A.T.conj()
+    I = np.eye(m)
+    P = np.diag(p_vec)               # K x K
+
+    # Compute the covairance matrix: R = A P A^H + \sigma I
+    R = A @ P @ A_H + noise_power * I
+    # Compute the projection matrix: A (A^H A)^{-1} A^H
+    P_A = A @ np.linalg.solve(A_H @ A, A_H)
+    # Compute the H matrix.
+    H = dA.T.conj() @ (I - P_A) @ dA
+    # Compute the CRB
+    CRB = (H * ((P @ (A_H @ np.linalg.solve(R, A)) @ P).T)).real
+    CRB = np.linalg.inv(CRB) * (noise_power / N / 2)
+    CRB *= (180 / np.pi) ** 2  # Convert to degrees squared
+    diag_CRB = np.diag(CRB)
+    return diag_CRB
+
+def OLD_cramer_rao_lower_bound(config):
     """
     Simple CRB (Cramer-Rao Bound)
     using the stochastic CRB definitions
@@ -55,5 +90,9 @@ def cramer_rao_lower_bound(config):
     CRB_matrix = np.linalg.inv(np.real(Inside)) * noisePower / (2 * t_samples)
     
     mse_CBRDOA = np.trace(CRB_matrix)
+
+    # # Normalize by the number of sources
+    # K = len(config["doa"])
+    # mse_CBRDOA /= K
     
     return mse_CBRDOA
