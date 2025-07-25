@@ -156,8 +156,7 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
     
     all_detected_doas = grid_doa[peak_indices]
     all_detected_powers = p_vec[peak_indices]
-    
-
+        
     # all_detected_doas = []
     # all_detected_powers = []
     # for i_detected_doa in range(num_detected_doas):
@@ -357,11 +356,12 @@ def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False, first_sensor_li
         "first_sensor_linear_gain": first_sensor_linear_gain
     }
 
-def configs_string_to_file(config_list, directory="", filename="configurations_output.txt"):
+def experiment_configs_string_to_file(num_mc, config_list, directory="", filename="configurations_output.txt"):
     import os
-    config_strs = []
+    strs = []
+    strs.append(f"Number of Monte Carlo runs: {num_mc}\n")
     for i_config in range(len(config_list)):
-        config_strs.append(f"-------------- Config {i_config}:\n{config_list[i_config]}\n")
-    configs_output = "\n".join(config_strs)
+        strs.append(f"-------------- Config {i_config}:\n{config_list[i_config]}\n")
+    configs_output = "\n".join(strs)
     with open(os.path.join(directory, filename), "w") as f:
         f.write(configs_output)

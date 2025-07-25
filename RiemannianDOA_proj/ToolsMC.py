@@ -160,11 +160,27 @@ def analyze_algo_errors(results: list):
                 power_errors = np.stack([results[i_config][i_mc]["selected_power_error"][i_algo] 
                                             for i_mc in inds])
                 mean_square_errors = np.mean(doa_errors**2, axis=1)
-                prcnt_worst_results_to_ignore = 2
-                index = np.ceil((100 - prcnt_worst_results_to_ignore) / 100 * len(mean_square_errors)).astype(int)
-                bottom_q_percent_indices = np.argsort(mean_square_errors)[:index]
-                doa_errors = np.stack([doa_errors[i] for i in bottom_q_percent_indices])
-                power_errors = np.stack([power_errors[i] for i in bottom_q_percent_indices])         
+
+                # prcnt_worst_results_to_ignore = 2
+                # index = np.ceil((100 - prcnt_worst_results_to_ignore) / 100 * len(mean_square_errors)).astype(int)
+                # bottom_q_percent_indices = np.argsort(mean_square_errors)[:index]
+                # doa_errors = np.stack([doa_errors[i] for i in bottom_q_percent_indices])
+                # power_errors = np.stack([power_errors[i] for i in bottom_q_percent_indices])
+
+                median_ = np.median(mean_square_errors)
+                # aad_ = np.mean(np.abs(mean_square_errors - median_))
+                # inds_to_remove = np.where(mean_square_errors > median_ + 10 * aad_)[0]
+                inds_to_remove = np.where(mean_square_errors > 100*median_)[0]
+                prcnt_outliers = len(inds_to_remove) / len(mean_square_errors) * 100
+                if prcnt_outliers > 5: 
+                    print(f"ERROR: {prcnt_outliers} % outliers detected in config {i_config}, algo {algo_name}. ")
+                    doa_errors = np.nan * np.ones_like(doa_errors)
+                    power_errors = np.nan * np.ones_like(power_errors)
+                elif prcnt_outliers > 0:
+                    print(f"WARNING: {prcnt_outliers} % outliers detected in config {i_config}, algo {algo_name}. Removing them.")
+                    doa_errors = np.delete(doa_errors, inds_to_remove, axis=0)
+                    power_errors = np.delete(power_errors, inds_to_remove, axis=0)
+
 
             algos_error_data["mean_doa_errors"][algo_name][i_config] = np.mean(doa_errors, axis=0)
             algos_error_data["mean_power_errors"][algo_name][i_config] = np.mean(power_errors, axis=0)

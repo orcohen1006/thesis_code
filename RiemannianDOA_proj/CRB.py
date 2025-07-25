@@ -36,6 +36,47 @@ def cramer_rao_lower_bound(config):
     diag_CRB = np.diag(CRB)
     return diag_CRB
 
+def HARD_cramer_rao_lower_bound(config):
+    if (config["cohr_flag"]):
+        return np.nan  # Not implemented for coherent sources
+    m = config["m"]
+    N = config["N"]
+    doa_deg = np.sort(config["doa"])
+    K = len(doa_deg)
+    p_vec = convert_db_to_linear(config["power_doa_db"])
+    
+    SNR = config["snr"]
+    noise_power_db = np.max(config["power_doa_db"]) - SNR
+    noise_power = convert_db_to_linear(noise_power_db)
+
+    # Convert to radians
+    doa_rad = np.deg2rad(doa_deg)
+    delta_vec = np.arange(m)
+    A = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(doa_rad)))
+    dA = -1j * np.pi * np.outer(delta_vec, np.sin(doa_rad)) * A  # shape (m, K)
+   
+    P = np.diag(p_vec)               # K x K
+    R = A @ P @ A.conj().T + noise_power * np.eye(m)  # m x m
+    R_inv = np.linalg.inv(R)
+
+    FIM = np.zeros((K, K), dtype=np.float64)
+    for i in range(K):
+        dai = dA[:, i:i+1]  # m x 1
+        ai = A[:, i:i+1]    # m x 1
+        dRi = p_vec[i] * (dai @ ai.conj().T + ai @ dai.conj().T)  # m x m
+
+        for j in range(K):
+            daj = dA[:, j:j+1]
+            aj = A[:, j:j+1]
+            dRj = p_vec[j] * (daj @ aj.conj().T + aj @ daj.conj().T)
+
+            FIM[i, j] = N * np.real(np.trace(R_inv @ dRi @ R_inv @ dRj))
+
+    CRB = np.linalg.inv(FIM)  # K x K
+    CRB *= (180 / np.pi) ** 2  # Convert to degrees squared
+    diag_CRB = np.diag(CRB)
+    return diag_CRB
+
 def OLD_cramer_rao_lower_bound(config):
     """
     Simple CRB (Cramer-Rao Bound)

@@ -30,7 +30,7 @@ def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40, theta0=35) -> None:
             create_config(
                 m=12, snr=vec_snr[i], N=N, 
                 power_doa_db=np.array([0, 0, -5]),
-                doa=np.array([theta0, theta0 + 5, theta0 + 15]),
+                doa=np.array([theta0, theta0 + 8, theta0 + 16]),
                 cohr_flag=cohr_flag,
                 )
         )
@@ -59,7 +59,7 @@ def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40, theta0=35) -> None:
     fig_l0_norm.savefig(os.path.join(path_results_dir, 'L0_' + str_desc_name +  '.png'), dpi=300)
     fig_hpbw.savefig(os.path.join(path_results_dir, 'HPBW_' + str_desc_name +  '.png'), dpi=300)
     # %%
-    configs_string_to_file(config_list=config_list, directory=path_results_dir)
+    experiment_configs_string_to_file(num_mc=num_mc, config_list=config_list, directory=path_results_dir)
 
 if __name__ == "__main__":
     # Example usage
