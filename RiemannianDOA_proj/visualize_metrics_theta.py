@@ -115,6 +115,7 @@ def visualize_metrics(metrics):
 
 
 if __name__ == "__main__":
+    # %%
     timestamp = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
     # ================
     metrics = calculate_metrics()
@@ -124,9 +125,9 @@ if __name__ == "__main__":
     with open(os.path.join(dir_name, 'data.pkl'), 'wb') as f:
         dill.dump(metrics, f)
     # %%  ================
-    dir_name = 'visualize_metrics_theta02-06-2025_09-17-55'
-    with open(os.path.join(dir_name, 'data.pkl'), 'rb') as f:
-        metrics = dill.load(f)
+    # dir_name = 'visualize_metrics_theta02-06-2025_09-17-55'
+    # with open(os.path.join(dir_name, 'data.pkl'), 'rb') as f:
+        # metrics = dill.load(f)
     # ================
     visualize_metrics(metrics)
     plt.savefig(os.path.join(dir_name, 'metrics.png'), dpi=300)

@@ -2,8 +2,6 @@ import numpy as np
 from utils import *
 
 def cramer_rao_lower_bound(config):
-    if (config["cohr_flag"]):
-        return np.nan  # Not implemented for coherent sources
     m = config["m"]
     N = config["N"]
     doa_deg = np.sort(config["doa"])
@@ -21,7 +19,15 @@ def cramer_rao_lower_bound(config):
 
     A_H = A.T.conj()
     I = np.eye(m)
-    P = np.diag(p_vec)               # K x K
+    if config["cohr_flag"]:
+        assert(len(p_vec) == 2) # implemented only for 2 sources
+        rho = config["cohr_coeff"]
+        P = np.array([
+            [p_vec[0], rho * np.sqrt(p_vec[0] * p_vec[1])],
+            [rho*np.sqrt(p_vec[0] * p_vec[1]), p_vec[1]]
+        ])
+    else:
+        P = np.diag(p_vec)               # K x K
 
     # Compute the covairance matrix: R = A P A^H + \sigma I
     R = A @ P @ A_H + noise_power * I

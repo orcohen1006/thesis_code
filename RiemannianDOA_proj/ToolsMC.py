@@ -64,6 +64,13 @@ def RunDoaConfigsPBS(workdir: str, config_list: list, num_mc:int, num_jobs: int 
     t0 = time.time()
     print("Starting job array with ", num_jobs, " jobs:", len(config_list), "configurations and", num_mc, "Monte Carlo iterations.")
     
+    job_logs_dir = Path('.') / "job_logs"
+    if job_logs_dir.exists():
+        import shutil
+        shutil.rmtree(job_logs_dir)
+    #create the job_logs directory
+    os.makedirs(job_logs_dir, exist_ok=True)
+
     save_job_metadata(workdir, config_list, num_mc, num_jobs)
 
     save_doa_configs(workdir, config_list)
@@ -170,7 +177,7 @@ def analyze_algo_errors(results: list):
                 median_ = np.median(mean_square_errors)
                 # aad_ = np.mean(np.abs(mean_square_errors - median_))
                 # inds_to_remove = np.where(mean_square_errors > median_ + 10 * aad_)[0]
-                inds_to_remove = np.where(mean_square_errors > 100*median_)[0]
+                inds_to_remove = np.where(mean_square_errors > 500*median_)[0]
                 prcnt_outliers = len(inds_to_remove) / len(mean_square_errors) * 100
                 if prcnt_outliers > 5: 
                     print(f"ERROR: {prcnt_outliers} % outliers detected in config {i_config}, algo {algo_name}. ")
@@ -367,6 +374,7 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         ax.plot(parameter_values, all_sources_doa_rmse, label=algo_name, **algo_list[algo_name])
         if do_ylogscale:
             ax.set_yscale('log')
+            ax.grid(True, which='both', linestyle='--')
     crb_values = np.stack(algos_error_data["mean_square_doa_errors"]["CRB"])
     lower_bound_all_sources_doa_rmse = np.sqrt(np.sum(crb_values, axis=1))
     if normalize_rmse_by_parameter:

@@ -1,0 +1,16 @@
+Number of Monte Carlo runs: 500
+
+-------------- Config 0:
+{'m': 12, 'snr': -6, 'N': 40, 'power_doa_db': array([ 0,  0, -5]), 'doa': array([35, 43, 51]), 'cohr_flag': False, 'first_sensor_linear_gain': 1.0}
+
+-------------- Config 1:
+{'m': 12, 'snr': -3, 'N': 40, 'power_doa_db': array([ 0,  0, -5]), 'doa': array([35, 43, 51]), 'cohr_flag': False, 'first_sensor_linear_gain': 1.0}
+
+-------------- Config 2:
+{'m': 12, 'snr': 0, 'N': 40, 'power_doa_db': array([ 0,  0, -5]), 'doa': array([35, 43, 51]), 'cohr_flag': False, 'first_sensor_linear_gain': 1.0}
+
+-------------- Config 3:
+{'m': 12, 'snr': 3, 'N': 40, 'power_doa_db': array([ 0,  0, -5]), 'doa': array([35, 43, 51]), 'cohr_flag': False, 'first_sensor_linear_gain': 1.0}
+
+-------------- Config 4:
+{'m': 12, 'snr': 6, 'N': 40, 'power_doa_db': array([ 0,  0, -5]), 'doa': array([35, 43, 51]), 'cohr_flag': False, 'first_sensor_linear_gain': 1.0}

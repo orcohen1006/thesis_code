@@ -21,8 +21,11 @@ def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40, theta0=35) -> None:
     if not os.path.exists(path_results_dir):
         os.makedirs(path_results_dir)
     # %%
-    num_mc = 100
-    vec_snr = np.arange(-6, 6 + 1, 3)
+    num_mc = 500
+    # vec_snr = np.arange(-6, 6 + 1, 3)
+    # vec_snr = np.arange(-5, 5 + 1, 2.5)
+    # vec_snr = np.arange(-4, 5 + 1, 1)
+    vec_snr = np.arange(-4.5, 4.5 + 1, 1.5)
     num_configs = len(vec_snr)
     config_list = []
     for i in range(num_configs):
@@ -40,7 +43,7 @@ def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40, theta0=35) -> None:
     results, algos_error_data = analyze_algo_errors(results)
     # 
     #
-    fig_doa_errors = plot_doa_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False, do_ylogscale=True)
+    fig_doa_errors = plot_doa_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False, do_ylogscale=False)
     # %%
     tmpfig = plot_doa_errors_per_source(algos_error_data, r'$SNR$', "", vec_snr)
     #  
@@ -48,7 +51,7 @@ def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40, theta0=35) -> None:
     #  
     fig_prob_detection = plot_prob_detection(algos_error_data, r'$SNR$', "", vec_snr)
     #
-    i_config = np.where(np.array(vec_snr) == -3)[0][0]
+    i_config = np.where(np.array(vec_snr) == 0)[0][0]
     fig_l0_norm = plot_l0_norm(results[i_config])
     fig_hpbw = plot_hpbw(results[i_config])
     # %%
@@ -63,7 +66,7 @@ def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40, theta0=35) -> None:
 
 if __name__ == "__main__":
     # Example usage
-    exp_SNR_Large(cohr_flag=False, N=40, theta0=35)
+    exp_SNR_Large(cohr_flag=False, N=40, theta0=35.25)
 
 
 # %%

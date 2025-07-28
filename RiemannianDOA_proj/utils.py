@@ -229,20 +229,22 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
     fig = plt.figure()
     ax = plt.gca()
 
+    list_plt = []
     for i_algo, algo_name in enumerate(algo_list.keys()):
         spectrum = list_p_vec[i_algo]
         spectrum[spectrum < epsilon_power] = epsilon_power
         spectrum = convert_linear_to_db(spectrum)
-        ax.plot(doa_scan, spectrum, label=algo_name, **algo_list[algo_name])
+        pltobj, = ax.plot(doa_scan, spectrum, label=algo_name, **algo_list[algo_name])
+        list_plt.append(pltobj)
 
     plt_doa, = ax.plot(doa, power_doa_db, 'x', color='black', label='DOA')
+    list_plt.append(plt_doa)
+    plt.legend(handles=list_plt)
     
-    plt.legend(handles=[plt_doa])
+    plt.xlabel(r"$\theta$ [degrees]", fontsize=12)
+    plt.ylabel("power [dB]", fontsize=12)
     
-    plt.xlabel(r"$\theta$ [degrees]", fontsize=14)
-    plt.ylabel("power [dB]", fontsize=14)
-    
-    plt.title('Directions Power Spectrum Estimation')
+    # plt.title('Directions Power Spectrum Estimation')
     return ax
 
 # def detect_DOAs(p_vec, grid_doa, doa):
@@ -292,7 +294,7 @@ def model_order_selection(R, N):
         mdl[k] = N * plunge + 0.5 * k * (2*M - k) * np.log(N)
     return np.argmin(aic), np.argmin(mdl)
 
-def generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=False, seed=None):
+def generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=False, cohr_coeff = 1.0, noncircular_coeff = 0.0, seed=None):
     if seed is not None:
         np.random.seed(seed)
 
@@ -305,16 +307,29 @@ def generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=Fals
 
     if not cohr_flag:  # independent sources
         waveform = np.exp(1j * 2 * np.pi * np.random.rand(num_sources, t_samples))
+        # waveform = np.sqrt(1 / 2) * (np.random.randn(num_sources, t_samples) + 1j * np.random.randn(num_sources, t_samples))
         waveform = waveform * np.tile(amplitude_doa, (t_samples, 1)).T
+        waveform = make_non_circular(waveform, kappa=noncircular_coeff)
     else:  # coherent sources
         waveform = np.exp(1j * 2 * np.pi * np.random.rand(num_sources - 1, t_samples))
-        waveform = np.vstack([waveform, waveform[0, :]])
+        waveform_last = np.exp(1j * 2 * np.pi * np.random.rand(1, t_samples))
+        waveform_last = cohr_coeff * waveform[0, :] + np.sqrt(1- cohr_coeff**2)*waveform_last
+        waveform = np.vstack([waveform, waveform_last])
         waveform = waveform * np.tile(amplitude_doa, (t_samples, 1)).T
 
     y_noisefree = A_true @ waveform  # ideal noiseless measurements
     y_noisy = y_noisefree + noise  # noisy measurements
 
     return y_noisy
+
+def make_non_circular(s, kappa):
+    """
+    Takes a circular signal s (K x N), returns non-circular version.
+    """
+    real = np.real(s)
+    imag = np.imag(s)
+    new_imag = np.sqrt(1 - kappa**2) * imag + kappa * real
+    return real + 1j * new_imag
 
 def get_doa_grid():
     res = 0.5  # resolution in degrees
@@ -335,7 +350,7 @@ def get_algo_dict_list(flag_also_use_PER=False):
     return d
 
 
-def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False, first_sensor_linear_gain=1.0):
+def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False, cohr_coeff=1.0, noncircular_coeff=0.0):
     """
     Create a configuration dictionary to hold parameters for simulations.
 
@@ -353,7 +368,8 @@ def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False, first_sensor_li
         "power_doa_db": power_doa_db,
         "doa": doa,
         "cohr_flag": cohr_flag,
-        "first_sensor_linear_gain": first_sensor_linear_gain
+        "cohr_coeff": cohr_coeff,
+        "noncircular_coeff": noncircular_coeff
     }
 
 def experiment_configs_string_to_file(num_mc, config_list, directory="", filename="configurations_output.txt"):

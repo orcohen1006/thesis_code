@@ -31,7 +31,6 @@ def run_single_mc_iteration(
 
     delta_vec = np.arange(config["m"])
     A_true = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(config["doa"] * np.pi / 180)))
-    # A_true = np.exp(1j * np.pi * np.outer(delta_vec.astype(np.float64) * config["first_sensor_linear_gain"], np.cos(config["doa"] * np.pi / 180)))
     A = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(doa_scan * np.pi / 180)))
 
     noise_power_db = np.max(config["power_doa_db"]) - config["snr"]
@@ -42,10 +41,9 @@ def run_single_mc_iteration(
 
     num_algos = len(algo_list)
 
-    # # #
-    # A_true[0,:] *= config["first_sensor_linear_gain"]
-    # # #
-    y_noisy = generate_signal(A_true, config["power_doa_db"], config["N"], noise_power, cohr_flag=config["cohr_flag"], seed=i_mc)
+    y_noisy = generate_signal(A_true, config["power_doa_db"], config["N"], noise_power, cohr_flag=config["cohr_flag"], 
+                              cohr_coeff = config["cohr_coeff"], noncircular_coeff=config["noncircular_coeff"],
+                              seed=i_mc)
 
     modulus_hat_das = np.sum(np.abs(A.conj().T @ (y_noisy / config["m"])), axis=1) / config["N"]
     
