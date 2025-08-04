@@ -177,7 +177,7 @@ def analyze_algo_errors(results: list):
                 median_ = np.median(mean_square_errors)
                 # aad_ = np.mean(np.abs(mean_square_errors - median_))
                 # inds_to_remove = np.where(mean_square_errors > median_ + 10 * aad_)[0]
-                inds_to_remove = np.where(mean_square_errors > 500*median_)[0]
+                inds_to_remove = np.where(mean_square_errors > 750*median_)[0]
                 prcnt_outliers = len(inds_to_remove) / len(mean_square_errors) * 100
                 if prcnt_outliers > 5: 
                     print(f"ERROR: {prcnt_outliers} % outliers detected in config {i_config}, algo {algo_name}. ")

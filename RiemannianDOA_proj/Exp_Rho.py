@@ -18,7 +18,7 @@ from ToolsMC import *
 
 # %%
 
-def exp_rho(doa: np.ndarray = np.array([35, 45]), power_doa_db: np.ndarray = np.array([0, 0]),
+def exp_rho(doa: np.ndarray = np.array([35, 45]), power_doa_db: np.ndarray = np.array([0, 0]),  N = 40,
             basedir:str = '') -> None:
 
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
@@ -37,7 +37,7 @@ def exp_rho(doa: np.ndarray = np.array([35, 45]), power_doa_db: np.ndarray = np.
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=12, snr=0, N=50, 
+                m=12, snr=0, N=N, 
                 power_doa_db=power_doa_db,
                 doa=doa,
                 cohr_flag=True,
@@ -50,7 +50,7 @@ def exp_rho(doa: np.ndarray = np.array([35, 45]), power_doa_db: np.ndarray = np.
     results, algos_error_data = analyze_algo_errors(results)
     #
     fig_doa_errors = plot_doa_errors(algos_error_data, r'Correlation Coefficient - $\rho$', "", vec_rho, normalize_rmse_by_parameter=False, do_ylogscale=False)
-    # 
+    # %%
     fig_power_errors = plot_power_errors(algos_error_data, r'Correlation Coefficient - $\rho$', "", vec_rho, normalize_rmse_by_parameter=False)
     # 
     fig_prob_detection = plot_prob_detection(algos_error_data, r'Correlation Coefficient - $\rho$', "", vec_rho)
