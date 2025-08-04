@@ -2,9 +2,43 @@ import numpy as np
 from scipy.signal import find_peaks
 from scipy.optimize import linear_sum_assignment
 import torch
+import matplotlib.pyplot as plt
+import pickle
+import os
 
 FILENAME_PBS_SCRIPT = "job_byOrCohen.pbs"
 FILENAME_PBS_METADATA = "job_metadata.pkl"
+
+def save_figure(fig: plt.Figure, path_results_dir: str, name: str):
+    fig.savefig(os.path.join(path_results_dir, name +  '.png'), dpi=300)
+    with open(os.path.join(path_results_dir, name +  '.pkl'), 'wb') as f:
+        pickle.dump(fig, f)
+
+
+def matrix_pinv_sqrtm(B_in):
+    """Compute the inverse square root of a positive definite matrix B."""
+    eigvals, eigvecs = torch.linalg.eigh(B_in)
+    eigvals_new = 1.0 / torch.sqrt(torch.clamp(eigvals.real, min=1e-10))
+    eigvals_new[eigvals.real < 1e-10] = 0
+    Lam_new = torch.diag(eigvals_new).type(torch.complex64)
+    B_out = eigvecs @ Lam_new @ eigvecs.conj().T
+    return B_out
+        
+def eigvals_of_Q(R, R_hat):
+    """
+    Compute the eigenvalues of the matrix Q = R_hat^(-1/2) @ R @ R_hat^(-1/2).
+    """
+    pinv_sqrtm_R_hat = matrix_pinv_sqrtm(R_hat)
+    Q = pinv_sqrtm_R_hat @ (R) @ pinv_sqrtm_R_hat
+    eigvals = torch.linalg.eigvalsh(Q).real
+    return eigvals
+def eigvals_of_Q_given_result(result):
+    config = result['config']
+    power_doa = convert_db_to_linear(config["power_doa_db"])
+    A_true = np.exp(1j * np.pi * np.outer(np.arange(config["m"]), np.cos(config["doa"] * np.pi / 180)))
+    noise_power = convert_db_to_linear(np.max(config["power_doa_db"]) - config["snr"])
+    R = A_true @ np.diag(power_doa) @ A_true.conj().T + noise_power * np.eye(config["m"])
+    return eigvals_of_Q(R, result['R_hat'])
 
 def convert_db_to_linear(power_doa_db):
     """

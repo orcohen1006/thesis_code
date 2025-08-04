@@ -49,18 +49,18 @@ def exp_rho(doa: np.ndarray = np.array([35, 45]), power_doa_db: np.ndarray = np.
     # %%
     results, algos_error_data = analyze_algo_errors(results)
     #
-    fig_doa_errors = plot_doa_errors(algos_error_data, r'Coherence Coeff - $\rho$', "", vec_rho, normalize_rmse_by_parameter=False, do_ylogscale=False)
+    fig_doa_errors = plot_doa_errors(algos_error_data, r'Correlation Coefficient - $\rho$', "", vec_rho, normalize_rmse_by_parameter=False, do_ylogscale=False)
     # 
-    fig_power_errors = plot_power_errors(algos_error_data, r'Coherence Coeff - $\rho$', "", vec_rho, normalize_rmse_by_parameter=False)
+    fig_power_errors = plot_power_errors(algos_error_data, r'Correlation Coefficient - $\rho$', "", vec_rho, normalize_rmse_by_parameter=False)
     # 
-    fig_prob_detection = plot_prob_detection(algos_error_data, r'Coherence Coeff - $\rho$', "", vec_rho)
-    # %%
-    str_desc_name = os.path.basename(name_results_dir)
-    fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + str_desc_name +  '.png'), dpi=300)
-    fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + str_desc_name +  '.png'), dpi=300)
-    fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + str_desc_name +  '.png'), dpi=300)
+    fig_prob_detection = plot_prob_detection(algos_error_data, r'Correlation Coefficient - $\rho$', "", vec_rho)
     # %%
     experiment_configs_string_to_file(num_mc=num_mc, config_list=config_list, directory=path_results_dir)
+    str_desc_name = os.path.basename(name_results_dir)
+    save_figure(fig_doa_errors, path_results_dir, str_desc_name+ "_DOA")
+    save_figure(fig_power_errors, path_results_dir, str_desc_name+ "_Power")
+    save_figure(fig_prob_detection, path_results_dir, str_desc_name+ "_Prob")
+    # %%
 
 if __name__ == "__main__":
     exp_rho(doa=np.array([35.25, 41.25]), power_doa_db=np.array([0, 0]))

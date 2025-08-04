@@ -10,7 +10,9 @@ from ToolsMC import *
 
 # %%
 
-def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40, theta0=35) -> None:
+def exp_SNR_Large(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.ndarray = np.array([0, 0, -5]),
+                  N=40,
+                  cohr_flag: bool = False, basedir:str = '') -> None:
     
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
@@ -22,9 +24,6 @@ def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40, theta0=35) -> None:
         os.makedirs(path_results_dir)
     # %%
     num_mc = 500
-    # vec_snr = np.arange(-6, 6 + 1, 3)
-    # vec_snr = np.arange(-5, 5 + 1, 2.5)
-    # vec_snr = np.arange(-4, 5 + 1, 1)
     vec_snr = np.arange(-4.5, 4.5 + 1, 1.5)
     num_configs = len(vec_snr)
     config_list = []
@@ -32,8 +31,8 @@ def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40, theta0=35) -> None:
         config_list.append(
             create_config(
                 m=12, snr=vec_snr[i], N=N, 
-                power_doa_db=np.array([0, 0, -5]),
-                doa=np.array([theta0, theta0 + 8, theta0 + 16]),
+                power_doa_db=power_doa_db,
+                doa=doa,
                 cohr_flag=cohr_flag,
                 )
         )
@@ -55,18 +54,18 @@ def exp_SNR_Large(cohr_flag: bool, basedir:str = '', N=40, theta0=35) -> None:
     fig_l0_norm = plot_l0_norm(results[i_config])
     fig_hpbw = plot_hpbw(results[i_config])
     # %%
-    str_desc_name = os.path.basename(name_results_dir)
-    fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + str_desc_name +  '.png'), dpi=300)
-    fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + str_desc_name +  '.png'), dpi=300)
-    fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + str_desc_name +  '.png'), dpi=300)
-    fig_l0_norm.savefig(os.path.join(path_results_dir, 'L0_' + str_desc_name +  '.png'), dpi=300)
-    fig_hpbw.savefig(os.path.join(path_results_dir, 'HPBW_' + str_desc_name +  '.png'), dpi=300)
-    # %%
     experiment_configs_string_to_file(num_mc=num_mc, config_list=config_list, directory=path_results_dir)
+    str_desc_name = os.path.basename(name_results_dir)
+    save_figure(fig_doa_errors, path_results_dir, str_desc_name+ "_DOA")
+    save_figure(fig_power_errors, path_results_dir, str_desc_name+ "_Power")
+    save_figure(fig_prob_detection, path_results_dir, str_desc_name+ "_Prob")
+    save_figure(fig_l0_norm, path_results_dir, str_desc_name+ "_L0")
+    save_figure(fig_hpbw, path_results_dir, str_desc_name+ "_HPBW")
+    # %%
 
 if __name__ == "__main__":
     # Example usage
-    exp_SNR_Large(cohr_flag=False, N=40, theta0=35.25)
+    exp_SNR_Large(N=40)
 
 
 # %%

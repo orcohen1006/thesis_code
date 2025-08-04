@@ -77,6 +77,7 @@ def run_single_mc_iteration(
     result = {}
     result["i_mc"] = i_mc
     result['config'] = config
+    result["R_hat"] = (y_noisy @ y_noisy.conj().T) / config["N"]
     result['runtime_list'] = runtime_list
     result['num_iters_list'] = num_iters_list
     result['p_vec_list'] = p_vec_list
