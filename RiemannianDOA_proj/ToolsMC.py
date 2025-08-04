@@ -177,7 +177,7 @@ def analyze_algo_errors(results: list):
                 median_ = np.median(mean_square_errors)
                 # aad_ = np.mean(np.abs(mean_square_errors - median_))
                 # inds_to_remove = np.where(mean_square_errors > median_ + 10 * aad_)[0]
-                inds_to_remove = np.where(mean_square_errors > 1000*median_)[0]
+                inds_to_remove = np.where(mean_square_errors > 500*median_)[0]
                 prcnt_outliers = len(inds_to_remove) / len(mean_square_errors) * 100
                 if prcnt_outliers > 5: 
                     print(f"ERROR: {prcnt_outliers} % outliers detected in config {i_config}, algo {algo_name}. ")
@@ -256,6 +256,76 @@ def plot_hpbw(result):
     ax.legend()
     return fig
     
+def plot_Qeigvals(results, parameter_name: str, parameter_units: str, parameter_values: list,
+                    do_ylogscale: bool = False):
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = plt.gca()
+    # %%
+    # num_configs = len(results)
+    # num_mc = len(results[0])
+    # for i_config in range(num_configs):
+    #     all_config_eigvals = []
+    #     for i_mc in range(num_mc):
+    #         eigvals = eigvals_of_Q_given_result(results[i_config][i_mc])
+    #         all_config_eigvals.extend(eigvals.tolist())
+
+    #     ax.boxplot(all_config_eigvals, positions=[parameter_values[i_config]],
+    #                widths=0.5, patch_artist=True,
+    #                whis=[10, 90],
+    #                showfliers=False,
+    #                boxprops=dict(facecolor='lightblue', color='black'),
+    #                medianprops=dict(color='red'), whiskerprops=dict(color='black'))
+
+    num_configs = len(results)
+    num_mc = len(results[0])
+    # Collect all eigenvalues for each config and MC
+    all_eigvals = []
+    for i_config in range(num_configs):
+        config_eigvals = []
+        for i_mc in range(num_mc):
+            eigvals = eigvals_of_Q_given_result(results[i_config][i_mc])
+            config_eigvals.append(eigvals)
+        all_eigvals.append(np.array(config_eigvals))  # shape: (num_mc, num_eigvals)
+    all_eigvals = np.array(all_eigvals)  # shape: (num_configs, num_mc, num_eigvals)
+    num_eigvals = all_eigvals.shape[2]
+
+    # # Compute mean and std for each eigenvalue index across MC runs, for each config
+    # mean_eigvals = np.mean(all_eigvals, axis=1)  # shape: (num_configs, num_eigvals)
+    # std_eigvals = np.std(all_eigvals, axis=1)    # shape: (num_configs, num_eigvals)
+
+    # Plot each eigenvalue's mean and std as a function of parameter_values
+    # for i_eig in range(num_eigvals):
+    #     ax.plot(parameter_values, mean_eigvals[:, i_eig], marker='o', label=fr"Mean $\lambda_{{{i_eig+1}}}$")
+    #     ax.fill_between(parameter_values, 
+    #                     mean_eigvals[:, i_eig] - std_eigvals[:, i_eig], 
+    #                     mean_eigvals[:, i_eig] + std_eigvals[:, i_eig],
+    #                     alpha=0.3, label=fr"$\lambda_{{{i_eig+1}}}$ ± Std")
+
+    bar_eigvals = np.mean(all_eigvals, axis=2)  # shape: (num_configs, num_mc)
+    print(f"bar_eigvals shape: {bar_eigvals.shape}")
+    mean_bar_eigvals = np.mean(bar_eigvals, axis=1)  # shape: (num_configs,)
+    std_bar_eigvals = np.std(bar_eigvals, axis=1)
+    # Plot mean and std of bar eigenvalues
+    ax.plot(parameter_values, mean_bar_eigvals, marker='o', label=r"$\bar{\lambda}$: Mean")
+    ax.fill_between(parameter_values,
+                    mean_bar_eigvals - std_bar_eigvals,
+                    mean_bar_eigvals + std_bar_eigvals,
+                    alpha=0.3, label=r"$\bar{\lambda}$: Mean ± Std")
+    #
+    # %%
+    ax.grid(True)
+    if do_ylogscale:
+        ax.set_yscale('log')
+        ax.grid(True, which='both', linestyle='--')
+
+    ax.set_ylabel("Q Eigenvalues")
+    ax.set_xlabel(parameter_name + f" {parameter_units}")
+    ax.legend()
+    return fig
+
+
+
 def plot_prob_detection(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list):
     # import matplotlib.pyplot as plt
     # import matplotlib.gridspec as gridspec
@@ -356,7 +426,6 @@ def plot_doa_errors_per_source(algos_error_data: dict, parameter_name: str, para
     return fig
 
 
-
 def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False,
                     do_ylogscale: bool = False):
     import matplotlib.pyplot as plt
@@ -388,73 +457,6 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
     ax.legend()
     ax.grid(True)
     return fig
-
-# def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False):
-#     import matplotlib.pyplot as plt
-#     import matplotlib.gridspec as gridspec
-
-#     algo_list = get_algo_dict_list()
-#     fig = plt.figure(figsize=(12, 10))
-#     gs = gridspec.GridSpec(3, 2, height_ratios=[1, 1, 1])  # 3 rows, 2 columns
-
-#     # Axes for the 2x2 part
-#     axs = [
-#         [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])],
-#         [fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])]
-#     ]
-
-#     # Axis for the bottom full-width plot
-#     ax_total = fig.add_subplot(gs[2, :])  # spans both columns
-
-#     for algo_name in algo_list.keys():
-#         mean_power_errors = np.stack(algos_error_data["mean_power_errors"][algo_name]) 
-#         mse_power_errors = np.stack(algos_error_data["mean_square_power_errors"][algo_name])
-#         rmse_power_errors = np.sqrt(mse_power_errors)
-        
-#         all_sources_power_rmse = np.sqrt(np.sum(mse_power_errors, axis=1))
-
-#         # Source 1
-#         axs[0][0].plot(parameter_values, mean_power_errors[:, 0], label=algo_name, **algo_list[algo_name])
-#         axs[1][0].plot(parameter_values, rmse_power_errors[:, 0], label=algo_name, **algo_list[algo_name])
-
-#         # Source 2
-#         axs[0][1].plot(parameter_values, mean_power_errors[:, 1], label=algo_name, **algo_list[algo_name])
-#         axs[1][1].plot(parameter_values, rmse_power_errors[:, 1], label=algo_name, **algo_list[algo_name])
-
-#         # Total RMSE (source 1 + source 2)
-#         if normalize_rmse_by_parameter:
-#             all_sources_power_rmse = all_sources_power_rmse / parameter_values
-#         ax_total.plot(parameter_values, all_sources_power_rmse, label=algo_name, **algo_list[algo_name])
-
-#     # Titles and labels
-#     axs[0][0].set_title("Source 1: Mean power Error (Bias)")
-#     axs[0][0].set_ylabel("power Error")
-    
-#     axs[0][1].set_title("Source 2: Mean power Error (Bias)")
-#     axs[0][1].set_ylabel("power Error")
-
-#     axs[1][0].set_title("Source 1: RMSE power Error")
-#     axs[1][0].set_ylabel("power RMSE")
-
-#     axs[1][1].set_title("Source 2: RMSE power Error")
-#     axs[1][1].set_ylabel("power RMSE")
-
-#     ax_total.set_title("Both Sources power RMSE")
-#     if normalize_rmse_by_parameter:
-#         ax_total.set_ylabel("power RMSE / " + parameter_name)
-#     else:
-#         ax_total.set_ylabel("power RMSE")
-#     ax_total.set_xlabel(parameter_name + f" {parameter_units}")
-#     # Add legends
-#     for ax_row in axs:
-#         for ax in ax_row:
-#             ax.legend()
-#             ax.grid(True)
-#     ax_total.legend()
-#     ax_total.grid(True)
-#     plt.tight_layout()
-#     return fig
-
 
 def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False,
                     do_ylogscale: bool = False):

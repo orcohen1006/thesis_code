@@ -53,6 +53,8 @@ def exp_SNR_Large(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_d
     i_config = np.where(np.array(vec_snr) == 0)[0][0]
     fig_l0_norm = plot_l0_norm(results[i_config])
     fig_hpbw = plot_hpbw(results[i_config])
+    #
+    fig_qeigvals = plot_Qeigvals(results, r'$SNR$', "", vec_snr, do_ylogscale=False)
     # %%
     experiment_configs_string_to_file(num_mc=num_mc, config_list=config_list, directory=path_results_dir)
     str_desc_name = os.path.basename(name_results_dir)
@@ -61,6 +63,7 @@ def exp_SNR_Large(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_d
     save_figure(fig_prob_detection, path_results_dir, str_desc_name+ "_Prob")
     save_figure(fig_l0_norm, path_results_dir, str_desc_name+ "_L0")
     save_figure(fig_hpbw, path_results_dir, str_desc_name+ "_HPBW")
+    save_figure(fig_qeigvals, path_results_dir, str_desc_name+ "_Qeigvals")
     # %%
 
 if __name__ == "__main__":

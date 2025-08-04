@@ -17,10 +17,10 @@ def save_figure(fig: plt.Figure, path_results_dir: str, name: str):
 
 def matrix_pinv_sqrtm(B_in):
     """Compute the inverse square root of a positive definite matrix B."""
-    eigvals, eigvecs = torch.linalg.eigh(B_in)
-    eigvals_new = 1.0 / torch.sqrt(torch.clamp(eigvals.real, min=1e-10))
+    eigvals, eigvecs = np.linalg.eigh(B_in)
+    eigvals_new = 1.0 / np.sqrt(np.clip(eigvals.real, a_min=1e-10, a_max=None))  # Avoid division by zero
     eigvals_new[eigvals.real < 1e-10] = 0
-    Lam_new = torch.diag(eigvals_new).type(torch.complex64)
+    Lam_new = np.diag(eigvals_new)
     B_out = eigvecs @ Lam_new @ eigvecs.conj().T
     return B_out
         
@@ -30,7 +30,7 @@ def eigvals_of_Q(R, R_hat):
     """
     pinv_sqrtm_R_hat = matrix_pinv_sqrtm(R_hat)
     Q = pinv_sqrtm_R_hat @ (R) @ pinv_sqrtm_R_hat
-    eigvals = torch.linalg.eigvalsh(Q).real
+    eigvals = np.linalg.eigvalsh(Q).real
     return eigvals
 def eigvals_of_Q_given_result(result):
     config = result['config']

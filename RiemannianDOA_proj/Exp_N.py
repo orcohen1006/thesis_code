@@ -19,7 +19,8 @@ from ToolsMC import *
 # %%
 
 def exp_N(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.ndarray = np.array([0, 0, -5]),
-           cohr_flag: bool = False, basedir:str = '') -> None:
+          snr: float = -3,
+          cohr_flag: bool = False, basedir:str = '') -> None:
 
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
@@ -38,7 +39,7 @@ def exp_N(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.nd
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=m, snr=-3, N=vec_n[i], 
+                m=m, snr=snr, N=vec_n[i], 
                 power_doa_db=power_doa_db,
                 doa=doa,
                 cohr_flag=cohr_flag,
@@ -54,12 +55,15 @@ def exp_N(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.nd
     fig_power_errors = plot_power_errors(algos_error_data, r'$N$', "", vec_n, normalize_rmse_by_parameter=False)
     # 
     fig_prob_detection = plot_prob_detection(algos_error_data, r'$N$', "", vec_n)
+    #
+    fig_qeigvals = plot_Qeigvals(results, r'$N/M$', "", vec_n/m, do_ylogscale=False)
     # %%
     experiment_configs_string_to_file(num_mc=num_mc, config_list=config_list, directory=path_results_dir)
     str_desc_name = os.path.basename(name_results_dir)
     save_figure(fig_doa_errors, path_results_dir, str_desc_name+ "_DOA")
     save_figure(fig_power_errors, path_results_dir, str_desc_name+ "_Power")
     save_figure(fig_prob_detection, path_results_dir, str_desc_name+ "_Prob")
+    save_figure(fig_qeigvals, path_results_dir, str_desc_name+ "_Qeigvals")
     # %%
 
 if __name__ == "__main__":
