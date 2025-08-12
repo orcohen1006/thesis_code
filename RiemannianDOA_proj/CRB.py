@@ -12,10 +12,7 @@ def cramer_rao_lower_bound(config):
     noise_power_db = np.max(config["power_doa_db"]) - SNR
     noise_power = convert_db_to_linear(noise_power_db)
 
-    doa_rad = np.deg2rad(doa_deg) # Convert to radians
-    delta_vec = np.arange(m)
-    A = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(doa_rad)))
-    dA = -1j * np.pi * np.outer(delta_vec, np.sin(doa_rad)) * A  # shape (m, K)
+    A, dA = get_steering_matrix(doa_deg, m, calcGradient_wrt_radians=True)
 
     A_H = A.T.conj()
     I = np.eye(m)
@@ -55,12 +52,8 @@ def HARD_cramer_rao_lower_bound(config):
     noise_power_db = np.max(config["power_doa_db"]) - SNR
     noise_power = convert_db_to_linear(noise_power_db)
 
-    # Convert to radians
-    doa_rad = np.deg2rad(doa_deg)
-    delta_vec = np.arange(m)
-    A = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(doa_rad)))
-    dA = -1j * np.pi * np.outer(delta_vec, np.sin(doa_rad)) * A  # shape (m, K)
-   
+    A, dA = get_steering_matrix(doa_deg, m, calcGradient_wrt_radians=True)
+
     P = np.diag(p_vec)               # K x K
     R = A @ P @ A.conj().T + noise_power * np.eye(m)  # m x m
     R_inv = np.linalg.inv(R)

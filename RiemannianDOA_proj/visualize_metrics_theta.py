@@ -19,7 +19,7 @@ sources_power = 10.0 ** (power_doa_db / 10.0)
 doas_true = np.array([40, 45])
 doa_scan = np.linspace(start=doas_true.min() - 15, stop=doas_true.max() + 15, num=int(1e2))
 doa_scan = np.clip(doa_scan, 0, 180)
-A_true = np.exp(1j * np.pi * np.outer(np.arange(m), np.cos(doas_true * np.pi / 180)))
+A_true = get_steering_matrix(doas_true, m)
 # ===================
 #A_true[0,:] *= 5  # Example of gain for the first sensor
 # ===================
@@ -60,7 +60,7 @@ def calculate_metrics():
         for jj in range(ii, len(doa_scan)):
             print(f'({ii}, {jj})')
             doas = np.array([doa_scan[ii], doa_scan[jj]])
-            A = np.exp(1j * np.pi * np.outer(np.arange(m), np.cos(doas * np.pi / 180)))
+            A = get_steering_matrix(doas, m)
             R = A @ np.diag(sources_power) @ A.conj().T + noise_power * np.eye(m)
             for metric in metrics:
                 metric.resultMat[ii, jj] = metric.fun(R)

@@ -18,7 +18,7 @@ sources_power = 10.0 ** (power_doa_db / 10.0)
 doas_true = np.array([40, 45])
 power_db_scan = np.linspace(start=power_doa_db.min() - 10, stop=power_doa_db.max() + 10, num=int(1e2))
 
-A_true = np.exp(1j * np.pi * np.outer(np.arange(m), np.cos(doas_true * np.pi / 180)))
+A_true = get_steering_matrix(doas_true, m)
 noise_power_db = np.max(power_doa_db) - snr
 noise_power = 10.0 ** (noise_power_db / 10.0)
 Y = generate_signal(A_true, power_doa_db, N, noise_power, False, seed=42)
@@ -57,7 +57,7 @@ def calculate_metrics():
         for jj in range(0, len(power_db_scan)):
             print(f'({ii}, {jj})')
             doas = doas_true
-            A = np.exp(1j * np.pi * np.outer(np.arange(m), np.cos(doas * np.pi / 180)))
+            A = get_steering_matrix(doas, m)
             sources_power = 10.0 ** (np.array([power_db_scan[ii],power_db_scan[jj]]) / 10.0)
             R = A @ np.diag(sources_power) @ A.conj().T + noise_power * np.eye(m)
             for metric in metrics:

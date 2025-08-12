@@ -10,7 +10,8 @@ from ToolsMC import *
 
 # %%
 
-def exp_M(cohr_flag: bool, basedir:str = '') -> None:
+def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5]), doa: np.ndarray = np.array([35.25, 43.25, 51.25]),
+           basedir:str = '') -> None:
     
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
@@ -21,18 +22,16 @@ def exp_M(cohr_flag: bool, basedir:str = '') -> None:
     if not os.path.exists(path_results_dir):
         os.makedirs(path_results_dir)
     # %%
-    num_mc = 50
-    vec_m = np.array([10, 50, 100, 500])
+    num_mc = 500
+    vec_m = np.array([12, 50])
     num_configs = len(vec_m)
     config_list = []
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=vec_m[i], snr=-20, N=vec_m[i]*3, 
-                # power_doa_db=np.array([0, 0, 0, 0, 0, 0]),
-                # doa=np.array([35, 35.5, 40, 40.5, 45, 45.5]),
-                power_doa_db=np.array([-20, -20]),
-                doa=np.array([35,150]),
+                m=vec_m[i], snr=10.79 - convert_linear_to_db(vec_m[i]), N=vec_m[i]*3, 
+                power_doa_db=power_doa_db,
+                doa=doa,
                 cohr_flag=cohr_flag,
                 )
         )
@@ -90,7 +89,7 @@ def exp_M(cohr_flag: bool, basedir:str = '') -> None:
 
 if __name__ == "__main__":
     # Example usage
-    exp_M(cohr_flag=False)
+    exp_M(power_doa_db=np.array([0, 0, 0]), doa=np.array([35.25, 36.25, 37.25]))
 
 
 # %%

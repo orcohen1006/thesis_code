@@ -11,5 +11,5 @@ rm -f /home/or.cohen/thesis_code/RiemannianDOA_proj/job_logs/*
 PBS_O_WORKDIR=$HOME/thesis_code/RiemannianDOA_proj
 cd $PBS_O_WORKDIR
 
-python3.11 RunSingleMCIteration.py "${PBS_ARRAY_INDEX}"
+python3.11 -u RunSingleMCIteration.py "${PBS_ARRAY_INDEX}"
 

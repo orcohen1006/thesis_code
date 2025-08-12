@@ -56,7 +56,7 @@ def loss_LD(p, A, R_hat, sigma2):
     M, D = A.shape
     P_diag = torch.diag(p).to(TORCH_DTYPE)  # Diagonal matrix from p
     R = (A @ P_diag @ A.conj().T + sigma2 * torch.eye(M, dtype=TORCH_DTYPE))
-    loss = torch.logdet(0.5*(R_hat + R)) -0.5*torch.logdet(R_hat @ R)
+    loss = torch.logdet(0.5*(R_hat + R)) -0.5*torch.logdet(R) # -0.5*torch.logdet(R_hat) is a constant and can be ignored
     loss = loss.real
     return loss
 

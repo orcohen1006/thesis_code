@@ -102,7 +102,6 @@ def analyze_algo_errors(results: list):
         tmp_doa = np.expand_dims(config["doa"],-1)
         threshold_theta_detect = 5 # np.abs(tmp_doa - tmp_doa.T).max()
         print(f"Config {i_config}: threshold_theta_detect = {threshold_theta_detect}")
-        A = np.exp(1j * np.pi * np.outer(np.arange(config["m"]), np.cos(grid_doa * np.pi / 180)))
         noise_power = 10.0 ** ((np.max(config["power_doa_db"]) - config["snr"]) / 10.0)
         for i_mc in range(num_mc):
             result = results[i_config][i_mc]
@@ -123,8 +122,7 @@ def analyze_algo_errors(results: list):
                         result["config"]["doa"],
                         convert_db_to_linear(result["config"]["power_doa_db"]), threshold_theta_detect=threshold_theta_detect)
                 l0_norm[i_alg] = thresholded_l0_norm(result["p_vec_list"][i_alg], threshold=convert_db_to_linear(np.min(config["power_doa_db"]))*0.01)
-                # R = A @ np.diag(result["p_vec_list"][i_alg]) @ A.conj().T + noise_power* np.eye(config["m"])
-                # num_detected_aic[i_alg], num_detected_mdl[i_alg] = model_order_selection(R, config["N"])
+
             result["num_detected"] = num_detected
             result["selected_doa_error"] = selected_doa_error
             result["selected_power_error"] = selected_power_error
@@ -262,21 +260,6 @@ def plot_Qeigvals(results, parameter_name: str, parameter_units: str, parameter_
     fig = plt.figure()
     ax = plt.gca()
     # %%
-    # num_configs = len(results)
-    # num_mc = len(results[0])
-    # for i_config in range(num_configs):
-    #     all_config_eigvals = []
-    #     for i_mc in range(num_mc):
-    #         eigvals = eigvals_of_Q_given_result(results[i_config][i_mc])
-    #         all_config_eigvals.extend(eigvals.tolist())
-
-    #     ax.boxplot(all_config_eigvals, positions=[parameter_values[i_config]],
-    #                widths=0.5, patch_artist=True,
-    #                whis=[10, 90],
-    #                showfliers=False,
-    #                boxprops=dict(facecolor='lightblue', color='black'),
-    #                medianprops=dict(color='red'), whiskerprops=dict(color='black'))
-
     num_configs = len(results)
     num_mc = len(results[0])
     # Collect all eigenvalues for each config and MC
@@ -290,29 +273,31 @@ def plot_Qeigvals(results, parameter_name: str, parameter_units: str, parameter_
     all_eigvals = np.array(all_eigvals)  # shape: (num_configs, num_mc, num_eigvals)
     num_eigvals = all_eigvals.shape[2]
 
-    # # Compute mean and std for each eigenvalue index across MC runs, for each config
-    # mean_eigvals = np.mean(all_eigvals, axis=1)  # shape: (num_configs, num_eigvals)
-    # std_eigvals = np.std(all_eigvals, axis=1)    # shape: (num_configs, num_eigvals)
+    # Compute mean and std for each eigenvalue index across MC runs, for each config
+    mean_eigvals = np.mean(all_eigvals, axis=1)  # shape: (num_configs, num_eigvals)
+    std_eigvals = np.std(all_eigvals, axis=1)    # shape: (num_configs, num_eigvals)
 
-    # Plot each eigenvalue's mean and std as a function of parameter_values
+    # # Plot each eigenvalue's mean and std as a function of parameter_values
+    # # select continous color map (not viridis)
+    # cmap = plt.get_cmap('plasma')  # or 'inferno', 'magma', etc.
     # for i_eig in range(num_eigvals):
-    #     ax.plot(parameter_values, mean_eigvals[:, i_eig], marker='o', label=fr"Mean $\lambda_{{{i_eig+1}}}$")
+    #     # ax.plot(parameter_values, mean_eigvals[:, i_eig], marker='o', label=fr"Mean $\lambda_{{{i_eig+1}}}$")
     #     ax.fill_between(parameter_values, 
     #                     mean_eigvals[:, i_eig] - std_eigvals[:, i_eig], 
     #                     mean_eigvals[:, i_eig] + std_eigvals[:, i_eig],
-    #                     alpha=0.3, label=fr"$\lambda_{{{i_eig+1}}}$ ± Std")
+    #                     alpha=0.3, label=fr"$\lambda_{{{i_eig+1}}}$ ± Std", color=cmap(i_eig / num_eigvals))
 
-    bar_eigvals = np.mean(all_eigvals, axis=2)  # shape: (num_configs, num_mc)
-    print(f"bar_eigvals shape: {bar_eigvals.shape}")
-    mean_bar_eigvals = np.mean(bar_eigvals, axis=1)  # shape: (num_configs,)
-    std_bar_eigvals = np.std(bar_eigvals, axis=1)
+    bar_eigvals_mat = np.mean(all_eigvals, axis=2)  # shape: (num_configs, num_mc)
+    # print(f"bar_eigvals_mat shape: {bar_eigvals_mat.shape}")
+    mean_bar_eigvals = np.mean(bar_eigvals_mat, axis=1)  # shape: (num_configs,)
+    std_bar_eigvals = np.std(bar_eigvals_mat, axis=1)
     # Plot mean and std of bar eigenvalues
     ax.plot(parameter_values, mean_bar_eigvals, marker='o', label=r"$\bar{\lambda}$: Mean")
     ax.fill_between(parameter_values,
                     mean_bar_eigvals - std_bar_eigvals,
                     mean_bar_eigvals + std_bar_eigvals,
                     alpha=0.3, label=r"$\bar{\lambda}$: Mean ± Std")
-    #
+    
     # %%
     ax.grid(True)
     if do_ylogscale:
@@ -321,8 +306,27 @@ def plot_Qeigvals(results, parameter_name: str, parameter_units: str, parameter_
 
     ax.set_ylabel("Q Eigenvalues")
     ax.set_xlabel(parameter_name + f" {parameter_units}")
-    ax.legend()
+    # ax.legend()
     return fig
+    
+    # # ----------------------
+    # # bar_eigvals shape: (num_configs, num_mc)
+    # #"selected_doa_error"
+    # algo_list = get_algo_dict_list()
+    # fig = plt.figure()
+    # ax = plt.gca()
+    # bar_lambda_vals = [bar_eigvals_mat[i_config, i_mc]
+    #                    for i_config in range(num_configs)
+    #                    for i_mc in range(num_mc)]
+    # for i_algo, algo_name in enumerate(algo_list.keys()): 
+    #     rmse_doa_vals = [np.sqrt(np.mean(results[i_config][i_mc]["selected_doa_error"][i_algo]**2)) 
+    #                        for i_config in range(num_configs) 
+    #                        for i_mc in range(num_mc)]
+    #     ax.scatter(bar_lambda_vals, rmse_doa_vals, label=algo_name, c=algo_list[algo_name]["color"], alpha=0.1) 
+    # ax.set_xlabel(r"$\bar{\lambda}$")
+    # ax.set_ylabel("RMSE DOA Error (degrees)")
+    
+    # return fig
 
 
 

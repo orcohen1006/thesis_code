@@ -19,8 +19,7 @@ def test_hyper_params(input) -> None:
 
     doa_scan = get_doa_grid()
 
-    A = np.exp(1j * np.pi * np.outer(np.arange(m), np.cos(doa_scan * np.pi / 180)))
-
+    A = get_steering_matrix(doa_scan, m)
     firstDOA = 35.11
 
     lr_values = input['lr_values']
@@ -59,7 +58,7 @@ def test_hyper_params(input) -> None:
         for idx_setting, setting in enumerate(tqdm(list_settings, desc=f"Testing scenarios for lr={lr}", leave=False)):
             deltaDOA, snr, N, seed = setting
             doa = np.sort(np.array([firstDOA, firstDOA+deltaDOA]))
-            A_true = np.exp(1j * np.pi * np.outer(np.arange(m), np.cos(doa * np.pi / 180)))
+            A_true = get_steering_matrix(doa, m)
             noise_power_db = np.mean(power_doa_db) - snr
             noise_power = 10.0 ** (noise_power_db / 10.0)
 

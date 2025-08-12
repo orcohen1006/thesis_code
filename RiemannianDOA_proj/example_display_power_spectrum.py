@@ -20,7 +20,7 @@ from ToolsMC import *
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/Exp_Rho_y2025-m07-d28_22-11-29'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m08-d10_20-47-58/Exp_M_y2025-m08-d10_20-47-58_indp'
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
     # %%
@@ -31,9 +31,11 @@ def example_display_power_spectrum():
     algo_list = get_algo_dict_list()
     # i_config = 2
     # i_mc = inds[5] #468 #3
-    i_config = 1; i_mc =  inds[31] # 71 # 216 # 253# 3 # 468
+    # i_config = 1; i_mc =  inds[31] # 71 # 216 # 253# 3 # 468
     # i_config = 5; i_mc = 6
     # i_config = 3; i_mc = inds[3]
+    i_config = 2; i_mc = 14
+
     print(results[i_config][0]["config"])
     ax = display_power_spectrum(results[i_config][i_mc]["config"], results[i_config][i_mc]["p_vec_list"])
 
@@ -64,8 +66,102 @@ def example_display_power_spectrum():
     inds = np.argsort(sqerr_dict["AIRM"] - (sqerr_dict["SAMV"] + sqerr_dict["SPICE"])/2)
 
     # %%
+    path_fig = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m08-d04_15-40-39/Exp_Rho_y2025-m08-d04_15-51-28/Exp_Rho_y2025-m08-d04_15-51-28_DOA.pkl'
+    with open(path_fig, 'rb') as f:
+        fig_qeigvals = pickle.load(f)
+    plt.show()
+    # %%
+    fig = plt.gcf()
+    curr_path_results_dir = os.path.dirname(path_fig)
+    filename_no_ext = os.path.basename(path_fig).replace('.pkl', '')
+    save_figure(fig, curr_path_results_dir, filename_no_ext)
+
+
+    # %%
+    algo_list = get_algo_dict_list()
+    num_configs = len(results)
+    num_mc = len(results[0])
+    num_algos = len(algo_list)
+    num_iters_mat = np.zeros((num_configs, num_mc, num_algos))
+    runtime_mat = np.zeros((num_configs, num_mc, num_algos))
+    for i_config in range(len(results)):
+        num_iters_mat[i_config,:,:] = np.array([results[i_config][i_mc]["num_iters_list"] for i_mc in range(len(results[i_config]))])
+        runtime_mat[i_config,:,:] = np.array([results[i_config][i_mc]["runtime_list"] for i_mc in range(len(results[i_config]))])
+
+
+    algo_names = list(algo_list.keys())
+    # --- Plot: Number of Iterations ---
+    fig_iters, axes_iters = plt.subplots(1, num_algos, figsize=(4 * num_algos, 4), sharey=True, sharex=True)
+    fig_iters.suptitle("Number of Iterations per Configuration")
+
+    for a in range(num_algos):
+        data = [num_iters_mat[c, :, a] for c in range(num_configs)]  # list of arrays, each of shape (num_mc,)
+        axes_iters[a].boxplot(data, showfliers=False)
+        axes_iters[a].set_title(algo_names[a])
+        axes_iters[a].set_xlabel("Config Index")
+        axes_iters[a].set_xticks(range(1, num_configs + 1))
+        if a == 0:
+            axes_iters[a].set_ylabel("Num Iters")
+        plt.tight_layout()
+
+
+    # --- Plot: Runtime ---
+    fig_runtime, axes_runtime = plt.subplots(1, num_algos, figsize=(4 * num_algos, 4), sharey=True, sharex=True)
+    fig_runtime.suptitle("Runtime per Configuration")
+
+    for a in range(num_algos):
+        data = [runtime_mat[c, :, a] for c in range(num_configs)]
+        axes_runtime[a].boxplot(data, showfliers=False)
+        axes_runtime[a].set_title(algo_names[a])
+        axes_runtime[a].set_xlabel("Config Index")
+        axes_runtime[a].set_xticks(range(1, num_configs + 1))
+        if a == 0:
+            axes_runtime[a].set_ylabel("Runtime [s]")
+        plt.tight_layout()
+
+
+
+    iter_runtime_mat = runtime_mat / num_iters_mat  # Shape: (num_configs, num_mc, num_algos)
+    fig_iterationruntime, axes_iterationruntime = plt.subplots(1, num_algos, figsize=(4 * num_algos, 4), sharey=True, sharex=True)
+    fig_iterationruntime.suptitle("Iteration Runtime per Configuration")
+    for a in range(num_algos):
+        data = [iter_runtime_mat[c, :, a] for c in range(num_configs)]
+
+        axes_iterationruntime[a].boxplot(data, showfliers=False)
+        axes_iterationruntime[a].set_title(algo_names[a])
+        axes_iterationruntime[a].set_xlabel("Config Index")
+        axes_iterationruntime[a].set_xticks(range(1, num_configs + 1))
+        if a == 0:
+            axes_iterationruntime[a].set_ylabel("Runtime [s]")
+        plt.tight_layout()
+
+    plt.tight_layout()
     
-    
+    plt.show()
+    # %%
+
+    def print_table(table_name, mean_mat, std_mat):
+        print("================   " + table_name + "   ================")
+        header = ["Config {}".format(i+1) for i in range(num_configs)]
+        print("{:<15}".format("Algorithm"), end="")
+        for h in header:
+            print("{:>20}".format(h), end="")
+        print()
+
+        # Print rows
+        for alg_idx in range(num_algos):
+            print("{:<15}".format(algo_names[alg_idx]), end="")
+            for cfg_idx in range(num_configs):
+                mean = mean_mat[alg_idx, cfg_idx]
+                std = std_mat[alg_idx, cfg_idx]
+                print("{:>20}".format(f"{mean:.4f} ± {std:.4f}"), end="")
+            print()
+        print("==========================================================")
+
+    print_table("Runtime", runtime_mat.mean(axis=1).T, runtime_mat.std(axis=1).T)
+    num_hundreds_iters_mat = num_iters_mat / 100
+    print_table("Num Iters (hundreds)", num_hundreds_iters_mat.mean(axis=1).T, num_hundreds_iters_mat.std(axis=1).T)
+    print_table("Iteration Runtime", iter_runtime_mat.mean(axis=1).T, iter_runtime_mat.std(axis=1).T)
 
 # %%
 def display_power_spectrum_tmp():

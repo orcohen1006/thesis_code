@@ -6,6 +6,7 @@ from Exp_N import *
 from Exp_M import *
 from Exp_Rho import *
 from Exp_SNR_Large import *
+from Exp_M import *
 from commit_repo_git import git_commit_and_push
 from datetime import datetime
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -18,14 +19,13 @@ def run_all_exp():
     if not os.path.exists(basedir):
         os.makedirs(basedir) 
     # ---------------------------------------
-    
+    exp_M(basedir=basedir, power_doa_db=np.array([0]), doa=np.array([35.25]))
+
     exp_N(basedir=basedir, doa=np.array([35.25, 43.25, 51.25]), power_doa_db=np.array([0, 0, -5]), snr=-2)
 
-    # exp_SNR_Large(basedir=basedir, doa=np.array([35.25, 43.25, 51.25]), power_doa_db=np.array([0, 0, -5]), N=40)
+    exp_SNR_Large(basedir=basedir, doa=np.array([35.25, 43.25, 51.25]), power_doa_db=np.array([0, 0, -5]), N=40)
 
-    exp_rho(basedir=basedir, doa=np.array([35.25, 41.25]), power_doa_db=np.array([0, 0]), N=40)
-
-
+    exp_rho(basedir=basedir, doa=np.array([35.25, 41.25]), power_doa_db=np.array([0, 0]), N=50)
     # ---------------------------------------
     print(f'Total Running Time: {time.time() - t0_overall} sec.')
     return basedir

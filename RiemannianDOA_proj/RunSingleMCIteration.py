@@ -1,4 +1,5 @@
 # %%
+import datetime
 import sys
 import numpy as np
 from time import time
@@ -15,11 +16,13 @@ from fun_SPICE import *
 from fun_Riemannian import *
 #from fun_JBLD import *
 import os
+import logging
 # %%
 def run_single_mc_iteration(
         i_mc: int,
         config: dict,
         algo_list : Optional[List[str]] = None,
+        do_log: bool = False
 ):
 
     t0 = time()
@@ -28,11 +31,12 @@ def run_single_mc_iteration(
     power_doa = 10.0 ** (config["power_doa_db"] / 10.0)
 
     doa_scan = get_doa_grid()
-
-    delta_vec = np.arange(config["m"])
-    A_true = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(config["doa"] * np.pi / 180)))
-    A = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(doa_scan * np.pi / 180)))
-
+    if do_log:
+        logging.info(f"- got doa_scan.")
+    A_true = get_steering_matrix(config["doa"], config["m"])
+    A = get_steering_matrix(doa_scan, config["m"])
+    if do_log:
+        logging.info(f"- got A_true and A.")
     noise_power_db = np.max(config["power_doa_db"]) - config["snr"]
     noise_power = 10.0 ** (noise_power_db / 10.0)
 
@@ -45,6 +49,9 @@ def run_single_mc_iteration(
                               cohr_coeff = config["cohr_coeff"], noncircular_coeff=config["noncircular_coeff"],
                               seed=i_mc)
 
+    if do_log:
+        logging.info(f"- generated noisy signal y_noisy with shape {y_noisy.shape}.")
+        
     modulus_hat_das = np.sum(np.abs(A.conj().T @ (y_noisy / config["m"])), axis=1) / config["N"]
     
     # Run on all algorithms
@@ -71,9 +78,18 @@ def run_single_mc_iteration(
         runtime_list[i_algo] = time() - t_algo_start
         num_iters_list[i_algo] = num_iters
         p_vec_list[i_algo] = p_vec
-        print(f"{algo_list[i_algo]}: #iters= {num_iters}, runtime= {runtime_list[i_algo]} [sec]")
+        msg = f"{algo_list[i_algo]}: #iters= {num_iters}, runtime= {runtime_list[i_algo]} [sec]"
+        if do_log:
+            logging.info(msg)
+        else:
+            print(msg)
 
-    print(f"i_mc = {i_mc + 1}, elapsed time: {time() - t0 :.2f} [sec]")
+    msg = f"i_mc = {i_mc + 1}, elapsed time: {time() - t0 :.2f} [sec]"
+    if do_log:
+        logging.info(msg)
+    else:
+        print(msg)
+    
     result = {}
     result["i_mc"] = i_mc
     result['config'] = config
@@ -107,11 +123,35 @@ def run_single_mc_iteration(
 #         pickle.dump(overall_results, f)
 
 if __name__ == "__main__":
-        
+
     job_id = int(sys.argv[1])  # PBS job index
+    log_dir = "/home/or.cohen/thesis_code/RiemannianDOA_proj/job_logs"
+    log_path = os.path.join(log_dir, f"mylog_job_{job_id}.log")
+
+    # Configure logging to write immediately
+    logging.basicConfig(
+        filename=log_path,
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+
+    # Also print to stdout in real-time if desired
+    console = logging.StreamHandler(sys.stdout)
+    console.setLevel(logging.DEBUG)
+    console.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+    logging.getLogger("").addHandler(console)
+
+    # Disable buffering on stdout
+    sys.stdout.reconfigure(line_buffering=True)
+
+    datetime_str = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    logging.info(f"~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ {datetime_str} : RunSingleMCIteration {job_id} ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~")
+
 
     with open(FILENAME_PBS_METADATA, "rb") as f:
         metadata = pickle.load(f)
+
+    logging.info(f"Metadata loaded: {metadata}")
 
     num_configs = metadata["num_configs"]
     num_mc = metadata["num_mc"]
@@ -123,19 +163,19 @@ if __name__ == "__main__":
 
     start_task = job_id * tasks_per_job
     end_task = min(start_task + tasks_per_job, total_tasks)
-
+    logging.info(f"Job {job_id} will process tasks from {start_task} to {end_task} (total: {end_task - start_task})")
     for task_id in range(start_task, end_task):
         i_config = task_id // num_mc
         i_mc = task_id % num_mc
 
         config_path = f"{workdir}/config_{i_config}.pkl"
         result_path = f"{workdir}/config_{i_config}_mc_{i_mc}.pkl"
-
+        logging.info(f"Processing config file: {config_path}  , result will be saved to: {result_path}")
         # Load config and run
         with open(config_path, 'rb') as f:
             config = pickle.load(f)
-
-        result = run_single_mc_iteration(i_mc=i_mc, config=config)
+        logging.info(f"Loaded config: {config}")
+        result = run_single_mc_iteration(i_mc=i_mc, config=config, do_log = True)
 
         with open(result_path, 'wb') as f:
             pickle.dump(result, f)

@@ -35,7 +35,7 @@ def eigvals_of_Q(R, R_hat):
 def eigvals_of_Q_given_result(result):
     config = result['config']
     power_doa = convert_db_to_linear(config["power_doa_db"])
-    A_true = np.exp(1j * np.pi * np.outer(np.arange(config["m"]), np.cos(config["doa"] * np.pi / 180)))
+    A_true = get_steering_matrix(config["doa"], config["m"])
     noise_power = convert_db_to_linear(np.max(config["power_doa_db"]) - config["snr"])
     R = A_true @ np.diag(power_doa) @ A_true.conj().T + noise_power * np.eye(config["m"])
     return eigvals_of_Q(R, result['R_hat'])
@@ -369,6 +369,15 @@ def get_doa_grid():
     res = 0.5  # resolution in degrees
     doa_scan = np.arange(0, 180+res, res)  # doa grid
     return doa_scan
+def get_steering_matrix(theta_degrees, m, calcGradient_wrt_radians=False):
+
+    doa_rad = np.deg2rad(theta_degrees) # Convert to radians
+    delta_vec = np.arange(m)    
+    A = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(doa_rad)))
+    if calcGradient_wrt_radians:
+        dA_dtheta_radians = -1j * np.pi * np.outer(delta_vec, np.sin(doa_rad)) * A  # shape (m, K)
+        return A, dA_dtheta_radians
+    return A
 
 def get_algo_dict_list(flag_also_use_PER=False):
     # return [("PER",'r-->'), ("SPICE",'m--p'), ("SAMV",'b-^'), ("AIRM",'g--s'), ("JBLD",'y--o')]
