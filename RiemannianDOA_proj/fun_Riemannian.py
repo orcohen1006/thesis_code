@@ -16,7 +16,7 @@ def fun_Riemannian(Y, A, DAS_init, DOAscan, DOA, noise_power, loss_name="AIRM"):
         p,num_iters, _ = optimize_adam_AIRM(A, R_hat, sigma2_n, DAS_init, _max_iter=int(5e3), _lr=1e-1)
     elif loss_name == "JBLD":
         p,num_iters, _ = optimize_adam_JBLD(A, R_hat, sigma2_n, DAS_init, _max_iter=int(5e3), _lr=1e-1)
-        # p,num_iters, _ = optimize_fixedpoint_JBLD(A, R_hat, sigma2_n, DAS_init, max_iter=int(5e3))
+        #p,num_iters, _ = optimize_mm_JBLD(A, R_hat, sigma2_n, DAS_init, max_iter=int(5e3))
 
     if isinstance(p, torch.Tensor):
         p = p.detach().cpu().numpy()

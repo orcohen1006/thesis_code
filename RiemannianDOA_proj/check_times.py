@@ -20,7 +20,7 @@ from utils import *
 from ToolsMC import *
 # %%
 config = create_config(
-                m=100, snr=-10, N=50, 
+                m=100, snr=0, N=50, 
                 power_doa_db=np.array([0, 0, -5]),
                 doa=np.array([35.25, 43.25, 51.25]), 
                 cohr_flag=False,
@@ -104,7 +104,7 @@ p.grad = None
 t0 = time.perf_counter()
 for _ in range(num_runs):
     p.grad = None  # clear gradients without touching optimizer
-    loss1 = loss_AFFINV_original(p, A, pinv_sqrtm_R_hat, noise_power)
+    loss1 = loss_AFFINV_adapted(p, A, pinv_sqrtm_R_hat, noise_power)
     loss1.backward()
 t1 = time.perf_counter()
 

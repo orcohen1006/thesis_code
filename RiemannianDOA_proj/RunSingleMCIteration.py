@@ -14,7 +14,6 @@ from fun_DAS import *
 from fun_SAMV import *
 from fun_SPICE import *
 from fun_Riemannian import *
-#from fun_JBLD import *
 import os
 import logging
 # %%
@@ -71,7 +70,6 @@ def run_single_mc_iteration(
             p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power, loss_name="AIRM")
         elif algo_list[i_algo] == "JBLD":
             p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power, loss_name="JBLD")
-            # p_vec, num_iters, _ = fun_JBLD(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power)
         else:
             raise ValueError("Algorithm not implemented")
 
