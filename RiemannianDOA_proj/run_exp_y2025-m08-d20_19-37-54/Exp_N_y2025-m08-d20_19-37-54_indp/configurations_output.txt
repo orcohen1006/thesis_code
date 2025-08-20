@@ -1,0 +1,22 @@
+Number of Monte Carlo runs: 500
+
+-------------- Config 0:
+{'m': 12, 'snr': -2, 'N': 12, 'power_doa_db': array([ 0,  0, -5]), 'doa': array([35.25, 43.25, 51.25]), 'cohr_flag': False, 'cohr_coeff': 1.0, 'noncircular_coeff': 0.0}
+
+-------------- Config 1:
+{'m': 12, 'snr': -2, 'N': 24, 'power_doa_db': array([ 0,  0, -5]), 'doa': array([35.25, 43.25, 51.25]), 'cohr_flag': False, 'cohr_coeff': 1.0, 'noncircular_coeff': 0.0}
+
+-------------- Config 2:
+{'m': 12, 'snr': -2, 'N': 36, 'power_doa_db': array([ 0,  0, -5]), 'doa': array([35.25, 43.25, 51.25]), 'cohr_flag': False, 'cohr_coeff': 1.0, 'noncircular_coeff': 0.0}
+
+-------------- Config 3:
+{'m': 12, 'snr': -2, 'N': 48, 'power_doa_db': array([ 0,  0, -5]), 'doa': array([35.25, 43.25, 51.25]), 'cohr_flag': False, 'cohr_coeff': 1.0, 'noncircular_coeff': 0.0}
+
+-------------- Config 4:
+{'m': 12, 'snr': -2, 'N': 60, 'power_doa_db': array([ 0,  0, -5]), 'doa': array([35.25, 43.25, 51.25]), 'cohr_flag': False, 'cohr_coeff': 1.0, 'noncircular_coeff': 0.0}
+
+-------------- Config 5:
+{'m': 12, 'snr': -2, 'N': 72, 'power_doa_db': array([ 0,  0, -5]), 'doa': array([35.25, 43.25, 51.25]), 'cohr_flag': False, 'cohr_coeff': 1.0, 'noncircular_coeff': 0.0}
+
+-------------- Config 6:
+{'m': 12, 'snr': -2, 'N': 84, 'power_doa_db': array([ 0,  0, -5]), 'doa': array([35.25, 43.25, 51.25]), 'cohr_flag': False, 'cohr_coeff': 1.0, 'noncircular_coeff': 0.0}

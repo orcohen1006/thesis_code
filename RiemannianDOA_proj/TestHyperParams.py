@@ -1,21 +1,22 @@
+# %%
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from tqdm import tqdm
+from datetime import datetime
 from utils import *
 from OptimizeRiemannianLoss import optimize_adam_AIRM, optimize_adam_LE, optimize_adam_JBLD
+from fun_JBLD import *
+from fun_JBLD_advanced import *
 from itertools import product
-
-
-def test_hyper_params(input) -> None:
+import os
+from functools import partial
+# %%
+def test_hyper_params(foldername, input) -> None:
     # Test parameters
     np.random.seed(42)
     m = 12
-    snr = 0
-    N = 16
-    MAX_ITERS = int(5e3)
-    # Source powers in dB
-    power_doa_db = np.array([3, 4])
+    MAX_ITERS = int(2e3)
 
     doa_scan = get_doa_grid()
 
@@ -25,17 +26,15 @@ def test_hyper_params(input) -> None:
     lr_values = input['lr_values']
     optimize_func = input['optimize_func']
 
-    # list_deltaDOA = [5,10]
     # list_snr = [-5, 0, 5]
-    # list_N = [16, 120]
+    # list_N = [25, 50]
     # list_seed = np.arange(0,3).tolist()
 
-    list_deltaDOA = [5]
-    list_snr = [0]
-    list_N = [16]
-    list_seed = np.arange(0, 2).tolist()
+    list_snr = [-5, 0, 5]
+    list_N = [50]
+    list_seed = np.arange(0,2).tolist()
 
-    list_settings = list(product(list_deltaDOA, list_snr,list_N, list_seed))
+    list_settings = list(product(list_snr,list_N, list_seed))
 
     # Results tracking
     results = {
@@ -54,26 +53,29 @@ def test_hyper_params(input) -> None:
         scenario_loss_histories = []
         scenario_rel_change_histories = []
 
-        # Run multiple scenarios for each learning rate
         for idx_setting, setting in enumerate(tqdm(list_settings, desc=f"Testing scenarios for lr={lr}", leave=False)):
-            deltaDOA, snr, N, seed = setting
-            doa = np.sort(np.array([firstDOA, firstDOA+deltaDOA]))
+            snr, N, seed = setting
+            # doa = np.sort(np.array([firstDOA, firstDOA+deltaDOA]))
+            doa=np.array([35.25, 43.25, 51.25])
+            power_doa_db=np.array([0, 0, -5])
             A_true = get_steering_matrix(doa, m)
-            noise_power_db = np.mean(power_doa_db) - snr
+            noise_power_db = np.max(power_doa_db) - snr
             noise_power = 10.0 ** (noise_power_db / 10.0)
 
+
+
             # Generate signal for this scenario
-            Y = generate_signal(A_true, power_doa_db, N, noise_power, False, seed=seed)
+            Y = generate_signal(A_true, power_doa_db, N, noise_power, seed=seed)
 
             # Prepare DAS initial guess
-            DAS_init = np.sum(np.abs(A.conj().T @ (Y / m)), axis=1) / N
-            DAS_init = torch.tensor(DAS_init, dtype=torch.float)
+            modulus_hat_das = np.sum(np.abs(A.conj().T @ (Y / m)), axis=1) / N
+
 
             # Prepare R_hat
             R_hat = Y @ Y.conj().T / N
 
             # Optimize with this learning rate
-            p, _, tuple_history = optimize_func(A, R_hat, noise_power, DAS_init,
+            p, _, tuple_history = optimize_func(A, R_hat, noise_power, modulus_hat_das,
                                                     _max_iter=MAX_ITERS, _lr=lr,
                                                     do_store_history=True)
             step_losses, rel_changes = tuple_history
@@ -90,25 +92,27 @@ def test_hyper_params(input) -> None:
         results['all_rel_change_histories'].append(scenario_rel_change_histories)
 
     # Plot results
-    fig, axs = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle(input['name'], fontsize=16)
+    fig1, axs = plt.subplots(2, 2, figsize=(15, 10))
+    fig1.suptitle(input['name'], fontsize=16)
     # Plot 1: Average loss curves for all learning rates
     for i, lr in enumerate(results['lr']):
         # Calculate mean and std of loss across scenarios at each iteration
         max_len = max(len(hist) for hist in results['all_loss_histories'][i])
-        avg_losses = np.zeros(max_len)
-        std_losses = np.zeros(max_len)
+        q25_losses = np.zeros(max_len)
+        q50_losses = np.zeros(max_len)
+        q75_losses = np.zeros(max_len)
 
         for step in range(max_len):
             step_losses = [hist[step] if step < len(hist) else hist[-1]
                            for hist in results['all_loss_histories'][i]]
-            avg_losses[step] = np.mean(step_losses)
-            std_losses[step] = np.std(step_losses)
+            q25_losses[step] = np.quantile(step_losses, 0.25)
+            q50_losses[step] = np.quantile(step_losses, 0.50)
+            q75_losses[step] = np.quantile(step_losses, 0.75)
 
         # Plot mean loss with shaded std region
         x = np.arange(max_len)
-        axs[0, 0].plot(x, avg_losses, label=f'lr={lr}')
-        axs[0, 0].fill_between(x, avg_losses - std_losses, avg_losses + std_losses, alpha=0.2)
+        axs[0, 0].plot(x, q50_losses, label=f'lr={lr}')
+        axs[0, 0].fill_between(x, q25_losses, q75_losses, alpha=0.2)
 
     axs[0, 0].set_title('Average Loss Curves Across Scenarios')
     axs[0, 0].set_xlabel('Iterations')
@@ -121,19 +125,17 @@ def test_hyper_params(input) -> None:
         # Calculate early iterations statistics
         early_iter = 500
         max_len = min(early_iter, max(len(hist) for hist in results['all_loss_histories'][i]))
-        avg_losses = np.zeros(max_len)
-        std_losses = np.zeros(max_len)
-
         for step in range(max_len):
             step_losses = [hist[step] if step < len(hist) else hist[-1]
-                           for hist in results['all_loss_histories'][i]]
-            avg_losses[step] = np.mean(step_losses)
-            std_losses[step] = np.std(step_losses)
+                            for hist in results['all_loss_histories'][i]]
+            q25_losses[step] = np.quantile(step_losses, 0.25)
+            q50_losses[step] = np.quantile(step_losses, 0.50)
+            q75_losses[step] = np.quantile(step_losses, 0.75)
 
         # Plot mean loss with shaded std region
         x = np.arange(max_len)
-        axs[0, 1].plot(x, avg_losses, label=f'lr={lr}')
-        axs[0, 1].fill_between(x, avg_losses - std_losses, avg_losses + std_losses, alpha=0.2)
+        axs[0, 1].plot(x, q50_losses[:max_len], label=f'lr={lr}')
+        axs[0, 1].fill_between(x, q25_losses[:max_len], q75_losses[:max_len], alpha=0.2)
 
     axs[0, 1].set_title('Average Loss Curves (First 500 Iterations)')
     axs[0, 1].set_xlabel('Iterations')
@@ -154,19 +156,21 @@ def test_hyper_params(input) -> None:
     for i, lr in enumerate(results['lr']):
         # Average parameter changes across scenarios
         max_len = MAX_ITERS #min(1000, max(len(changes) for changes in results['all_rel_change_histories'][i]))
-        avg_changes = np.zeros(max_len)
-        std_changes = np.zeros(max_len)
+        q25_changes = np.zeros(max_len)
+        q50_changes = np.zeros(max_len)
+        q75_changes = np.zeros(max_len)
 
         for step in range(max_len):
             step_changes = [changes[step] if step < len(changes) else 0
                             for changes in results['all_rel_change_histories'][i]]
-            avg_changes[step] = np.mean(step_changes)
-            std_changes[step] = np.std(step_changes)
+            q25_changes[step] = np.quantile(step_changes, 0.25)
+            q50_changes[step] = np.quantile(step_changes, 0.50)
+            q75_changes[step] = np.quantile(step_changes, 0.75)
 
         # Plot mean parameter change with shaded std region
         x = np.arange(max_len)
-        axs[1, 1].plot(x, avg_changes, label=f'lr={lr}')
-        axs[1, 1].fill_between(x, avg_changes - std_changes, avg_changes + std_changes, alpha=0.2)
+        axs[1, 1].plot(x, q50_changes, label=f'lr={lr}')
+        axs[1, 1].fill_between(x, q25_changes, q75_changes, alpha=0.2)
 
     axs[1, 1].set_title('Parameter Change During Optimization')
     axs[1, 1].set_xlabel('Iterations')
@@ -175,20 +179,12 @@ def test_hyper_params(input) -> None:
     axs[1, 1].set_yscale('log')
 
     plt.tight_layout()
-    plt.savefig(input['name'] + '_learning_rate_comparison_multi_scenario.png')
+    save_figure(fig1, foldername,  input['name'] + '_learning_rate_comparison')
     # plt.show()
 
-    # Print recommendation
-    # best_lr_idx = np.argmin(results['avg_final_loss'])
-    # best_lr = results['lr'][best_lr_idx]
-    # print(f"\nRecommended learning rate: {best_lr}")
-    # print(
-    #     f"Average lowest loss: {results['avg_final_loss'][best_lr_idx]:.6e} ± {results['std_final_loss'][best_lr_idx]:.6e}")
-    # print(
-    #     f"Average convergence in {results['avg_convergence_steps'][best_lr_idx]:.1f} ± {results['std_convergence_steps'][best_lr_idx]:.1f} iterations")
 
     # Create robustness plot - how consistent is each learning rate across scenarios?
-    plt.figure(figsize=(10, 6))
+    fig2 = plt.figure(figsize=(10, 6))
 
     # For each LR, plot the distribution of final losses
     boxplot_data = []
@@ -201,14 +197,32 @@ def test_hyper_params(input) -> None:
     plt.title('Distribution of Final Losses Across Scenarios')
     plt.xlabel('Learning Rate')
     plt.ylabel('Final Loss')
-    plt.yscale('log')
+    # plt.yscale('log')
     plt.grid(True, linestyle='--', alpha=0.7)
-    plt.savefig(input['name'] + '_learning_rate_robustness.png')
+    save_figure(fig2, foldername,  input['name'] + '_learning_rate_boxplots')
     # plt.show()
 
 
 if __name__ == "__main__":
-    test_hyper_params({'name':'AFFINV','optimize_func':optimize_adam_AIRM, 'lr_values':[1e-4, 1e-3, 1e-2]})
-    test_hyper_params({'name':'LD','optimize_func':optimize_adam_JBLD, 'lr_values':[1e-4, 1e-3, 1e-2]})
-    # test_hyper_params({'name':'LE','optimize_func':optimize_adam_LE,'lr_values':[1e-3]})
+    foldername = "TestHyperparams_" + datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
+    os.makedirs(foldername, exist_ok=True)
+    # test_hyper_params(foldername, {'name':'AIRM','optimize_func':optimize_adam_AIRM, 'lr_values':[1e-2, 1e-1]})
+    # test_hyper_params(foldername, {'name':'JBLD','optimize_func':optimize_adam_JBLD, 'lr_values':[1e-2, 1e-1]})
+    
+    # optimize_JBLD_cccp_adam_inner10 = partial(optimize_JBLD_cccp, inner_opt='adam', inner_iters=10)
+    # test_hyper_params(foldername, {'name':'JBLD_cccp_adam','optimize_func':optimize_JBLD_cccp_adam_inner10, 'lr_values':[1e-2, 1e-1]})
+
+    # optimize_JBLD_cccp_adam_inner25 = partial(optimize_JBLD_cccp, inner_opt='adam', inner_iters=25)
+    # test_hyper_params(foldername, {'name':'JBLD_cccp_adam_inner25','optimize_func':optimize_JBLD_cccp_adam_inner25, 'lr_values':[1e-2, 1e-1]})
+
+    # optimize_JBLD_cccp_lbfgs_inner25 = partial(optimize_JBLD_cccp, inner_opt='lbfgs', inner_iters=25, line_search_fn_bfgs="strong_wolfe")
+    # test_hyper_params(foldername, {'name':'JBLD_cccp_lbfgs_inner25','optimize_func':optimize_JBLD_cccp_lbfgs_inner25, 'lr_values':[5e-1, 1]})
+
+    optimize_JBLD_cccp_lbfgs_inner200 = partial(optimize_JBLD_cccp, inner_opt='lbfgs', inner_iters=200, line_search_fn_bfgs="strong_wolfe")
+    test_hyper_params(foldername, {'name':'JBLD_cccp_lbfgs_inner200','optimize_func':optimize_JBLD_cccp_lbfgs_inner200, 'lr_values':[5e-1, 1]})
+
+
+    optimize_JBLD_cccp_lbfgs_inner15 = partial(optimize_JBLD_cccp, inner_opt='lbfgs', inner_iters=15, line_search_fn_bfgs="strong_wolfe")
+    test_hyper_params(foldername, {'name':'JBLD_cccp_lbfgs_inner15','optimize_func':optimize_JBLD_cccp_lbfgs_inner15, 'lr_values':[5e-1, 1]})
+
     plt.show()

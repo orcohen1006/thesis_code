@@ -66,7 +66,7 @@ def example_display_power_spectrum():
     inds = np.argsort(sqerr_dict["AIRM"] - (sqerr_dict["SAMV"] + sqerr_dict["SPICE"])/2)
 
     # %%
-    path_fig = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m08-d04_15-40-39/Exp_Rho_y2025-m08-d04_15-51-28/Exp_Rho_y2025-m08-d04_15-51-28_DOA.pkl'
+    path_fig = '/home/or.cohen/thesis_code/RiemannianDOA_proj/TestHyperparams_y2025-m08-d19_15-08-43/JBLD_learning_rate_comparison.pkl'
     with open(path_fig, 'rb') as f:
         fig_qeigvals = pickle.load(f)
     plt.show()
@@ -169,12 +169,15 @@ def display_power_spectrum_tmp():
     config_dict = create_config(
         m=12, snr=0, N=40, power_doa_db=np.array([0, 0]), doa=np.array([35, 42]), cohr_flag=True, noncircular_coeff=0.0
     )
+    
+    algo_list = get_algo_dict_list()
+    algo_list = {k: v for k, v in algo_list.items() if k in ['AIRM', 'JBLD']}
     result= run_single_mc_iteration(
         i_mc=0,
         config=config_dict,
-        algo_list=list(get_algo_dict_list().keys()))
+        algo_list=list(algo_list.keys()))
 
-    ax = display_power_spectrum(result["config"], result["p_vec_list"])
+    ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list)
 
     # doas = result["config"]["doa"]
     # power_doa_db = result["config"]["power_doa_db"]

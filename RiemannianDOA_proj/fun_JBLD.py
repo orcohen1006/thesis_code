@@ -50,14 +50,94 @@ def optimize_fixedpoint_JBLD(A, R_hat, sigma2, p_init, max_iter, do_store_histor
 
     return p,it,(None, rel_change_history)
 
+def optimize_cg_JBLD(
+    A, R_hat, sigma2, p_init,
+    _max_iter,
+    _lr = 1,
+    cg_tol=1e-6,
+    cg_maxiter=10,
+    use_linesearch=False,
+    do_store_history = False, do_verbose = False
+):
+    threshold = 1e-4
+    eps_p = 1e-10
+    M, D = A.shape
+    p = np.maximum(p_init, eps_p)  # ensure positivity
+
+    loss_history = []
+    rel_change_history = []
+
+    for it in range(_max_iter):
+        p_prev = p.copy() 
+        
+        R = A @ np.diag(p) @ A.conj().T + sigma2 * np.eye(M)
+        S = R + R_hat
+        invR_A = np.linalg.solve(R, A)
+        invS_A = np.linalg.solve(S, A)
+
+        # Gradient terms
+        grad_f = np.maximum(0, np.real(np.sum(np.conj(A) * (invS_A), axis=0)))
+        grad_g = -0.5*np.maximum(0, np.real(np.sum(np.conj(A) * (invR_A), axis=0)))
+        # J(p | p_prev) = grad_f(p_prev)^T p + g(p), is the majorization function and is convex.
+        # grad_J(p_prev) = grad_f(p_prev) + grad_g(p_prev)
+        grad_J = grad_f + grad_g
+        rhs = -grad_J  # Right-hand side for CG: (-1)*gradient
+
+        # Precompute full Hessian: H = |A^H R^{-1} A|^2
+        G = A.conj().T @ invR_A
+        H = 0.5*np.abs(G) ** 2
+
+        # Solve H @ delta_p = rhs using CG
+        delta_p, info = cg(H, rhs, maxiter=cg_maxiter)
+        # if info != 0:
+            # print(f"[warning] CG did not fully converge at iter {it} (info = {info})")
+
+        # Line search (optional)
+        if use_linesearch:
+            alpha = 1.0
+            beta = 0.5
+            c = 1e-4
+            cost_old = jbld_cost(R, R_hat)
+
+            while True:
+                p_new = np.maximum(p - alpha * delta_p, 0)
+                R_new =  A @ np.diag(p_new) @ A.conj().T + sigma2 * np.eye(M)
+                cost_new = jbld_cost(R_new, R_hat)
+
+                if cost_new <= cost_old - c * alpha * np.dot(delta_p, delta_p):
+                    break
+
+                alpha *= beta
+                if alpha < 1e-6:
+                    p_new = p  # Reject update
+                    break
+
+            p = p_new
+        else:
+            # Basic projected update
+            p = np.maximum(p + _lr*delta_p, 0)
+
+        # Convergence check
+        rel_change = np.linalg.norm(p_prev - p) / np.linalg.norm(p_prev)
+        if do_verbose:
+            print(f"Iter {it}: rel_change = {rel_change:.2e}")
+        if do_store_history:
+                loss_history.append(jbld_cost(A @ np.diag(p_prev) @ A.conj().T + sigma2 * np.eye(M), R_hat))
+                rel_change_history.append(rel_change)
+        if rel_change < threshold:
+            break
+
+    return p, it, (loss_history, rel_change_history)
+
+
 # def optimize_mm_JBLD(
 #     A, R_hat, sigma2, p_init, max_iter,
+#     lr=None,
 #     cg_tol=1e-6,
 #     cg_maxiter=10,
 #     use_linesearch=False,
 #     do_store_history = False, do_verbose = False
 # ):
-#     print("mm optimization")
 #     threshold = 1e-4
 #     eps_p = 1e-10
 #     M, D = A.shape
@@ -76,44 +156,16 @@ def optimize_fixedpoint_JBLD(A, R_hat, sigma2, p_init, max_iter, do_store_histor
 #         # Gradient terms
 #         grad_f = np.maximum(0, np.real(np.sum(np.conj(A) * (invS_A), axis=0)))
 #         grad_g = -0.5*np.maximum(0, np.real(np.sum(np.conj(A) * (invR_A), axis=0)))
-#         # J(p | p_prev) = grad_f(p_prev)^T p + g(p), is the majorization function and is convex.
-#         # grad_J(p_prev) = grad_f(p_prev) + grad_g(p_prev)
+#         # J(p | p_prev) = ∇f(p_prev)^T p + g(p), is the majorization function and is convex.
+#         # ∇J(p | p_prev) = ∇f(p_prev) + ∇g(p) -----> ∇J(p_prev | p_prev) = ∇f(p_prev) + ∇g(p_prev)
 #         grad_J = grad_f + grad_g
-#         rhs = -grad_J  # Right-hand side for CG: (-1)*gradient
+        
+#         # [∇²J(p | p_prev)]_{k,l} = [∇²g(p)]_{k,l} = 0.5 |a_k^H R^{-1} a_l|^2
+#         diag_Hessian = 0.5*np.real(np.sum(np.conj(A) * (invR_A), axis=0)) ** 2
+#         # diag_Hessian += 1e-5
 
-#         # Precompute full Hessian: H = |A^H R^{-1} A|^2
-#         G = A.conj().T @ invR_A
-#         H = 0.5*np.abs(G) ** 2
-
-#         # Solve H @ delta_p = rhs using CG
-#         delta_p, info = cg(H, rhs, maxiter=cg_maxiter)
-#         if info != 0:
-#             print(f"[warning] CG did not fully converge at iter {it} (info = {info})")
-
-#         # Line search (optional)
-#         if use_linesearch:
-#             alpha = 1.0
-#             beta = 0.5
-#             c = 1e-4
-#             cost_old = jbld_cost(R, R_hat)
-
-#             while True:
-#                 p_new = np.maximum(p - alpha * delta_p, 0)
-#                 R_new =  A @ np.diag(p_new) @ A.conj().T + sigma2 * np.eye(M)
-#                 cost_new = jbld_cost(R_new, R_hat)
-
-#                 if cost_new <= cost_old - c * alpha * np.dot(delta_p, delta_p):
-#                     break
-
-#                 alpha *= beta
-#                 if alpha < 1e-6:
-#                     p_new = p  # Reject update
-#                     break
-
-#             p = p_new
-#         else:
-#             # Basic projected update
-#             p = np.maximum(p + delta_p, 0)
+#         delta_p = -grad_J / diag_Hessian
+#         p = np.maximum(p + delta_p, 0)
 
 #         # Convergence check
 #         rel_change = np.linalg.norm(p_prev - p) / np.linalg.norm(p_prev)
@@ -125,52 +177,3 @@ def optimize_fixedpoint_JBLD(A, R_hat, sigma2, p_init, max_iter, do_store_histor
 #             break
 
 #     return p, it, (None, rel_change_history)
-
-
-def optimize_mm_JBLD(
-    A, R_hat, sigma2, p_init, max_iter,
-    cg_tol=1e-6,
-    cg_maxiter=10,
-    use_linesearch=False,
-    do_store_history = False, do_verbose = False
-):
-    print("mm optimization 123")
-    threshold = 1e-4
-    eps_p = 1e-10
-    M, D = A.shape
-    p = np.maximum(p_init, eps_p)  # ensure positivity
-
-    rel_change_history = []
-
-    for it in range(max_iter):
-        p_prev = p.copy() 
-        
-        R = A @ np.diag(p) @ A.conj().T + sigma2 * np.eye(M)
-        S = R + R_hat
-        invR_A = np.linalg.solve(R, A)
-        invS_A = np.linalg.solve(S, A)
-
-        # Gradient terms
-        grad_f = np.maximum(0, np.real(np.sum(np.conj(A) * (invS_A), axis=0)))
-        grad_g = -0.5*np.maximum(0, np.real(np.sum(np.conj(A) * (invR_A), axis=0)))
-        # J(p | p_prev) = ∇f(p_prev)^T p + g(p), is the majorization function and is convex.
-        # ∇J(p | p_prev) = ∇f(p_prev) + ∇g(p) -----> ∇J(p_prev | p_prev) = ∇f(p_prev) + ∇g(p_prev)
-        grad_J = grad_f + grad_g
-        
-        # [∇²J(p | p_prev)]_{k,l} = [∇²g(p)]_{k,l} = 0.5 |a_k^H R^{-1} a_l|^2
-        diag_Hessian = 0.5*np.real(np.sum(np.conj(A) * (invR_A), axis=0)) ** 2
-        # diag_Hessian += 1e-5
-
-        delta_p = -grad_J / diag_Hessian
-        p = np.maximum(p + delta_p, 0)
-
-        # Convergence check
-        rel_change = np.linalg.norm(p_prev - p) / np.linalg.norm(p_prev)
-        if do_verbose:
-            print(f"Iter {it}: rel_change = {rel_change:.2e}")
-        if do_store_history:
-                rel_change_history.append(rel_change)
-        if rel_change < threshold:
-            break
-
-    return p, it, (None, rel_change_history)
