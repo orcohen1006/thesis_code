@@ -20,7 +20,7 @@ from ToolsMC import *
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m08-d10_20-47-58/Exp_M_y2025-m08-d10_20-47-58_indp'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m08-d20_19-37-54/Exp_SNR_Large_y2025-m08-d20_19-47-35_indp_N_40'
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
     # %%

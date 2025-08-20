@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from time import time
 # %%
-EPS_REL_CHANGE = 1e-4
+EPS_REL_CHANGE = 1e-3
 TORCH_DTYPE = torch.complex64
 
 def matrix_logm(B_in):
@@ -82,10 +82,7 @@ def optimize_adam_AIRM(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do
             p.clamp_(min=0)  # Keep p non-negative if needed
 
         with torch.no_grad():
-            p_norm = torch.norm(p)
-            rel_change = 0
-            if p_norm > 0:
-                rel_change = (torch.norm(p - p_prev) / p_norm).item()
+            rel_change = (torch.norm(p - p_prev) / (1e-5 + torch.norm(p_prev))).item()
             if do_store_history:
                 rel_change_history.append(rel_change)
                 loss_history.append(loss.item())
@@ -169,10 +166,7 @@ def optimize_adam_JBLD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do
             p.clamp_(min=0)  # Keep p non-negative if needed
 
         with torch.no_grad():
-            p_norm = torch.norm(p)
-            rel_change = 0
-            if p_norm > 0:
-                rel_change = (torch.norm(p - p_prev) / p_norm).item()
+            rel_change = (torch.norm(p - p_prev) / (1e-5 + torch.norm(p_prev))).item()
             if do_store_history:
                 rel_change_history.append(rel_change)
                 loss_history.append(loss.item())

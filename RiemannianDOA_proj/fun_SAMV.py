@@ -26,7 +26,7 @@ def fun_SAMV(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
     flag_sigma_is_given = sigma_given is not None
     
     Numsources = len(DOA)
-    threshold = 1e-4
+    threshold = 1e-3
     maxIter = 10000
     
     M, thetaNum = A.shape
@@ -53,7 +53,7 @@ def fun_SAMV(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
         if not flag_sigma_is_given:
             sigma = np.real(np.trace(Rinv @ Rinv @ R_N)) / np.real(np.trace(Rinv @ Rinv))
         
-        p_diffs_ratio = np.linalg.norm(p_vec_Old - p_vec) / np.linalg.norm(p_vec_Old)
+        p_diffs_ratio = np.linalg.norm(p_vec_Old - p_vec) / (1e-5 + np.linalg.norm(p_vec_Old))
         if p_diffs_ratio < threshold:
             break
         

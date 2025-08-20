@@ -339,7 +339,7 @@ def optimize_JBLD_cccp(
         i_iter += inner_iters
         p = p_var.detach()
 
-        rel = torch.norm(p - p_prev) / (1e-12 + torch.norm(p_prev)).item()
+        rel = torch.norm(p - p_prev) / (1e-5 + torch.norm(p_prev)).item()
         if do_store_history:
             # Track true JBLD after each outer iteration
             p_req = p.clone().detach().requires_grad_(False)
