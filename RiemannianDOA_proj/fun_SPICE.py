@@ -2,6 +2,7 @@ import numpy as np
 from utils import *
 from scipy import linalg
 from time import time
+from utils import EPS_REL_CHANGE
 
 
 def fun_SPICE(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
@@ -28,7 +29,6 @@ def fun_SPICE(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
     Numsources = len(DOA)
     
     maxIter = 10000
-    EPS_NORM_CHANGE = 1e-3
     
     M, N = A.shape
     t_samples = Y.shape[1]
@@ -83,7 +83,7 @@ def fun_SPICE(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
         p = np.abs(p)
         
         measured_change_norm = np.linalg.norm(p - p_prev) / (1e-5 + np.linalg.norm(p_prev))
-        if measured_change_norm < EPS_NORM_CHANGE:
+        if measured_change_norm < EPS_REL_CHANGE:
             break
     # print(f"spice: #iters= {jj}, time= {time() - t0} [sec]")
     # Detected_powers, Distance, normal = detect_DOAs(p, DOAscan, DOA)

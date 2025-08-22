@@ -9,7 +9,7 @@ from RunSingleMCIteration import run_single_mc_iteration
 from utils import *
 import os
 import pickle
-# %%
+# 
 import utils
 import ToolsMC
 import importlib
@@ -20,7 +20,7 @@ from ToolsMC import *
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m08-d20_19-37-54/Exp_SNR_Large_y2025-m08-d20_19-47-35_indp_N_40'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m08-d20_23-01-43/Exp_N_y2025-m08-d20_23-01-43_indp'
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
     # %%
@@ -34,7 +34,8 @@ def example_display_power_spectrum():
     # i_config = 1; i_mc =  inds[31] # 71 # 216 # 253# 3 # 468
     # i_config = 5; i_mc = 6
     # i_config = 3; i_mc = inds[3]
-    i_config = 2; i_mc = 14
+    # i_config = 2; i_mc = 14
+    i_config = 1; i_mc = 0
 
     print(results[i_config][0]["config"])
     ax = display_power_spectrum(results[i_config][i_mc]["config"], results[i_config][i_mc]["p_vec_list"])
@@ -66,9 +67,9 @@ def example_display_power_spectrum():
     inds = np.argsort(sqerr_dict["AIRM"] - (sqerr_dict["SAMV"] + sqerr_dict["SPICE"])/2)
 
     # %%
-    path_fig = '/home/or.cohen/thesis_code/RiemannianDOA_proj/TestHyperparams_y2025-m08-d19_15-08-43/JBLD_learning_rate_comparison.pkl'
+    path_fig = '/home/or.cohen/thesis_code/RiemannianDOA_proj/TestHyperparams_y2025-m08-d19_20-14-13/JBLD_cccp_adam_learning_rate_comparison.pkl'
     with open(path_fig, 'rb') as f:
-        fig_qeigvals = pickle.load(f)
+        my_fig = pickle.load(f)
     plt.show()
     # %%
     fig = plt.gcf()

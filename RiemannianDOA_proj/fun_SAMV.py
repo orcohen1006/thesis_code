@@ -2,6 +2,7 @@ import numpy as np
 from utils import *
 from scipy import sparse
 from time import time
+from utils import EPS_REL_CHANGE
 
 def fun_SAMV(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
     """
@@ -26,7 +27,6 @@ def fun_SAMV(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
     flag_sigma_is_given = sigma_given is not None
     
     Numsources = len(DOA)
-    threshold = 1e-3
     maxIter = 10000
     
     M, thetaNum = A.shape
@@ -54,7 +54,7 @@ def fun_SAMV(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
             sigma = np.real(np.trace(Rinv @ Rinv @ R_N)) / np.real(np.trace(Rinv @ Rinv))
         
         p_diffs_ratio = np.linalg.norm(p_vec_Old - p_vec) / (1e-5 + np.linalg.norm(p_vec_Old))
-        if p_diffs_ratio < threshold:
+        if p_diffs_ratio < EPS_REL_CHANGE:
             break
         
         p_vec_Old = p_vec.copy()

@@ -1,7 +1,8 @@
 import torch
 from torch import Tensor
 from typing import Callable, Dict, Optional, Tuple
-from OptimizeRiemannianLoss import EPS_REL_CHANGE, TORCH_DTYPE
+from OptimizeRiemannianLoss import  TORCH_DTYPE
+from utils import EPS_REL_CHANGE
 ###############################################################################
 # Utilities
 ###############################################################################
@@ -48,6 +49,9 @@ def jbl_loss(A: Tensor, p: Tensor, sigma2: float, Rhat: Tensor) -> Tensor:
     expression for readability; autograd will ignore constants.
     Efficient and stable via Cholesky.
     """
+    with torch.no_grad():
+        project_nonneg_(p)
+        
     R = build_R(A, p, sigma2)
     # (R + Rhat)/2
     Rbar = 0.5 * (R + Rhat)
@@ -246,7 +250,11 @@ def inner_objective_cccp(A: Tensor, p: Tensor, sigma2: float, w: Tensor) -> Tens
     """Inner convex objective for CCCP:
     F(p) = -0.5 * logdet(R(p)) + w^T p. The linear term uses fixed w.
     """
+    with torch.no_grad():
+        project_nonneg_(p)
+
     R = build_R(A, p, sigma2)
+
     logdet_R, _ = cholesky_logdet_and_solve(R)
     return (-0.5 * logdet_R + (w @ p))
 

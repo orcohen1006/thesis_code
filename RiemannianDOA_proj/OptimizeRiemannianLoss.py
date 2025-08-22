@@ -3,8 +3,8 @@ import torch
 import numpy as np
 from time import time
 # %%
-EPS_REL_CHANGE = 1e-3
 TORCH_DTYPE = torch.complex64
+from utils import EPS_REL_CHANGE
 
 def matrix_logm(B_in):
     # B_in += get_fixed_noise(size=B_in.shape[0], noise_scale=1e-7)

@@ -9,6 +9,9 @@ import os
 FILENAME_PBS_SCRIPT = "job_byOrCohen.pbs"
 FILENAME_PBS_METADATA = "job_metadata.pkl"
 
+
+EPS_REL_CHANGE = 1e-4
+
 def save_figure(fig: plt.Figure, path_results_dir: str, name: str):
     fig.savefig(os.path.join(path_results_dir, name +  '.png'), dpi=300)
     with open(os.path.join(path_results_dir, name +  '.pkl'), 'wb') as f:

@@ -16,12 +16,11 @@ def test_hyper_params(foldername, input) -> None:
     # Test parameters
     np.random.seed(42)
     m = 12
-    MAX_ITERS = int(2e3)
+    MAX_ITERS = int(5e3)
 
     doa_scan = get_doa_grid()
 
     A = get_steering_matrix(doa_scan, m)
-    firstDOA = 35.11
 
     lr_values = input['lr_values']
     optimize_func = input['optimize_func']
@@ -215,14 +214,14 @@ if __name__ == "__main__":
     # optimize_JBLD_cccp_adam_inner25 = partial(optimize_JBLD_cccp, inner_opt='adam', inner_iters=25)
     # test_hyper_params(foldername, {'name':'JBLD_cccp_adam_inner25','optimize_func':optimize_JBLD_cccp_adam_inner25, 'lr_values':[1e-2, 1e-1]})
 
+    optimize_JBLD_cccp_adam_inner5 = partial(optimize_JBLD_cccp, inner_opt='adam', inner_iters=5)
+    test_hyper_params(foldername, {'name':'JBLD_cccp_adam_inner5','optimize_func':optimize_JBLD_cccp_adam_inner5, 'lr_values':[1e-2]})
+
     # optimize_JBLD_cccp_lbfgs_inner25 = partial(optimize_JBLD_cccp, inner_opt='lbfgs', inner_iters=25, line_search_fn_bfgs="strong_wolfe")
     # test_hyper_params(foldername, {'name':'JBLD_cccp_lbfgs_inner25','optimize_func':optimize_JBLD_cccp_lbfgs_inner25, 'lr_values':[5e-1, 1]})
 
-    optimize_JBLD_cccp_lbfgs_inner200 = partial(optimize_JBLD_cccp, inner_opt='lbfgs', inner_iters=200, line_search_fn_bfgs="strong_wolfe")
-    test_hyper_params(foldername, {'name':'JBLD_cccp_lbfgs_inner200','optimize_func':optimize_JBLD_cccp_lbfgs_inner200, 'lr_values':[5e-1, 1]})
 
-
-    optimize_JBLD_cccp_lbfgs_inner15 = partial(optimize_JBLD_cccp, inner_opt='lbfgs', inner_iters=15, line_search_fn_bfgs="strong_wolfe")
-    test_hyper_params(foldername, {'name':'JBLD_cccp_lbfgs_inner15','optimize_func':optimize_JBLD_cccp_lbfgs_inner15, 'lr_values':[5e-1, 1]})
+    # optimize_JBLD_cccp_lbfgs_inner10 = partial(optimize_JBLD_cccp, inner_opt='lbfgs', inner_iters=10, line_search_fn_bfgs="strong_wolfe")
+    # test_hyper_params(foldername, {'name':'JBLD_cccp_lbfgs_inner10','optimize_func':optimize_JBLD_cccp_lbfgs_inner10, 'lr_values':[5e-1]})
 
     plt.show()
