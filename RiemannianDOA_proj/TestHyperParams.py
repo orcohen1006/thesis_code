@@ -362,7 +362,6 @@ def run_aux(dict_method, list_doa_settings, A, m, MAX_ITERS):
 
 
 if __name__ == "__main__":
-
     foldername = "zCompareMethodsHyperparams_" + datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     os.makedirs(foldername, exist_ok=True)
 
@@ -380,7 +379,8 @@ if __name__ == "__main__":
 
     compare_methods_and_hyperparams(foldername, 
                                     [
-                                    #  {'name':'JBLD_scipy_lbfgsb_inner10','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=10), 'lr_values':[1e-2]},
+                                     {'name':'JBLD_scipy_lbfgsb_inner20','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=20), 'lr_values':[1e-2]},
+                                     {'name':'JBLD_scipy_lbfgsb_inner10','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=10), 'lr_values':[1e-2]},
                                     #  {'name':'JBLD_scipy_lbfgsb_inner10','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=10), 'lr_values':[1e-2]},
                                     #  {'name':'JBLD_scipy_lbfgsb_inner10_gtol1e-3','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=10, gtol=1e-3), 'lr_values':[1e-2]},
                                     # {'name':'JBLD_scipy_lbfgsb_inner25','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=25), 'lr_values':[1e-2]},
@@ -388,7 +388,7 @@ if __name__ == "__main__":
                                     # {'name':'JBLD_scipy_lbfgsb_inner50','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=50), 'lr_values':[1e-2]},
                                     #  {'name':'JBLD_cccp_sgd_inner5','optimize_func':partial(optimize_JBLD_cccp, inner_opt='sgd', inner_iters=5), 'lr_values':[1e-2]},
                                     #  {'name':'JBLD_cccp_sgd_inner10','optimize_func':partial(optimize_JBLD_cccp, inner_opt='sgd', inner_iters=10), 'lr_values':[1e-2]},
-                                     {'name':'JBLD_cccp_ls_sgd_inner20','optimize_func':partial(optimize_JBLD_cccp, inner_opt='ls_sgd', inner_iters=20), 'lr_values':[5e-2]},
+                                    #  {'name':'JBLD_cccp_ls_sgd_inner20','optimize_func':partial(optimize_JBLD_cccp, inner_opt='ls_sgd', inner_iters=20), 'lr_values':[5e-2]},
                                      {'name':'JBLD_cccp_sgd_inner20','optimize_func':partial(optimize_JBLD_cccp, inner_opt='sgd', inner_iters=20), 'lr_values':[1e-1]},
                                     #  {'name':'JBLD_cccp_adam_inner5','optimize_func':partial(optimize_JBLD_cccp, inner_opt='adam', inner_iters=5), 'lr_values':[1e-2]},
                                      {'name':'JBLD_adam_cholesky','optimize_func':optimize_adam_cholesky_JBLD, 'lr_values':[1e-2]},

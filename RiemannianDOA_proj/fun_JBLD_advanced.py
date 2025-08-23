@@ -354,12 +354,12 @@ def optimize_JBLD_cccp(
 
     loss_history = []
     rel_change_history = []
+    rel_change_window = []
     i_iter = -1
     p_prev = p.clone().detach()
     # assert that either _max_iter is different from None or outer_iters is different from None
     assert (_max_iter is not None) or (outer_iters is not None), "Must specify either _max_iter or outer_iters"
     _max_iter = outer_iters*inner_iters if _max_iter is None else _max_iter
-
     while i_iter < _max_iter:
         # 1) Compute CCCP weights at current p (no grad)
         w = weights_cccp(A_n, p, sigma2_n, Rhat_n)  # shape (K,)
@@ -420,8 +420,9 @@ def optimize_JBLD_cccp(
         elif inner_opt.lower() == "scipy_lbfgsb":
             p_var.requires_grad_ = False
             def loss_fn_for_scipy(x):
+                # return jbl_loss(A_n, x, sigma2_n, Rhat_n) 
                 return inner_objective_cccp(A_n, x, sigma2_n, w)
-                # return jbl_loss(A_n, x, sigma2_n, Rhat_n)
+
             fun, jac = make_scipy_objective(loss_fn_for_scipy)
             bounds = [(0, None)] * A_n.shape[1]
             x0 = p_var.detach().numpy()
@@ -436,6 +437,7 @@ def optimize_JBLD_cccp(
         p = p_var.detach()
 
         rel = torch.norm(p - p_prev) / (1e-5 + torch.norm(p_prev)).item()
+        rel_change_window.append(rel)
         if do_store_history:
             # Track true JBLD after each outer iteration
             p_req = p.clone().detach().requires_grad_(False)
@@ -443,8 +445,15 @@ def optimize_JBLD_cccp(
             loss_history.extend(inner_iters * [loss_val])
 
             rel_change_history.extend(inner_iters * [rel])
+        
+        switch_optimizer_to_avoid_stalling = rel < 2*EPS_REL_CHANGE
+        if (switch_optimizer_to_avoid_stalling):
+            inner_opt, _lr = "adam", 1e-3
+            
+        # if len(rel_change_window) > 5 and all([tmprel < EPS_REL_CHANGE for tmprel in rel_change_window[-5:]]):
+        #     break
         if rel < EPS_REL_CHANGE:
-            break
+                    break
         p_prev = p.clone()
 
     # Map back to original coordinates
