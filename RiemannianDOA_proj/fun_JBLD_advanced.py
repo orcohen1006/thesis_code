@@ -4,6 +4,7 @@ from typing import Callable, Dict, Optional, Tuple
 from OptimizeRiemannianLoss import  TORCH_DTYPE
 from utils import EPS_REL_CHANGE
 from scipy.optimize import minimize
+from ProjectedLineSearchOptimizer import *
 ###############################################################################
 # Utilities
 ###############################################################################
@@ -316,6 +317,7 @@ def optimize_JBLD_cccp(
     inner_iters: int = 20,
     inner_opt: str = "adam",
     do_nesterov: bool = False, # for sgd
+    gtol: float = 1e-5, # for scipy lbfgs
     _lr: float = 0.05,
     line_search_fn_bfgs = None,
     normalize: bool = False,
@@ -364,8 +366,30 @@ def optimize_JBLD_cccp(
 
         # 2) Solve inner convex problem approximately from warm start p
         p_var = p.clone().detach().requires_grad_(True)
+        if inner_opt.lower().startswith("ls_"):
+            if inner_opt.lower() == "ls_sgd":
+                opt_cls = torch.optim.SGD
+                opt_kwargs = {"lr":_lr,"momentum":0.9, "nesterov":do_nesterov}
+            elif inner_opt.lower() == "ls_adam":
+                opt_cls = torch.optim.Adam
+                opt_kwargs = {"lr":_lr}
+            def loss_fn():
+                return inner_objective_cccp(A_n, p_var, sigma2_n, w)
+            def eval_fn():
+                return inner_objective_cccp(A_n, p_var, sigma2_n, w)
+                # return jbl_loss(A_n, p_var, sigma2_n, Rhat_n)
+            opt = ProjectedLineSearchOptimizer(
+                params=[p_var],
+                base_optimizer_cls=opt_cls,
+                base_optimizer_kwargs=opt_kwargs,
+                loss_fn=loss_fn,
+                eval_fn=eval_fn,
+                c=1e-4, tau=0.5, max_ls_steps=3
+                )
+            for _ in range(inner_iters):
+                opt.step()
 
-        if inner_opt.lower() == "adam" or inner_opt.lower() == "sgd":
+        elif inner_opt.lower() == "adam" or inner_opt.lower() == "sgd":
             if inner_opt.lower() == "adam":
                 opt = torch.optim.Adam([p_var], lr=_lr)
             else:
@@ -383,12 +407,11 @@ def optimize_JBLD_cccp(
 
             def closure():
                 opt.zero_grad(set_to_none=True)
-                
+                loss = inner_objective_cccp(A_n, p_var, sigma2_n, w)
+                loss.backward()
                 with torch.no_grad():
                     p_var.clamp_(min=0.0)
 
-                loss = inner_objective_cccp(A_n, p_var, sigma2_n, w)
-                loss.backward()
                 return loss
 
             opt.step(closure)
@@ -402,12 +425,11 @@ def optimize_JBLD_cccp(
             fun, jac = make_scipy_objective(loss_fn_for_scipy)
             bounds = [(0, None)] * A_n.shape[1]
             x0 = p_var.detach().numpy()
-            options = {"maxiter":inner_iters, "disp":True}
+            options = {"maxiter":inner_iters, "gtol":gtol}
             res = minimize(fun, x0, method="L-BFGS-B", jac=jac, bounds=bounds, options=options)
             # success = res.success
-            print(f"------ i_iter={i_iter}, ------ scipy lbfgsb: {res.message}")
+            # print(f"------ i_iter={i_iter}, ------ scipy lbfgsb: {res.message}")
             p_var = torch.tensor(res.x, device='cpu', dtype=torch.float)
-
         else:
             raise ValueError("inner_opt not recognized")
         i_iter += inner_iters
