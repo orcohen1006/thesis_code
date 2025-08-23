@@ -3,9 +3,45 @@ from torch import Tensor
 from typing import Callable, Dict, Optional, Tuple
 from OptimizeRiemannianLoss import  TORCH_DTYPE
 from utils import EPS_REL_CHANGE
+from scipy.optimize import minimize
 ###############################################################################
 # Utilities
 ###############################################################################
+
+def make_scipy_objective(loss_fn, device="cpu", dtype=torch.float):
+    """
+    Wrap a PyTorch loss function for SciPy's minimize (L-BFGS-B).
+
+    Parameters
+    ----------
+    loss_fn : callable
+        Takes a torch.Tensor p of shape (D,) and returns a scalar loss (torch scalar).
+    device : str
+        Torch device ("cpu" or "cuda").
+    dtype : torch dtype
+        Precision of optimization variable.
+
+    Returns
+    -------
+    fun : callable
+        Function that SciPy minimize can call: fun(x) -> float
+    jac : callable
+        Gradient function: jac(x) -> np.ndarray
+    """
+    
+    def fun(x):
+        p = torch.tensor(x, device=device, dtype=dtype, requires_grad=True)
+        loss = loss_fn(p)
+        return float(loss.item())
+    
+    def jac(x):
+        p = torch.tensor(x, device=device, dtype=dtype, requires_grad=True)
+        loss = loss_fn(p)
+        loss.backward()
+        grad = p.grad.detach().cpu().numpy()
+        return grad
+    
+    return fun, jac
 
 def hermitian(A: Tensor) -> Tensor:
     return A.mT.conj()
@@ -49,8 +85,8 @@ def jbl_loss(A: Tensor, p: Tensor, sigma2: float, Rhat: Tensor) -> Tensor:
     expression for readability; autograd will ignore constants.
     Efficient and stable via Cholesky.
     """
-    with torch.no_grad():
-        project_nonneg_(p)
+    # with torch.no_grad():
+    #     p_clamped = p.clamp(min=0)
         
     R = build_R(A, p, sigma2)
     # (R + Rhat)/2
@@ -123,53 +159,59 @@ def maybe_normalize(A: Tensor, Rhat: Tensor, sigma2: float, normalize: bool = Tr
 # 1) Projected Gradient with Barzilai–Borwein (BB) + optional Armijo
 ###############################################################################
 
-def projected_gradient_bb(
-    A: Tensor,
-    Rhat: Tensor,
-    sigma2: float,
-    p_init: Tensor,
-    max_iters: int = 500,
-    tol_rel: float = 1e-6,
-    armijo: bool = False,
+def optimize_JBLD_BB(
+    _A: Tensor,
+    _R_hat: Tensor,
+    _sigma2: float,
+    _p_init: Tensor,
+    _max_iter: int = None,
+    _lr: float = 1,
+    armijo: bool = True,
     armijo_c: float = 1e-4,
     armijo_beta: float = 0.5,
     bb_epsilon: float = 1e-12,
-    normalize: bool = True,
-) -> Dict[str, Tensor]:
+    normalize: bool = False,
+    do_store_history: bool = False,
+    ):
     """Projected gradient descent with BB step sizes.
 
     If normalization is enabled, the routine optimizes in the normalized space
     (A', Rhat', sigma2'), and returns p in the *original* units by inverting
     the column scaling: p_out_k = p'_k / ||a_k||^2.
     """
+    R_hat = torch.as_tensor(_R_hat, dtype=TORCH_DTYPE)
+    p_init = torch.as_tensor(_p_init, dtype=torch.float)
+    A = torch.as_tensor(_A, dtype=TORCH_DTYPE)
+
     device = A.device
     dtype = A.dtype
 
-    A_n, Rhat_n, sigma2_n, col_norms = maybe_normalize(A, Rhat, sigma2, normalize)
+    A_n, Rhat_n, sigma2_n, col_norms = maybe_normalize(A, R_hat, _sigma2, normalize)
 
     # Map initial p to normalized coordinates if needed: p' = p * ||a||^2
     if col_norms is not None:
-        p = (p_init * (col_norms ** 2)).to(device=device, dtype=torch.float64)
+        p = (p_init * (col_norms ** 2)).to(device=device, dtype=torch.float)
     else:
-        p = p_init.to(device=device, dtype=torch.float64)
+        p = p_init.to(device=device, dtype=torch.float)
 
     A_n = A_n.to(device=device, dtype=dtype)
     Rhat_n = Rhat_n.to(device=device, dtype=dtype)
 
-    project_nonneg_(p)
+    # project_nonneg_(p)
+    p = p.clamp(min=0)
 
     # Compute initial gradient
-    p.requires_grad_(True)
+    p = p.detach().requires_grad_(True)
     loss = jbl_loss(A_n, p, sigma2_n, Rhat_n)
     g, = torch.autograd.grad(loss, p)
-    p = p.detach()
 
     t = 1.0  # initial stepsize
     prev_p, prev_g = None, None
 
-    history = []
+    loss_history = []
+    rel_change_history = []
 
-    for it in range(1, max_iters + 1):
+    for it in range(1, _max_iter + 1):
         # BB stepsize (use BB1 or fallback)
         if prev_p is not None:
             s = p - prev_p
@@ -202,8 +244,8 @@ def projected_gradient_bb(
                 cand_loss = jbl_loss(A_n, cand, sigma2_n, Rhat_n)
                 # Armijo condition: f(cand) <= f(p) - c * alpha * t * ||g||^2
                 if cand_loss <= Lp - armijo_c * alpha * t * (g @ g):
-                    trial_p = cand.detach()
-                    loss = cand_loss.detach()
+                    trial_p = cand
+                    loss = cand_loss
                     break
                 alpha *= armijo_beta
                 if alpha < 1e-8:
@@ -212,8 +254,8 @@ def projected_gradient_bb(
                     # recompute loss at trial_p
                     trial_p.requires_grad_(True)
                     loss = jbl_loss(A_n, trial_p, sigma2_n, Rhat_n)
-                    trial_p = trial_p.detach()
                     break
+            print(f"alpha = {alpha}")
         else:
             # Recompute loss at trial
             trial_p = trial_p.detach().requires_grad_(True)
@@ -223,14 +265,19 @@ def projected_gradient_bb(
         g_new, = torch.autograd.grad(loss, trial_p)
         trial_p = trial_p.detach()
 
-        # Save history
-        history.append(loss.detach().cpu())
-
+        p = trial_p
         # Check convergence
-        rel = torch.norm(trial_p - p) / (1e-12 + torch.norm(p))
-        p, prev_p = trial_p, p
+        if prev_p is None:
+            rel = 1e-2
+        else:
+            rel = torch.norm(p - prev_p) / (1e-5 + torch.norm(prev_p)).detach().item()
+        if do_store_history:
+            loss_history.append(loss.item())
+            rel_change_history.append(rel)
+
+        prev_p = p.detach()
         prev_g, g = g, g_new.detach()
-        if rel.item() < tol_rel:
+        if rel < EPS_REL_CHANGE:
             break
 
     # Map back to original units: p = p' / ||a||^2
@@ -239,7 +286,7 @@ def projected_gradient_bb(
     else:
         p_out = p
 
-    return {"p": p_out.detach(), "loss_history": torch.stack(history)}
+    return p_out.detach(), it, (loss_history, rel_change_history)
 
 
 ###############################################################################
@@ -250,9 +297,9 @@ def inner_objective_cccp(A: Tensor, p: Tensor, sigma2: float, w: Tensor) -> Tens
     """Inner convex objective for CCCP:
     F(p) = -0.5 * logdet(R(p)) + w^T p. The linear term uses fixed w.
     """
-    with torch.no_grad():
-        project_nonneg_(p)
-
+    # with torch.no_grad():
+    #     p_clamped = p.clamp(min=0)
+    
     R = build_R(A, p, sigma2)
 
     logdet_R, _ = cholesky_logdet_and_solve(R)
@@ -267,7 +314,8 @@ def optimize_JBLD_cccp(
     _max_iter: int = None,
     outer_iters: int = 500,
     inner_iters: int = 20,
-    inner_opt: str = "adam",  # "adam" or "lbfgs"
+    inner_opt: str = "adam",
+    do_nesterov: bool = False, # for sgd
     _lr: float = 0.05,
     line_search_fn_bfgs = None,
     normalize: bool = False,
@@ -309,6 +357,7 @@ def optimize_JBLD_cccp(
     # assert that either _max_iter is different from None or outer_iters is different from None
     assert (_max_iter is not None) or (outer_iters is not None), "Must specify either _max_iter or outer_iters"
     _max_iter = outer_iters*inner_iters if _max_iter is None else _max_iter
+
     while i_iter < _max_iter:
         # 1) Compute CCCP weights at current p (no grad)
         w = weights_cccp(A_n, p, sigma2_n, Rhat_n)  # shape (K,)
@@ -316,8 +365,11 @@ def optimize_JBLD_cccp(
         # 2) Solve inner convex problem approximately from warm start p
         p_var = p.clone().detach().requires_grad_(True)
 
-        if inner_opt.lower() == "adam":
-            opt = torch.optim.Adam([p_var], lr=_lr)
+        if inner_opt.lower() == "adam" or inner_opt.lower() == "sgd":
+            if inner_opt.lower() == "adam":
+                opt = torch.optim.Adam([p_var], lr=_lr)
+            else:
+                opt = torch.optim.SGD([p_var],lr=_lr,momentum=0.9, nesterov=do_nesterov)
             for _ in range(inner_iters):
                 opt.zero_grad(set_to_none=True)
                 loss = inner_objective_cccp(A_n, p_var, sigma2_n, w)
@@ -342,8 +394,22 @@ def optimize_JBLD_cccp(
             opt.step(closure)
             with torch.no_grad():
                 project_nonneg_(p_var)
+        elif inner_opt.lower() == "scipy_lbfgsb":
+            p_var.requires_grad_ = False
+            def loss_fn_for_scipy(x):
+                return inner_objective_cccp(A_n, x, sigma2_n, w)
+                # return jbl_loss(A_n, x, sigma2_n, Rhat_n)
+            fun, jac = make_scipy_objective(loss_fn_for_scipy)
+            bounds = [(0, None)] * A_n.shape[1]
+            x0 = p_var.detach().numpy()
+            options = {"maxiter":inner_iters, "disp":True}
+            res = minimize(fun, x0, method="L-BFGS-B", jac=jac, bounds=bounds, options=options)
+            # success = res.success
+            print(f"------ i_iter={i_iter}, ------ scipy lbfgsb: {res.message}")
+            p_var = torch.tensor(res.x, device='cpu', dtype=torch.float)
+
         else:
-            raise ValueError("inner_opt must be 'adam' or 'lbfgs'")
+            raise ValueError("inner_opt not recognized")
         i_iter += inner_iters
         p = p_var.detach()
 
@@ -366,4 +432,176 @@ def optimize_JBLD_cccp(
         p_out = p
 
     return p_out.detach(), i_iter, (loss_history, rel_change_history)
+
+
+
+
+
+# def optimize_JBLD_cccp_with_reparametrization(
+#     _A: Tensor,
+#     _R_hat: Tensor,
+#     _sigma2: float,
+#     _p_init: Tensor,
+#     _max_iter: int = None,
+#     outer_iters: int = 500,
+#     inner_iters: int = 20,
+#     inner_opt: str = "adam",  # "adam" or "lbfgs"
+#     _lr: float = 0.05,
+#     line_search_fn_bfgs = None,
+#     normalize: bool = False,
+#     do_store_history: bool = False,
+#     do_verbose: bool = False
+# ) -> Dict[str, Tensor]:
+#     """CCCP for JBLD: linearize h(p) = -logdet((R+Rhat)/2) and solve
+#     min_p >= 0 of  g(p) - <w, p>, with g(p) = -0.5 logdet R(p), w fixed.
+
+#     inner_opt:
+#         - "adam": Adam with projection (clamp) after each step.
+#         - "lbfgs": torch.optim.LBFGS with projection after each step.
+#           (Note: this is *projected* LBFGS, not true L-BFGS-B.)
+#     """
+#     R_hat = torch.as_tensor(_R_hat, dtype=TORCH_DTYPE)
+#     p_init = torch.as_tensor(_p_init, dtype=torch.float)
+#     A = torch.as_tensor(_A, dtype=TORCH_DTYPE)
+
+#     device = A.device
+#     dtype = A.dtype
+
+#     A_n, Rhat_n, sigma2_n, col_norms = maybe_normalize(A, R_hat, _sigma2, normalize)
+
+#     # Map initial p to normalized coordinates if needed
+#     if col_norms is not None:
+#         p = (p_init * (col_norms ** 2)).to(device=device, dtype=torch.float)
+#     else:
+#         p = p_init.to(device=device, dtype=torch.float)
+
+#     A_n = A_n.to(device=device, dtype=dtype)
+#     Rhat_n = Rhat_n.to(device=device, dtype=dtype)
+
+#     project_nonneg_(p)
+#     gamma_var = torch.log(p + 1e-12).requires_grad_(True)
+#     loss_history = []
+#     rel_change_history = []
+#     i_iter = -1
+#     p_prev = p.clone().detach().requires_grad_(False)
+#     # assert that either _max_iter is different from None or outer_iters is different from None
+#     assert (_max_iter is not None) or (outer_iters is not None), "Must specify either _max_iter or outer_iters"
+#     _max_iter = outer_iters*inner_iters if _max_iter is None else _max_iter
+#     with torch.autograd.set_detect_anomaly(True):
+#         while i_iter < _max_iter:
+#             # 1) Compute CCCP weights at current p (no grad)
+#             w = weights_cccp(A_n, p, sigma2_n, Rhat_n)  # shape (K,)
+
+#             # 2) Solve inner convex problem approximately from warm start p
+#             if inner_opt.lower() == "adam":
+#                 opt = torch.optim.Adam([gamma_var], lr=_lr)
+#                 for _ in range(inner_iters):
+#                     opt.zero_grad(set_to_none=True)
+#                     loss = inner_objective_cccp(A_n, torch.exp(gamma_var), sigma2_n, w)
+#                     loss.backward()
+#                     opt.step()
+
+#             elif inner_opt.lower() == "lbfgs":
+#                 # Projected LBFGS via closure + clamp after step
+#                 opt = torch.optim.LBFGS([gamma_var], lr=_lr, max_iter=inner_iters, line_search_fn=line_search_fn_bfgs)
+
+#                 def closure():
+#                     opt.zero_grad(set_to_none=True)
+#                     p_var = torch.exp(gamma_var)
+#                     loss = inner_objective_cccp(A_n, p_var, sigma2_n, w)
+#                     loss.backward()
+#                     return loss
+
+#                 opt.step(closure)
+
+#             else:
+#                 raise ValueError("inner_opt must be 'adam' or 'lbfgs'")
+#             i_iter += inner_iters
+#             p = torch.exp(gamma_var.detach()).requires_grad_(False)
+
+#             rel = torch.norm(p - p_prev) / (1e-5 + torch.norm(p_prev)).item()
+#             if do_store_history:
+#                 # Track true JBLD after each outer iteration
+#                 p_req = p.clone().detach().requires_grad_(False)
+#                 loss_val = jbl_loss(A_n, p_req, sigma2_n, Rhat_n).detach().cpu()
+#                 loss_history.extend(inner_iters * [loss_val])
+
+#                 rel_change_history.extend(inner_iters * [rel])
+#             if rel < EPS_REL_CHANGE:
+#                 break
+#             p_prev = p.clone().detach().requires_grad_(False)
+
+#     # Map back to original coordinates
+#     if col_norms is not None:
+#         p_out = (p / (col_norms ** 2)).to(dtype=torch.float64)
+#     else:
+#         p_out = p
+
+#     return p_out.detach(), i_iter, (loss_history, rel_change_history)
+
+
+def optimize_adam_cholesky_JBLD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
+    # t0 = time()
+
+    R_hat = torch.as_tensor(_R_hat, dtype=TORCH_DTYPE)
+    p = torch.as_tensor(_p_init, dtype=torch.float).clone().detach().requires_grad_(True)  # Use provided initialization
+    A = torch.as_tensor(_A, dtype=TORCH_DTYPE)
+
+    p_prev = p.clone().detach()
+    optimizer = torch.optim.Adam([p], lr=_lr)
+    loss_history = []
+    rel_change_history = []
+
+    for step in range(_max_iter):
+        optimizer.zero_grad()
+        loss = jbl_loss(A, p, _sigma2, R_hat)
+        loss.backward()
+        optimizer.step()
+
+        with torch.no_grad():
+            p.clamp_(min=0)  # Keep p non-negative if needed
+
+        with torch.no_grad():
+            rel_change = (torch.norm(p - p_prev) / (1e-5 + torch.norm(p_prev))).item()
+            if do_store_history:
+                rel_change_history.append(rel_change)
+                loss_history.append(loss.item())
+
+            p_prev = p.clone().detach()
+        if do_verbose and step % 10 == 0:
+            print(f"Step {step}: Loss = {loss.item()}")
+        if rel_change < EPS_REL_CHANGE:
+            break
+    # print(f"ld: #iters= {step}, time= {time() - t0} [sec]")
+    return p.detach(), step, (loss_history, rel_change_history)
+
+
+def linesearch_with_Armijo(obj_func, x, t, d, f, g, armijo_c=1e-4):
+    # Backtracking Armijo on the *projected* point
+    # Define phi(alpha) = L(P[p - alpha * g])
+    alpha = 1.0
+    # directional derivative surrogate: g^T (p - P[p - alpha g]) / alpha
+    # Use standard Armijo with recomputed loss.
+    gtd = g.dot(d)
+    assert gtd < 0, "gtd is non negative"
+    x_new = None
+    while True:
+        cand = x - alpha * t * d
+        cand = cand.clamp(min=0)
+        f_new = obj_func(cand)        
+        if f_new <= (f + armijo_c * t * gtd):
+            trial_x = cand
+            loss = cand_loss
+            break
+        alpha *= armijo_beta
+        if alpha < 1e-8:
+            # accept the non-backtracked step
+            trial_p = trial_p.detach()
+            # recompute loss at trial_p
+            trial_p.requires_grad_(True)
+            loss = jbl_loss(A_n, trial_p, sigma2_n, Rhat_n)
+            break
+
+
+
 

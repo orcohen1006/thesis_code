@@ -67,7 +67,7 @@ def example_display_power_spectrum():
     inds = np.argsort(sqerr_dict["AIRM"] - (sqerr_dict["SAMV"] + sqerr_dict["SPICE"])/2)
 
     # %%
-    path_fig = '/home/or.cohen/thesis_code/RiemannianDOA_proj/TestHyperparams_y2025-m08-d19_20-14-13/JBLD_cccp_adam_learning_rate_comparison.pkl'
+    path_fig = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zCompareMethodsHyperparams_y2025-m08-d23_17-45-03/losses.pkl'
     with open(path_fig, 'rb') as f:
         my_fig = pickle.load(f)
     plt.show()
