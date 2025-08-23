@@ -37,7 +37,7 @@ def exp_rho(doa: np.ndarray = np.array([35, 45]), power_doa_db: np.ndarray = np.
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=12, snr=0, N=N, 
+                m=13, snr=0, N=N, 
                 power_doa_db=power_doa_db,
                 doa=doa,
                 cohr_flag=True,

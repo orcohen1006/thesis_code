@@ -30,7 +30,7 @@ def exp_SNR_Large(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_d
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=12, snr=vec_snr[i], N=N, 
+                m=13, snr=vec_snr[i], N=N, 
                 power_doa_db=power_doa_db,
                 doa=doa,
                 cohr_flag=cohr_flag,

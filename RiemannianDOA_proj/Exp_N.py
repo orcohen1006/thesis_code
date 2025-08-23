@@ -32,7 +32,7 @@ def exp_N(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.nd
         os.makedirs(path_results_dir)
     # %%
     num_mc = 500
-    m=12
+    m=13
     # vec_n = np.arange(m, 7*m + 1, m)
     vec_n = np.arange(m, 11*m + 1, 2*m)
     num_configs = len(vec_n)
