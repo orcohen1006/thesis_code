@@ -406,17 +406,17 @@ def optimize_JBLD_cccp(
             opt = torch.optim.LBFGS([p_var], lr=_lr, max_iter=inner_iters, line_search_fn=line_search_fn_bfgs)
 
             def closure():
+                with torch.no_grad():
+                    p_var.clamp_(min=0.0)
                 opt.zero_grad(set_to_none=True)
                 loss = inner_objective_cccp(A_n, p_var, sigma2_n, w)
                 loss.backward()
-                with torch.no_grad():
-                    p_var.clamp_(min=0.0)
-
+                
                 return loss
 
             opt.step(closure)
             with torch.no_grad():
-                project_nonneg_(p_var)
+                    p_var.clamp_(min=0.0)
         elif inner_opt.lower() == "scipy_lbfgsb":
             p_var.requires_grad_ = False
             def loss_fn_for_scipy(x):
@@ -446,9 +446,9 @@ def optimize_JBLD_cccp(
 
             rel_change_history.extend(inner_iters * [rel])
         
-        switch_optimizer_to_avoid_stalling = rel < 2*EPS_REL_CHANGE
-        if (switch_optimizer_to_avoid_stalling):
-            inner_opt, _lr = "adam", 1e-3
+        # switch_optimizer_to_avoid_stalling = rel < 5*EPS_REL_CHANGE
+        # if (switch_optimizer_to_avoid_stalling):
+        #     inner_opt = "adam"
             
         # if len(rel_change_window) > 5 and all([tmprel < EPS_REL_CHANGE for tmprel in rel_change_window[-5:]]):
         #     break

@@ -20,7 +20,7 @@ from ToolsMC import *
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m08-d20_23-01-43/Exp_N_y2025-m08-d20_23-01-43_indp'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m08-d25_09-12-37/Exp_M_y2025-m08-d25_09-12-37_indp'
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
     # %%
@@ -168,7 +168,7 @@ def example_display_power_spectrum():
 def display_power_spectrum_tmp():
     # %%
     config_dict = create_config(
-        m=12, snr=0, N=40, power_doa_db=np.array([0, 0]), doa=np.array([35, 62]), cohr_flag=True, noncircular_coeff=0.0
+        m=12, snr=0, N=40, power_doa_db=np.array([0, 0]), doa=np.array([35, 42]), cohr_flag=False, noncircular_coeff=0.0
     )
     
     algo_list = get_algo_dict_list()

@@ -19,9 +19,9 @@ def run_all_exp():
     if not os.path.exists(basedir):
         os.makedirs(basedir) 
     # ---------------------------------------
-    # exp_M(basedir=basedir, power_doa_db=np.array([0]), doa=np.array([35.25]))
+    exp_M(basedir=basedir, power_doa_db=np.array([0]), doa=np.array([35.25]))
 
-    # exp_N(basedir=basedir, doa=np.array([35.25, 43.25, 51.25]), power_doa_db=np.array([0, 0, -5]), snr=-2)
+    exp_N(basedir=basedir, doa=np.array([35.25, 43.25, 51.25]), power_doa_db=np.array([0, 0, -5]), snr=-2)
 
     exp_SNR_Large(basedir=basedir, doa=np.array([35.25, 43.25, 51.25]), power_doa_db=np.array([0, 0, -5]), N=40)
 

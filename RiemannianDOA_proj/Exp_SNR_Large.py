@@ -23,14 +23,15 @@ def exp_SNR_Large(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_d
     if not os.path.exists(path_results_dir):
         os.makedirs(path_results_dir)
     # %%
-    num_mc = 500
-    vec_snr = np.arange(-4.5, 9 + 1, 1.5)
+    num_mc = NUM_MC
+    # vec_snr = np.arange(-4.5, 9 + 1, 1.5)
+    vec_snr = np.arange(-5, 10 + 1, 2.5)
     num_configs = len(vec_snr)
     config_list = []
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=11, snr=vec_snr[i], N=N, 
+                m=12, snr=vec_snr[i], N=N, 
                 power_doa_db=power_doa_db,
                 doa=doa,
                 cohr_flag=cohr_flag,

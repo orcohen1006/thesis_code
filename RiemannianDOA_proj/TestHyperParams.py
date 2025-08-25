@@ -260,7 +260,7 @@ def compare_methods_and_hyperparams(foldername, list_dict_method) -> None:
                 axes1[row_idx, col_idx].plot(iters, loss_vals, label=result['desc'][i_subresult])
                 axes2[row_idx, col_idx].plot(iters, relchange_vals, label=result['desc'][i_subresult])
 
-        axes1[row_idx, col_idx].set_title(f'SNR: {snr} dB, N: {N}, Seed: {seed}, min_loss={min_loss_val}',fontdict={"size":8})
+        axes1[row_idx, col_idx].set_title(f'SNR: {snr} dB, N: {N}, Seed: {seed}, min_loss={min_loss_val:.5f}',fontdict={"size":8})
         axes2[row_idx, col_idx].set_title(f'SNR: {snr} dB, N: {N}, Seed: {seed}',fontdict={"size":8})
         axes1[row_idx, col_idx].grid(True)
         axes2[row_idx, col_idx].grid(True)
@@ -379,9 +379,10 @@ if __name__ == "__main__":
 
     compare_methods_and_hyperparams(foldername, 
                                     [
-                                     {'name':'JBLD_scipy_lbfgsb_inner20','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=20), 'lr_values':[1e-2]},
-                                     {'name':'JBLD_scipy_lbfgsb_inner10','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=10), 'lr_values':[1e-2]},
+                                    #  {'name':'JBLD_scipy_lbfgsb_inner20','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=20), 'lr_values':[1e-2]},
+                                    #  {'name':'JBLD_scipy_lbfgsb_inner10','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=10), 'lr_values':[1e-2, 1e-3]},
                                     #  {'name':'JBLD_scipy_lbfgsb_inner10','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=10), 'lr_values':[1e-2]},
+                                    #  {'name':'JBLD_lbfgsb_inner10','optimize_func':partial(optimize_JBLD_cccp, inner_opt='lbfgs', inner_iters=10, line_search_fn_bfgs='strong_wolfe'), 'lr_values':[2]},
                                     #  {'name':'JBLD_scipy_lbfgsb_inner10_gtol1e-3','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=10, gtol=1e-3), 'lr_values':[1e-2]},
                                     # {'name':'JBLD_scipy_lbfgsb_inner25','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=25), 'lr_values':[1e-2]},
                                     # {'name':'JBLD_scipy_lbfgsb_inner25_gtol1e-3','optimize_func':partial(optimize_JBLD_cccp, inner_opt='scipy_lbfgsb', inner_iters=25, gtol=1e-3), 'lr_values':[1e-2]},
@@ -389,7 +390,7 @@ if __name__ == "__main__":
                                     #  {'name':'JBLD_cccp_sgd_inner5','optimize_func':partial(optimize_JBLD_cccp, inner_opt='sgd', inner_iters=5), 'lr_values':[1e-2]},
                                     #  {'name':'JBLD_cccp_sgd_inner10','optimize_func':partial(optimize_JBLD_cccp, inner_opt='sgd', inner_iters=10), 'lr_values':[1e-2]},
                                     #  {'name':'JBLD_cccp_ls_sgd_inner20','optimize_func':partial(optimize_JBLD_cccp, inner_opt='ls_sgd', inner_iters=20), 'lr_values':[5e-2]},
-                                     {'name':'JBLD_cccp_sgd_inner20','optimize_func':partial(optimize_JBLD_cccp, inner_opt='sgd', inner_iters=20), 'lr_values':[1e-1]},
+                                    #  {'name':'JBLD_cccp_sgd_inner20','optimize_func':partial(optimize_JBLD_cccp, inner_opt='sgd', inner_iters=20), 'lr_values':[1e-1]},
                                     #  {'name':'JBLD_cccp_adam_inner5','optimize_func':partial(optimize_JBLD_cccp, inner_opt='adam', inner_iters=5), 'lr_values':[1e-2]},
                                      {'name':'JBLD_adam_cholesky','optimize_func':optimize_adam_cholesky_JBLD, 'lr_values':[1e-2]},
                                     #  {'name':'JBLD_BB','optimize_func':optimize_JBLD_BB, 'lr_values':[1]},

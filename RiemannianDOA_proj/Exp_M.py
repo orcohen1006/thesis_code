@@ -22,7 +22,7 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
     if not os.path.exists(path_results_dir):
         os.makedirs(path_results_dir)
     # %%
-    num_mc = 500
+    num_mc = NUM_MC
     vec_m = np.array([10, 100])
     num_configs = len(vec_m)
     config_list = []

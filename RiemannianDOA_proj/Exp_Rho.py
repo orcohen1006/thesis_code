@@ -29,7 +29,7 @@ def exp_rho(doa: np.ndarray = np.array([35, 45]), power_doa_db: np.ndarray = np.
     if not os.path.exists(path_results_dir):
         os.makedirs(path_results_dir)
     # %%
-    num_mc = 500
+    num_mc = NUM_MC
     vec_rho = np.arange(0.0, 1.01, 0.2)
     vec_rho[-1] = 0.99
     num_configs = len(vec_rho)
@@ -37,7 +37,7 @@ def exp_rho(doa: np.ndarray = np.array([35, 45]), power_doa_db: np.ndarray = np.
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=11, snr=0, N=N, 
+                m=12, snr=0, N=N, 
                 power_doa_db=power_doa_db,
                 doa=doa,
                 cohr_flag=True,
