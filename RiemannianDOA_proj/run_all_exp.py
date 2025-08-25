@@ -22,8 +22,8 @@ def run_all_exp():
     # exp_M(basedir=basedir, power_doa_db=np.array([0]), doa=np.array([35.25]))
 
 
-    # doa=np.array([35.25, 43.25, 51.25])
-    doa=np.array([35.25, 45.75, 55.75])
+    doa=np.array([35.25, 43.25, 51.25])
+    # doa=np.array([35.25, 45.75, 55.75])
     power_doa_db=np.array([0, 0, -5])
 
     exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=0)
