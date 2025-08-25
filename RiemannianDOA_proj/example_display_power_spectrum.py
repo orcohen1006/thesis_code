@@ -168,16 +168,23 @@ def example_display_power_spectrum():
 def display_power_spectrum_tmp():
     # %%
     config_dict = create_config(
-        m=12, snr=0, N=40, power_doa_db=np.array([0, 0]), doa=np.array([35, 42]), cohr_flag=True, noncircular_coeff=0.0
+        m=12, snr=0, N=40, power_doa_db=np.array([0, 0]), doa=np.array([35, 62]), cohr_flag=True, noncircular_coeff=0.0
     )
     
     algo_list = get_algo_dict_list()
-    algo_list = {k: v for k, v in algo_list.items() if k in ['AIRM', 'JBLD']}
+    # algo_list = {k: v for k, v in algo_list.items() if k in ['AIRM', 'JBLD']}
     result= run_single_mc_iteration(
-        i_mc=1,
+        i_mc=0,
         config=config_dict,
         algo_list=list(algo_list.keys()))
-
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # R_hat = result["R_hat"]
+    # A = get_steering_matrix(get_doa_grid(),R_hat.shape[0])
+    # invR_hat_A = np.linalg.solve(R_hat, A)
+    # p_MVDR = 1/np.sum(A.conj() * invR_hat_A, axis=0)
+    # result["p_vec_list"][0] = p_MVDR
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
     ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list)
 
     # doas = result["config"]["doa"]

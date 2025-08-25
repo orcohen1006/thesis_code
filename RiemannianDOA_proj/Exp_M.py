@@ -23,13 +23,13 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
         os.makedirs(path_results_dir)
     # %%
     num_mc = 500
-    vec_m = np.array([12, 50])
+    vec_m = np.array([10, 100])
     num_configs = len(vec_m)
     config_list = []
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=vec_m[i], snr=10.79 - convert_linear_to_db(vec_m[i]), N=vec_m[i]*3, 
+                m=vec_m[i], snr= 10 + convert_linear_to_db(vec_m[0]) - convert_linear_to_db(vec_m[i]), N=vec_m[i]*3, 
                 power_doa_db=power_doa_db,
                 doa=doa,
                 cohr_flag=cohr_flag,
