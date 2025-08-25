@@ -44,7 +44,7 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
     # 
     fig_power_errors = plot_power_errors(algos_error_data, r'$M$', "", vec_m, normalize_rmse_by_parameter=False)
     # 
-    fig_prob_detection = plot_prob_detection(algos_error_data, r'$M$', "", vec_m)
+    # fig_prob_detection = plot_prob_detection(algos_error_data, r'$M$', "", vec_m)
     # %%
     import matplotlib.pyplot as plt   
     algo_list = get_algo_dict_list()
@@ -83,7 +83,8 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
     fig_numIters.savefig(os.path.join(path_results_dir, 'NumIters_' + str_desc_name +  '.png'), dpi=300)
     fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + str_desc_name +  '.png'), dpi=300)
     fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + str_desc_name +  '.png'), dpi=300)
-    fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + str_desc_name +  '.png'), dpi=300)
+    # fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + str_desc_name +  '.png'), dpi=300)
+    plt.close()
     # %%
     experiment_configs_string_to_file(num_mc=num_mc, config_list=config_list, directory=path_results_dir)
 

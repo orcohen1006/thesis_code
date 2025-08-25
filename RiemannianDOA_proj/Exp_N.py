@@ -51,20 +51,21 @@ def exp_N(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.nd
     # %%
     results, algos_error_data = analyze_algo_errors(results)
     #
-    fig_doa_errors = plot_doa_errors(algos_error_data, r'$N/M$', "", vec_n/m, normalize_rmse_by_parameter=False, do_ylogscale=False)
+    fig_doa_errors = plot_doa_errors(algos_error_data, r'$N/M$', "", vec_n/m, normalize_rmse_by_parameter=False, do_ylogscale=True)
     # %% 
     fig_power_errors = plot_power_errors(algos_error_data, r'$N/M$', "", vec_n/m, normalize_rmse_by_parameter=False)
     # 
-    fig_prob_detection = plot_prob_detection(algos_error_data, r'$N/M$', "", vec_n/m)
-    #
-    fig_qeigvals = plot_Qeigvals(results, r'$N/M$', "", vec_n/m, do_ylogscale=False)
+    # fig_prob_detection = plot_prob_detection(algos_error_data, r'$N/M$', "", vec_n/m)
+    # #
+    # fig_qeigvals = plot_Qeigvals(results, r'$N/M$', "", vec_n/m, do_ylogscale=False)
     # %%
     experiment_configs_string_to_file(num_mc=num_mc, config_list=config_list, directory=path_results_dir)
     str_desc_name = os.path.basename(name_results_dir)
     save_figure(fig_doa_errors, path_results_dir, str_desc_name+ "_DOA")
     save_figure(fig_power_errors, path_results_dir, str_desc_name+ "_Power")
-    save_figure(fig_prob_detection, path_results_dir, str_desc_name+ "_Prob")
-    save_figure(fig_qeigvals, path_results_dir, str_desc_name+ "_Qeigvals")
+    # save_figure(fig_prob_detection, path_results_dir, str_desc_name+ "_Prob")
+    # save_figure(fig_qeigvals, path_results_dir, str_desc_name+ "_Qeigvals")
+    plt.close()
     # %%
 
 if __name__ == "__main__":

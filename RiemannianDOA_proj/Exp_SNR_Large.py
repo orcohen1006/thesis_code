@@ -24,8 +24,8 @@ def exp_SNR_Large(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_d
         os.makedirs(path_results_dir)
     # %%
     num_mc = NUM_MC
-    vec_snr = np.arange(-4.5, 9 + 1, 1.5)
-    # vec_snr = np.arange(-5, 10 + 1, 2.5)
+    # vec_snr = np.arange(-4.5, 9 + 1, 1.5)
+    vec_snr = np.arange(-5, 10 + 1, 2.5)
     num_configs = len(vec_snr)
     config_list = []
     for i in range(num_configs):
@@ -42,7 +42,7 @@ def exp_SNR_Large(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_d
     # %%
     results, algos_error_data = analyze_algo_errors(results)
     #
-    fig_doa_errors = plot_doa_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False, do_ylogscale=False)
+    fig_doa_errors = plot_doa_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False, do_ylogscale=True)
     # %%
     tmpfig = plot_doa_errors_per_source(algos_error_data, r'$SNR$', "", vec_snr)
     #  
@@ -51,19 +51,20 @@ def exp_SNR_Large(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_d
     fig_prob_detection = plot_prob_detection(algos_error_data, r'$SNR$', "", vec_snr)
     #
     i_config = np.where(np.array(vec_snr) == 0)[0][0]
-    fig_l0_norm = plot_l0_norm(results[i_config])
+    # fig_l0_norm = plot_l0_norm(results[i_config])
     fig_hpbw = plot_hpbw(results[i_config])
     #
-    fig_qeigvals = plot_Qeigvals(results, r'$SNR$', "", vec_snr, do_ylogscale=False)
+    # fig_qeigvals = plot_Qeigvals(results, r'$SNR$', "", vec_snr, do_ylogscale=False)
     # %%
     experiment_configs_string_to_file(num_mc=num_mc, config_list=config_list, directory=path_results_dir)
     str_desc_name = os.path.basename(name_results_dir)
     save_figure(fig_doa_errors, path_results_dir, str_desc_name+ "_DOA")
     save_figure(fig_power_errors, path_results_dir, str_desc_name+ "_Power")
-    save_figure(fig_prob_detection, path_results_dir, str_desc_name+ "_Prob")
-    save_figure(fig_l0_norm, path_results_dir, str_desc_name+ "_L0")
+    # save_figure(fig_prob_detection, path_results_dir, str_desc_name+ "_Prob")
+    # save_figure(fig_l0_norm, path_results_dir, str_desc_name+ "_L0")
     save_figure(fig_hpbw, path_results_dir, str_desc_name+ "_HPBW")
-    save_figure(fig_qeigvals, path_results_dir, str_desc_name+ "_Qeigvals")
+    # save_figure(fig_qeigvals, path_results_dir, str_desc_name+ "_Qeigvals")
+    plt.close()
     # %%
 
 if __name__ == "__main__":
