@@ -21,9 +21,13 @@ def run_all_exp():
     # ---------------------------------------
     exp_M(basedir=basedir, power_doa_db=np.array([0]), doa=np.array([35.25]))
 
-    exp_N(basedir=basedir, doa=np.array([35.25, 43.25, 51.25]), power_doa_db=np.array([0, 0, -5]), snr=-2)
 
-    exp_SNR_Large(basedir=basedir, doa=np.array([35.25, 43.25, 51.25]), power_doa_db=np.array([0, 0, -5]), N=40)
+    doa=np.array([35.25, 43.25, 51.25])
+    power_doa_db=np.array([0, 0, -5])
+
+    exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=0)
+
+    exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=30)
 
     exp_rho(basedir=basedir, doa=np.array([35.25, 41.25]), power_doa_db=np.array([0, 0]), N=50)
     # ---------------------------------------

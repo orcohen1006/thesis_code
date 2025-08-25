@@ -24,8 +24,8 @@ def exp_SNR_Large(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_d
         os.makedirs(path_results_dir)
     # %%
     num_mc = NUM_MC
-    # vec_snr = np.arange(-4.5, 9 + 1, 1.5)
-    vec_snr = np.arange(-5, 10 + 1, 2.5)
+    vec_snr = np.arange(-4.5, 9 + 1, 1.5)
+    # vec_snr = np.arange(-5, 10 + 1, 2.5)
     num_configs = len(vec_snr)
     config_list = []
     for i in range(num_configs):
@@ -42,7 +42,7 @@ def exp_SNR_Large(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_d
     # %%
     results, algos_error_data = analyze_algo_errors(results)
     #
-    fig_doa_errors = plot_doa_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False, do_ylogscale=True)
+    fig_doa_errors = plot_doa_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False, do_ylogscale=False)
     # %%
     tmpfig = plot_doa_errors_per_source(algos_error_data, r'$SNR$', "", vec_snr)
     #  
