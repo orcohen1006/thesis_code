@@ -30,7 +30,7 @@ def run_all_exp():
 
     exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=40)
 
-    # exp_rho(basedir=basedir, doa=np.array([35.25, 41.25]), power_doa_db=np.array([0, 0]), N=40)
+    exp_rho(basedir=basedir, doa=np.array([35.25, 41.25]), power_doa_db=np.array([0, 0]), N=40)
     # ---------------------------------------
     print(f'Total Running Time: {time.time() - t0_overall} sec.')
     return basedir
