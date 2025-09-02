@@ -20,7 +20,7 @@ from ToolsMC import *
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m08-d25_14-55-27/Exp_N_y2025-m08-d25_14-57-36_indp'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m08-d25_14-55-27/Exp_M_y2025-m08-d25_14-55-27_indp'
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
     # %%
@@ -161,7 +161,7 @@ def example_display_power_spectrum():
 
     print_table("Runtime", runtime_mat.mean(axis=1).T, runtime_mat.std(axis=1).T)
     num_hundreds_iters_mat = num_iters_mat / 100
-    print_table("Num Iters (hundreds)", num_hundreds_iters_mat.mean(axis=1).T, num_hundreds_iters_mat.std(axis=1).T)
+    print_table("Num Iters", num_iters_mat.mean(axis=1).T, num_iters_mat.std(axis=1).T)
     print_table("Iteration Runtime", iter_runtime_mat.mean(axis=1).T, iter_runtime_mat.std(axis=1).T)
 
 # %%

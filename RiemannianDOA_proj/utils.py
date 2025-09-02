@@ -331,7 +331,9 @@ def model_order_selection(R, N):
         mdl[k] = N * plunge + 0.5 * k * (2*M - k) * np.log(N)
     return np.argmin(aic), np.argmin(mdl)
 
-def generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=False, cohr_coeff = 1.0, noncircular_coeff = 0.0, seed=None):
+def generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=False, cohr_coeff = 1.0, noncircular_coeff = 0.0, 
+                    impulse_prob=0.0, impulse_factor=1.0,
+                    seed=None):
     if seed is not None:
         np.random.seed(seed)
 
@@ -341,18 +343,20 @@ def generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=Fals
 
     # Generate signal
     noise = np.sqrt(noise_power / 2) * (np.random.randn(m, t_samples) + 1j * np.random.randn(m, t_samples))
+    num_impulse_snapshots = int(impulse_prob * t_samples)
+    noise[:, :num_impulse_snapshots] *= impulse_factor
 
     if not cohr_flag:  # independent sources
         waveform = np.exp(1j * 2 * np.pi * np.random.rand(num_sources, t_samples))
         # waveform = np.sqrt(1 / 2) * (np.random.randn(num_sources, t_samples) + 1j * np.random.randn(num_sources, t_samples))
         waveform = waveform * np.tile(amplitude_doa, (t_samples, 1)).T
-        waveform = make_non_circular(waveform, kappa=noncircular_coeff)
     else:  # coherent sources
         waveform = np.exp(1j * 2 * np.pi * np.random.rand(num_sources - 1, t_samples))
         waveform_last = np.exp(1j * 2 * np.pi * np.random.rand(1, t_samples))
         waveform_last = cohr_coeff * waveform[0, :] + np.sqrt(1- cohr_coeff**2)*waveform_last
         waveform = np.vstack([waveform, waveform_last])
         waveform = waveform * np.tile(amplitude_doa, (t_samples, 1)).T
+    waveform = make_non_circular(waveform, kappa=noncircular_coeff)
 
     y_noisefree = A_true @ waveform  # ideal noiseless measurements
     y_noisy = y_noisefree + noise  # noisy measurements
@@ -396,16 +400,10 @@ def get_algo_dict_list(flag_also_use_PER=False):
     return d
 
 
-def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False, cohr_coeff=1.0, noncircular_coeff=0.0):
+def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False, cohr_coeff=1.0, noncircular_coeff=0.0, 
+                  impulse_prob=0.0, impulse_factor=1.0):
     """
     Create a configuration dictionary to hold parameters for simulations.
-
-    :param m: Number of sensors
-    :param snr: Signal-to-noise ratio
-    :param N: Number of snapshots
-    :param power_doa_db: Power of DOAs in dB
-    :param doa: Directions of arrival (DOAs) in degrees
-    :return: Configuration dictionary
     """
     return {
         "m": m,
@@ -415,7 +413,9 @@ def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False, cohr_coeff=1.0,
         "doa": doa,
         "cohr_flag": cohr_flag,
         "cohr_coeff": cohr_coeff,
-        "noncircular_coeff": noncircular_coeff
+        "noncircular_coeff": noncircular_coeff,
+        "impulse_prob": impulse_prob,
+        "impulse_factor": impulse_factor,
     }
 
 def experiment_configs_string_to_file(num_mc, config_list, directory="", filename="configurations_output.txt"):
