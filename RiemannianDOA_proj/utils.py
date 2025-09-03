@@ -373,7 +373,7 @@ def make_non_circular(s, kappa):
     return real + 1j * new_imag
 
 def get_doa_grid():
-    res = 0.5  # resolution in degrees
+    res = 1  # resolution in degrees
     doa_scan = np.arange(0, 180+res, res)  # doa grid
     return doa_scan
 def get_steering_matrix(theta_degrees, m, calcGradient_wrt_radians=False):

@@ -19,21 +19,20 @@ def run_all_exp():
     if not os.path.exists(basedir):
         os.makedirs(basedir) 
     # ---------------------------------------
-    exp_M(basedir=basedir, power_doa_db=np.array([0]), doa=np.array([35.25]))
+    exp_M(basedir=basedir, power_doa_db=np.array([0]), doa=np.array([35.5]))
 
 
-    # doa=np.array([35.25, 45.75, 55.75])
-    # power_doa_db=np.array([0, 0, -5])
+    doa=np.array([35.5, 43.5, 51.5])
+    power_doa_db=np.array([0, 0, -5])
 
-    # exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=0)
+    exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=-2)
 
-    # exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=40)
+    exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=40)
 
-    # exp_rho(basedir=basedir, doa=np.array([35.25, 41.25]), power_doa_db=np.array([0, 0]), N=40)
+    exp_rho(basedir=basedir, doa=np.array([35.5, 41.5]), power_doa_db=np.array([0, 0]), N=40)
     # ---------------------------------------
     print(f'Total Running Time: {time.time() - t0_overall} sec.')
     return basedir
 if __name__ == "__main__":
-    1/0
     basedir = run_all_exp()
     git_commit_and_push(commit_message=basedir)
