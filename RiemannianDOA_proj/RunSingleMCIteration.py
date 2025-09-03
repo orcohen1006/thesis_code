@@ -27,7 +27,17 @@ def run_single_mc_iteration(
     t0 = time()
     num_sources = len(config["doa"])
 
-    power_doa = 10.0 ** (config["power_doa_db"] / 10.0)
+    # power_doa_db = config["power_doa_db"]
+    # power_doa = 10.0 ** (power_doa_db / 10.0)
+    # noise_power_db = np.max(config["power_doa_db"]) - config["snr"]
+    # noise_power = 10.0 ** (noise_power_db / 10.0)
+
+
+    noise_power = 1
+    noise_power_db = convert_linear_to_db(noise_power)
+    doa_max_power_db = noise_power_db + config["snr"]
+    power_doa_db = config["power_doa_db"] - np.max(config["power_doa_db"]) + doa_max_power_db
+
 
     doa_scan = get_doa_grid()
     if do_log:
@@ -36,15 +46,14 @@ def run_single_mc_iteration(
     A = get_steering_matrix(doa_scan, config["m"])
     if do_log:
         logging.info(f"- got A_true and A.")
-    noise_power_db = np.max(config["power_doa_db"]) - config["snr"]
-    noise_power = 10.0 ** (noise_power_db / 10.0)
+
 
     if algo_list is None:
         algo_list = list(get_algo_dict_list().keys())
 
     num_algos = len(algo_list)
 
-    y_noisy = generate_signal(A_true, config["power_doa_db"], config["N"], noise_power, cohr_flag=config["cohr_flag"], 
+    y_noisy = generate_signal(A_true, power_doa_db, config["N"], noise_power, cohr_flag=config["cohr_flag"], 
                               cohr_coeff = config["cohr_coeff"], noncircular_coeff=config["noncircular_coeff"],
                               seed=i_mc)
 
@@ -91,7 +100,7 @@ def run_single_mc_iteration(
     result = {}
     result["i_mc"] = i_mc
     result['config'] = config
-    result["R_hat"] = (y_noisy @ y_noisy.conj().T) / config["N"]
+    # result["R_hat"] = (y_noisy @ y_noisy.conj().T) / config["N"]
     result['runtime_list'] = runtime_list
     result['num_iters_list'] = num_iters_list
     result['p_vec_list'] = p_vec_list

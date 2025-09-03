@@ -68,7 +68,8 @@ def fun_SPICE(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
         rho = np.sum(np.sqrt(weight[:N].T) * p * norm_am_Rinv_R_hat_sqrt)
 
         # Keep the ||F for future use
-        norm_Rinv_Rhatsqrt = np.sqrt(np.sum(np.diag(Rinv_R_hat_sqrt.conj().T @ Rinv_R_hat_sqrt)))
+        # norm_Rinv_Rhatsqrt = np.sqrt(np.sum(np.diag(Rinv_R_hat_sqrt.conj().T @ Rinv_R_hat_sqrt)))
+        norm_Rinv_Rhatsqrt = np.sqrt(np.sum(np.sum(Rinv_R_hat_sqrt.conj() * Rinv_R_hat_sqrt, axis=0))) # more efficient calculation
         rho = rho + np.sqrt(gamma) * sigma * norm_Rinv_Rhatsqrt
         
         # Compute sigma
