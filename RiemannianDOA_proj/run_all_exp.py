@@ -34,5 +34,6 @@ def run_all_exp():
     print(f'Total Running Time: {time.time() - t0_overall} sec.')
     return basedir
 if __name__ == "__main__":
+    1/0
     basedir = run_all_exp()
     git_commit_and_push(commit_message=basedir)
