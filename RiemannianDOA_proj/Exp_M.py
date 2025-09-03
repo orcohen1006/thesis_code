@@ -23,7 +23,7 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
         os.makedirs(path_results_dir)
     # %%
     num_mc = NUM_MC
-    vec_m = np.array([10, 50, 100])
+    vec_m = np.array([10, 50, 100, 300])
     num_configs = len(vec_m)
     config_list = []
     for i in range(num_configs):
@@ -145,7 +145,7 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
                 )
                 row.append(formatted_value)
             table_data.append(row)
-            
+
         print(f"================   {table_name}   ================")
         print(tabulate(table_data, headers=header, tablefmt="grid"))
         print("==========================================================")
