@@ -253,7 +253,9 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
     import matplotlib.pyplot as plt
 
     power_doa_db = config["power_doa_db"]
+
     doa = config["doa"]
+
 
     doa_scan = get_doa_grid()
 

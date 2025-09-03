@@ -46,41 +46,96 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
     # 
     # fig_prob_detection = plot_prob_detection(algos_error_data, r'$M$', "", vec_m)
     # %%
-    import matplotlib.pyplot as plt   
     algo_list = get_algo_dict_list()
- 
-    fig_runtime = plt.figure()
-    plt.xlabel(r'$M$', fontsize=12)
-    plt.ylabel('Runtime (seconds)', fontsize=12)
-    for i_algo,algo_name in enumerate(algo_list.keys()):
-        mean_runtime = [np.mean([results[i_config][i_mc]["runtime_list"][i_algo] for i_mc in range(num_mc)]) for i_config in range(num_configs)]
-        std_runtime = [np.std([results[i_config][i_mc]["runtime_list"][i_algo] for i_mc in range(num_mc)]) for i_config in range(num_configs)]
-        plt.errorbar(vec_m, mean_runtime, yerr=std_runtime, label=algo_name, **algo_list[algo_name])
-    plt.legend()
+    num_configs = len(results)
+    num_mc = len(results[0])
+    num_algos = len(algo_list)
+    num_iters_mat = np.zeros((num_configs, num_mc, num_algos))
+    runtime_mat = np.zeros((num_configs, num_mc, num_algos))
+    for i_config in range(len(results)):
+        num_iters_mat[i_config,:,:] = np.array([results[i_config][i_mc]["num_iters_list"] for i_mc in range(len(results[i_config]))])
+        runtime_mat[i_config,:,:] = np.array([results[i_config][i_mc]["runtime_list"] for i_mc in range(len(results[i_config]))])
 
-    fig_iterRuntime = plt.figure()
-    plt.xlabel(r'$M$', fontsize=12)
-    plt.ylabel('Iteration Runtime (seconds)', fontsize=12)
-    for i_algo,algo_name in enumerate(algo_list.keys()):
-        mean_runtime = [np.mean([results[i_config][i_mc]["runtime_list"][i_algo]/results[i_config][i_mc]["num_iters_list"][i_algo] for i_mc in range(num_mc)]) for i_config in range(num_configs)]
-        std_runtime = [np.std([results[i_config][i_mc]["runtime_list"][i_algo]/results[i_config][i_mc]["num_iters_list"][i_algo] for i_mc in range(num_mc)]) for i_config in range(num_configs)]
-        plt.errorbar(vec_m, mean_runtime, yerr=std_runtime, label=algo_name, **algo_list[algo_name])
-    plt.legend()
+
+    algo_names = list(algo_list.keys())
+    # --- Plot: Number of Iterations ---
+    fig_iters, axes_iters = plt.subplots(1, num_algos, figsize=(4 * num_algos, 4), sharey=True, sharex=True)
+    fig_iters.suptitle("Number of Iterations per Configuration")
+
+    for a in range(num_algos):
+        data = [num_iters_mat[c, :, a] for c in range(num_configs)]  # list of arrays, each of shape (num_mc,)
+        axes_iters[a].boxplot(data, showfliers=False)
+        axes_iters[a].set_title(algo_names[a])
+        axes_iters[a].set_xlabel("Config Index")
+        axes_iters[a].set_xticks(range(1, num_configs + 1))
+        if a == 0:
+            axes_iters[a].set_ylabel("Num Iters")
+        plt.tight_layout()
+
+
+    # --- Plot: Runtime ---
+    fig_runtime, axes_runtime = plt.subplots(1, num_algos, figsize=(4 * num_algos, 4), sharey=True, sharex=True)
+    fig_runtime.suptitle("Runtime per Configuration")
+
+    for a in range(num_algos):
+        data = [runtime_mat[c, :, a] for c in range(num_configs)]
+        axes_runtime[a].boxplot(data, showfliers=False)
+        axes_runtime[a].set_title(algo_names[a])
+        axes_runtime[a].set_xlabel("Config Index")
+        axes_runtime[a].set_xticks(range(1, num_configs + 1))
+        if a == 0:
+            axes_runtime[a].set_ylabel("Runtime [s]")
+        plt.tight_layout()
+
+
+
+    iter_runtime_mat = runtime_mat / num_iters_mat  # Shape: (num_configs, num_mc, num_algos)
+    fig_iterationruntime, axes_iterationruntime = plt.subplots(1, num_algos, figsize=(4 * num_algos, 4), sharey=True, sharex=True)
+    fig_iterationruntime.suptitle("Iteration Runtime per Configuration")
+    for a in range(num_algos):
+        data = [iter_runtime_mat[c, :, a] for c in range(num_configs)]
+
+        axes_iterationruntime[a].boxplot(data, showfliers=False)
+        axes_iterationruntime[a].set_title(algo_names[a])
+        axes_iterationruntime[a].set_xlabel("Config Index")
+        axes_iterationruntime[a].set_xticks(range(1, num_configs + 1))
+        if a == 0:
+            axes_iterationruntime[a].set_ylabel("Runtime [s]")
+        plt.tight_layout()
+
+    plt.tight_layout()
     
-    fig_numIters = plt.figure()
-    plt.xlabel(r'$M$', fontsize=12)
-    plt.ylabel('Iterations', fontsize=12)
-    for i_algo,algo_name in enumerate(algo_list.keys()):
-        mean_iterations = [np.mean([results[i_config][i_mc]["num_iters_list"][i_algo] for i_mc in range(num_mc)]) for i_config in range(num_configs)]
-        std_iterations = [np.std([results[i_config][i_mc]["num_iters_list"][i_algo] for i_mc in range(num_mc)]) for i_config in range(num_configs)]
-        plt.errorbar(vec_m, mean_iterations, yerr=std_iterations, label=algo_name, **algo_list[algo_name])
-    plt.legend()
+    # plt.show()
+    # %%
+
+    def print_table(table_name, mean_mat, std_mat):
+        print("================   " + table_name + "   ================")
+        header = ["Config {}".format(i+1) for i in range(num_configs)]
+        print("{:<15}".format("Algorithm"), end="")
+        for h in header:
+            print("{:>20}".format(h), end="")
+        print()
+
+        # Print rows
+        for alg_idx in range(num_algos):
+            print("{:<15}".format(algo_names[alg_idx]), end="")
+            for cfg_idx in range(num_configs):
+                mean = mean_mat[alg_idx, cfg_idx]
+                std = std_mat[alg_idx, cfg_idx]
+                print("{:>20}".format(f"{mean:.4f} ± {std:.4f}"), end="")
+            print()
+        print("==========================================================")
+
+    print_table("Runtime", runtime_mat.mean(axis=1).T, runtime_mat.std(axis=1).T)
+    num_hundreds_iters_mat = num_iters_mat / 100
+    print_table("Num Iters", num_iters_mat.mean(axis=1).T, num_iters_mat.std(axis=1).T)
+    print_table("Iteration Runtime", iter_runtime_mat.mean(axis=1).T, iter_runtime_mat.std(axis=1).T)
     # %%
     str_desc_name = os.path.basename(name_results_dir)
 
     fig_runtime.savefig(os.path.join(path_results_dir, 'Runtime_' + str_desc_name +  '.png'), dpi=300)
-    fig_iterRuntime.savefig(os.path.join(path_results_dir, 'IterRuntime_' + str_desc_name +  '.png'), dpi=300)
-    fig_numIters.savefig(os.path.join(path_results_dir, 'NumIters_' + str_desc_name +  '.png'), dpi=300)
+    fig_iters.savefig(os.path.join(path_results_dir, 'IterRuntime_' + str_desc_name +  '.png'), dpi=300)
+    fig_iterationruntime.savefig(os.path.join(path_results_dir, 'NumIters_' + str_desc_name +  '.png'), dpi=300)
     fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + str_desc_name +  '.png'), dpi=300)
     fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + str_desc_name +  '.png'), dpi=300)
     # fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + str_desc_name +  '.png'), dpi=300)

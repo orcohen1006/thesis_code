@@ -9,7 +9,9 @@ from fun_JBLD_advanced import *
 def fun_Riemannian(Y, A, DAS_init, DOAscan, DOA, noise_power, loss_name="AIRM"):
     t_samples = Y.shape[1]
     R_hat = (Y @ Y.conj().T) / t_samples
-    sigma2_n = noise_power
+    # normalize by noise power and set sigma_n^2 to 1
+    R_hat /= noise_power
+    sigma2_n = 1
 
 
     if loss_name == "AIRM":
@@ -22,4 +24,6 @@ def fun_Riemannian(Y, A, DAS_init, DOAscan, DOA, noise_power, loss_name="AIRM"):
 
     if isinstance(p, torch.Tensor):
         p = p.detach().cpu().numpy()
-    return p, num_iters, sigma2_n
+    # rescale p 
+    p *= noise_power
+    return p, num_iters, noise_power

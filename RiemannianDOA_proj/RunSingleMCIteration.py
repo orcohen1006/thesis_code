@@ -27,16 +27,10 @@ def run_single_mc_iteration(
     t0 = time()
     num_sources = len(config["doa"])
 
-    # power_doa_db = config["power_doa_db"]
-    # power_doa = 10.0 ** (power_doa_db / 10.0)
-    # noise_power_db = np.max(config["power_doa_db"]) - config["snr"]
-    # noise_power = 10.0 ** (noise_power_db / 10.0)
-
-
-    noise_power = 1
-    noise_power_db = convert_linear_to_db(noise_power)
-    doa_max_power_db = noise_power_db + config["snr"]
-    power_doa_db = config["power_doa_db"] - np.max(config["power_doa_db"]) + doa_max_power_db
+    power_doa_db = config["power_doa_db"]
+    power_doa = 10.0 ** (power_doa_db / 10.0)
+    noise_power_db = np.max(config["power_doa_db"]) - config["snr"]
+    noise_power = 10.0 ** (noise_power_db / 10.0)
 
 
     doa_scan = get_doa_grid()
