@@ -126,10 +126,36 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
             print()
         print("==========================================================")
 
-    print_table("Runtime", runtime_mat.mean(axis=1).T, runtime_mat.std(axis=1).T)
-    num_hundreds_iters_mat = num_iters_mat / 100
-    print_table("Num Iters", num_iters_mat.mean(axis=1).T, num_iters_mat.std(axis=1).T)
-    print_table("Iteration Runtime", iter_runtime_mat.mean(axis=1).T, iter_runtime_mat.std(axis=1).T)
+    def print_table_with_percentile(table_name, mat):
+        from tabulate import tabulate
+        qlow_mat = np.percentile(mat, 10, axis=1).T
+        qmid_mat = np.percentile(mat, 50, axis=1).T
+        qhigh_mat = np.percentile(mat, 90, axis=1).T
+
+        header = ["Algorithm"] + [f"Config {i+1}" for i in range(num_configs)]
+        table_data = []
+
+        for alg_idx in range(num_algos):
+            row = [algo_names[alg_idx]]
+            for cfg_idx in range(num_configs):
+                formatted_value = (
+                    f"{qmid_mat[alg_idx, cfg_idx]:.4f} "
+                    f"[ {qlow_mat[alg_idx, cfg_idx]:.4f}, "
+                    f"{qhigh_mat[alg_idx, cfg_idx]:.4f} ]"
+                )
+                row.append(formatted_value)
+            table_data.append(row)
+            
+        print(f"================   {table_name}   ================")
+        print(tabulate(table_data, headers=header, tablefmt="grid"))
+        print("==========================================================")
+    
+    # print_table("Runtime", runtime_mat.mean(axis=1).T, runtime_mat.std(axis=1).T)
+    # print_table("Num Iters", num_iters_mat.mean(axis=1).T, num_iters_mat.std(axis=1).T)
+    # print_table("Iteration Runtime", iter_runtime_mat.mean(axis=1).T, iter_runtime_mat.std(axis=1).T)
+    print_table_with_percentile("Runtime", runtime_mat)
+    print_table_with_percentile("Num Iters", num_iters_mat)
+    print_table_with_percentile("Iteration Runtime", iter_runtime_mat)
     # %%
     str_desc_name = os.path.basename(name_results_dir)
 
