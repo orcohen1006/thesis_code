@@ -83,11 +83,11 @@ for i_parameter in range(len(list_tuples)):
         mat_eigvals[:, i_trial] = eigvals
 
 
-    alpha_transp = 0.2
+    alpha_transp = 0.3
     CONST_MUL_JBLD = 8
     fig1, ax = plt.subplots(figsize=(5, 5))
-    ax.scatter(parameter_vals, vals_AMV/vals_AIRM, alpha=alpha_transp, label='AMV/AIRM',color='red')
-    ax.scatter(parameter_vals, CONST_MUL_JBLD*(vals_JBLD)/vals_AIRM, alpha=alpha_transp, label='JBLD/AIRM',color='blue')
+    ax.scatter(parameter_vals, vals_AMV/vals_AIRM, alpha=alpha_transp, label=r'$\mathcal{D}^2_{\text{AMV}} / \mathcal{D}^2_{\text{AIRM}}$',color='red')
+    ax.scatter(parameter_vals, CONST_MUL_JBLD*(vals_JBLD)/vals_AIRM, alpha=alpha_transp, label=r'$\mathcal{D}^2_{\text{JBLD}} / \mathcal{D}^2_{\text{AIRM}}$',color='blue')
     ax.set_xlabel(parameter_name)
     ax.set_ylabel(r'$\mathcal{D}^2 \,/ \,\mathcal{D}^2_{\text{AIRM}}$')
     ax.legend()
@@ -100,8 +100,8 @@ for i_parameter in range(len(list_tuples)):
     for i_eig in range(config["m"]):
         color = sm.to_rgba(i_eig + 1)
         ax.scatter(parameter_vals, mat_eigvals[i_eig, :], color=color, alpha=alpha_transp)
-    cbar = fig2.colorbar(sm, ax=ax)
-    cbar.set_label('Eigenvalue Index', rotation=270, labelpad=15)
+    cbar = fig2.colorbar(sm, ax=ax, orientation="horizontal", fraction=0.05, pad=0.2)
+    cbar.set_label('Eigenvalue Index', rotation=0, labelpad=5)
     ax.set_xlabel(parameter_name)
     ax.set_ylabel('Eigenvalues')
     plt.show()
