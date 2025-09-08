@@ -440,7 +440,7 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         mean_doa_errors = np.stack(algos_error_data["mean_doa_errors"][algo_name]) 
         mse_doa_errors = np.stack(algos_error_data["mean_square_doa_errors"][algo_name])
         
-        all_sources_doa_rmse = np.sqrt(np.sum(mse_doa_errors, axis=1))
+        all_sources_doa_rmse = np.sqrt(np.mean(mse_doa_errors, axis=1))
         if normalize_rmse_by_parameter:
             all_sources_doa_rmse = all_sources_doa_rmse / parameter_values
         ax.plot(parameter_values, all_sources_doa_rmse, label=algo_name, **algo_list[algo_name])
@@ -448,10 +448,10 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
             ax.set_yscale('log')
             ax.grid(True, which='both', linestyle='--')
     crb_values = np.stack(algos_error_data["mean_square_doa_errors"]["CRB"])
-    lower_bound_all_sources_doa_rmse = np.sqrt(np.sum(crb_values, axis=1))
+    lower_bound_all_sources_doa_rmse = np.sqrt(np.mean(crb_values, axis=1))
     if normalize_rmse_by_parameter:
         lower_bound_all_sources_doa_rmse = lower_bound_all_sources_doa_rmse / parameter_values
-    ax.plot(parameter_values, lower_bound_all_sources_doa_rmse, 'k--', label='CRB')
+    ax.plot(parameter_values, lower_bound_all_sources_doa_rmse, '--', color='gray', label='CRB', linewidth=2)
     if normalize_rmse_by_parameter:
         ax.set_ylabel("DOA RMSE / " + parameter_name)
     else:
@@ -473,7 +473,7 @@ def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_uni
         mse_power_errors = np.stack(algos_error_data["mean_square_power_errors"][algo_name])
         rmse_power_errors = np.sqrt(mse_power_errors)
         
-        all_sources_power_rmse = np.sqrt(np.sum(mse_power_errors, axis=1))
+        all_sources_power_rmse = np.sqrt(np.mean(mse_power_errors, axis=1))
 
         if normalize_rmse_by_parameter:
             all_sources_power_rmse = all_sources_power_rmse / parameter_values
