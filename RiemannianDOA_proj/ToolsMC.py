@@ -455,7 +455,7 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
     if normalize_rmse_by_parameter:
         ax.set_ylabel("DOA RMSE / " + parameter_name)
     else:
-        ax.set_ylabel("DOA RMSE [degrees]")
+        ax.set_ylabel(r"$\mathrm{RMSE}_{\mathrm{DOA}}$ (degrees)")
     ax.set_xlabel(parameter_name + f" {parameter_units}")
     ax.legend()
     ax.grid(True)
@@ -483,7 +483,7 @@ def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_uni
     if normalize_rmse_by_parameter:
         ax.set_ylabel("power RMSE / " + parameter_name)
     else:
-        ax.set_ylabel("power RMSE")
+        ax.set_ylabel(r"$\mathrm{RMSE}_{\mathrm{Power}}$ (linear)")
     ax.set_xlabel(parameter_name + f" {parameter_units}")
 
     ax.legend()

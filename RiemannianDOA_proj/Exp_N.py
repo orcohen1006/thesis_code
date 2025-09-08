@@ -33,8 +33,8 @@ def exp_N(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.nd
     # %%
     num_mc = NUM_MC
     m=12
-    # vec_n = np.arange(m, 7*m + 1, m)
-    vec_n = np.arange(m, 11*m + 1, 2*m)
+    vec_n = np.arange(m, 7*m + 1, m)
+    # vec_n = np.arange(m, 11*m + 1, 2*m)
     num_configs = len(vec_n)
     config_list = []
     for i in range(num_configs):
@@ -51,7 +51,7 @@ def exp_N(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.nd
     # %%
     results, algos_error_data = analyze_algo_errors(results)
     #
-    fig_doa_errors = plot_doa_errors(algos_error_data, r'$N/M$', "", vec_n/m, normalize_rmse_by_parameter=False, do_ylogscale=True)
+    fig_doa_errors = plot_doa_errors(algos_error_data, r'$N/M$', "", vec_n/m, normalize_rmse_by_parameter=False, do_ylogscale=False)
     # %% 
     fig_power_errors = plot_power_errors(algos_error_data, r'$N/M$', "", vec_n/m, normalize_rmse_by_parameter=False)
     # 

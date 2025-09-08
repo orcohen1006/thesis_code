@@ -14,6 +14,8 @@ EPS_REL_CHANGE = 1e-4
 
 def save_figure(fig: plt.Figure, path_results_dir: str, name: str):
     fig.savefig(os.path.join(path_results_dir, name +  '.png'), dpi=300)
+    fig.savefig(os.path.join(path_results_dir, name +  '.pdf'), format="pdf", bbox_inches="tight")
+
     with open(os.path.join(path_results_dir, name +  '.pkl'), 'wb') as f:
         pickle.dump(fig, f)
 
@@ -375,7 +377,7 @@ def make_non_circular(s, kappa):
     return real + 1j * new_imag
 
 def get_doa_grid():
-    res = 1 # resolution in degrees
+    res = 0.5 # resolution in degrees
     doa_scan = np.arange(0, 180+res, res)  # doa grid
     return doa_scan
 def get_steering_matrix(theta_degrees, m, calcGradient_wrt_radians=False):
