@@ -394,8 +394,8 @@ def get_algo_dict_list(flag_also_use_PER=False):
     # return [("PER",'r-->'), ("SPICE",'m--p'), ("SAMV",'b-^'), ("AIRM",'g--s'), ("JBLD",'y--o')]
     # return [("SPICE",'m--p'), ("SAMV",'r--^'), ("AIRM",'g-s'), ("JBLD",'b--o')]
     d = {
-        "SPICE": {"linestyle": ":", "color": "m", "marker": "p"},
-        "SAMV":  {"linestyle": ":", "color": "r", "marker": "s"},
+        "SPICE": {"linestyle": ":", "color": "m", "marker": "p", "markersize": 5},
+        "SAMV":  {"linestyle": ":", "color": "r", "marker": "s", "markersize": 5},
         "AIRM":  {"linestyle": "-", "color": "g", "marker": "o"},
         "JBLD":  {"linestyle": "--", "color": "b", "marker": "o", "markerfacecolor": "none", "markersize": 8},
     }
