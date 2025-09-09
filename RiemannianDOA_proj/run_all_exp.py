@@ -19,29 +19,17 @@ def run_all_exp():
     if not os.path.exists(basedir):
         os.makedirs(basedir) 
     # ---------------------------------------
-    # exp_M(basedir=basedir, power_doa_db=np.array([0]), doa=np.array([35.25]))
+    exp_M(basedir=basedir, power_doa_db=np.array([0]), doa=np.array([35.25]))
 
 
     doa=np.array([35.25, 43.25, 51.25])
     power_doa_db=np.array([0, 0, -5])
 
     exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=-1.5)
-    # exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=0)
-
-    # exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=30)
-    # exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=40)
-    # exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=50)
     
-    # doa=np.array([35.25, 43.25, 51.75])
-    # power_doa_db=np.array([0, 0, -5])
-    # exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=-2)
-    # exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=50)
-
+    exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=50)
     
-
-    # exp_rho(basedir=basedir, doa=np.array([35.25, 41.25]), power_doa_db=np.array([0, 0]), N=30)
-    # exp_rho(basedir=basedir, doa=np.array([35.25, 41.25]), power_doa_db=np.array([0, 0]), N=40)
-    # exp_rho(basedir=basedir, doa=np.array([35.25, 41.25]), power_doa_db=np.array([0, 0]), N=50)
+    exp_rho(basedir=basedir, doa=np.array([35.25, 41.25]), power_doa_db=np.array([0, 0]), N=50)
     # ---------------------------------------
     print(f'Total Running Time: {time.time() - t0_overall} sec.')
     return basedir
