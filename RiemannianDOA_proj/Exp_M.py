@@ -23,7 +23,8 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
         os.makedirs(path_results_dir)
     # %%
     num_mc = NUM_MC
-    vec_m = np.array([10, 50, 100, 200])
+    # vec_m = np.array([10, 50, 100, 200])
+    vec_m = np.array([10, 100])
     num_configs = len(vec_m)
     config_list = []
     for i in range(num_configs):
@@ -130,9 +131,9 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
         from tabulate import tabulate
         qlow_mat = np.percentile(mat, 10, axis=1).T
         qmid_mat = np.percentile(mat, 50, axis=1).T
-        qhigh_mat = np.percentile(mat, 90, axis=1).T
+        qhigh_mat = np.percentile(mat, 95, axis=1).T
 
-        header = ["Algorithm"] + [f"Config {i+1}" for i in range(num_configs)]
+        header = ["Algorithm"] + [f"M={config_list[i]['m']}" for i in range(num_configs)]
         table_data = []
 
         for alg_idx in range(num_algos):
@@ -147,15 +148,19 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
             table_data.append(row)
 
         print(f"================   {table_name}   ================")
-        print(tabulate(table_data, headers=header, tablefmt="grid"))
+        tabulate_data = tabulate(table_data, headers=header, tablefmt="grid")
+        print(tabulate_data)
         print("==========================================================")
+        return tabulate_data
     
     # print_table("Runtime", runtime_mat.mean(axis=1).T, runtime_mat.std(axis=1).T)
     # print_table("Num Iters", num_iters_mat.mean(axis=1).T, num_iters_mat.std(axis=1).T)
     # print_table("Iteration Runtime", iter_runtime_mat.mean(axis=1).T, iter_runtime_mat.std(axis=1).T)
-    print_table_with_percentile("Runtime", runtime_mat)
+    # print_table_with_percentile("Runtime", runtime_mat)
     print_table_with_percentile("Num Iters", num_iters_mat)
-    print_table_with_percentile("Iteration Runtime", iter_runtime_mat)
+    print_table_with_percentile("Iteration Runtime [ms]", iter_runtime_mat * 1e3)  # Convert to milliseconds
+
+    
     # %%
     str_desc_name = os.path.basename(name_results_dir)
 
