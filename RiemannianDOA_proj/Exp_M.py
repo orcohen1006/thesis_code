@@ -133,7 +133,7 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
         qmid_mat = np.percentile(mat, 50, axis=1).T
         qhigh_mat = np.percentile(mat, 95, axis=1).T
 
-        header = ["Algorithm"] + [f"M={config_list[i]['m']}" for i in range(num_configs)]
+        header = ["Algorithm"] + [f"M={vec_m[i]}" for i in range(num_configs)]
         table_data = []
 
         for alg_idx in range(num_algos):
@@ -151,6 +151,9 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
         tabulate_data = tabulate(table_data, headers=header, tablefmt="grid")
         print(tabulate_data)
         print("==========================================================")
+
+        with open(os.path.join(path_results_dir, table_name+'.txt'), "w") as f:
+            f.write(tabulate_data)
         return tabulate_data
     
     # print_table("Runtime", runtime_mat.mean(axis=1).T, runtime_mat.std(axis=1).T)
