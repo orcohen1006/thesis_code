@@ -25,7 +25,7 @@ def run_all_exp():
     doa=np.array([35.25, 43.25, 51.25])
     power_doa_db=np.array([0, 0, -5])
 
-    # exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=-2)
+    exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=-1.5)
     # exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=0)
 
     # exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=30)
@@ -36,13 +36,6 @@ def run_all_exp():
     # power_doa_db=np.array([0, 0, -5])
     # exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=-2)
     # exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=50)
-
-    doa=np.array([35.25, 43.25, 52.25])
-    power_doa_db=np.array([0, -2, -5])
-    exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=0)
-    exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=-2)
-    exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=50)
-    exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=40)
 
     
 
