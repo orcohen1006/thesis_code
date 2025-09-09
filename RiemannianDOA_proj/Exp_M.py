@@ -105,8 +105,79 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
         plt.tight_layout()
 
     plt.tight_layout()
+    #%%
+    def create_figure_iterruntime_boxplot(DO_BOXPLOT=True):
+            
+        # Boxplot settings
+        width = 0.15   # width of each box
+        x = np.arange(num_configs)  # x locations for each config
+        # colors = ['skyblue', 'salmon', 'lightgreen']
+        import matplotlib.colors as mcolors
+
+        def lighten_color(color, amount=0.5):
+            """
+            Lightens the given color by blending it with white.
+            amount=0 returns original color, amount=1 returns white.
+            """
+            try:
+                c = mcolors.to_rgb(color)
+            except ValueError:
+                # if not recognized, default to black
+                c = (0,0,0)
+            white = np.array([1,1,1])
+            return tuple(c + (white - c) * amount)
+        original_colors = [algo_list[d]["color"] for d in algo_list]
+        colors = [lighten_color(c, 0.5) for c in original_colors] 
+        iteration_runtime_ms_mat = iter_runtime_mat * 1e3  # Convert to milliseconds
+        fig_runtime_boxplot, ax = plt.subplots(figsize=(6,4))
+
+        for algo_idx in range(num_algos):
+            # Shift each algorithm's box a little to the left/right
+            spread = 1.1  # 1 = current spacing, >1 = more spread
+            pos = x + (algo_idx - num_algos/2 + 0.5) * width * spread
+            data_to_plot = [iteration_runtime_ms_mat[config_idx,:,algo_idx] for config_idx in range(num_configs)]
+            
+            if DO_BOXPLOT:
+                bp = ax.boxplot(data_to_plot, positions=pos, widths=width, patch_artist=True)
+                for patch in bp['boxes']:
+                    patch.set_facecolor(colors[algo_idx])
+                for whisker in bp['whiskers']:
+                    whisker.set_color('black')
+                for cap in bp['caps']:
+                    cap.set_color('black')
+                for median in bp['medians']:
+                    median.set_color('black')
+            
+            else:
+                vp = ax.violinplot(data_to_plot, positions=pos, widths=width, showmeans=False, showmedians=True, showextrema=False)
+                #set median color black
+                vp['cmedians'].set_color('black')
+                vp['cmedians'].set_linewidth(2)
+                # Fill color
+                for body in vp['bodies']:
+                    body.set_facecolor(colors[algo_idx])
+                    body.set_alpha(0.5)  # make it transparent
+
+
+        # Labels and ticks
+        ax.set_xticks(x)
+        ax.set_xticklabels([f'$M = {vec_m[i]}$' for i in range(num_configs)])
+        ax.set_ylabel('Iteration Runtime (ms)')
+        # ax.set_title('Algorithm runtimes by configuration')
+        ax.set_yscale('log')
+        # Legend
+        from matplotlib.patches import Patch
+        legend_handles = [Patch(facecolor=colors[i], label=algo_names[i]) for i in range(num_algos)]
+        ax.legend(handles=legend_handles)
+
+        plt.tight_layout()
+        # plt.show()
+        return fig_runtime_boxplot
     
-    # plt.show()
+    fig_runtime_boxplot = create_figure_iterruntime_boxplot(DO_BOXPLOT=True)
+    fig_runtime_violin = create_figure_iterruntime_boxplot(DO_BOXPLOT=False)
+
+
     # %%
 
     def print_table(table_name, mean_mat, std_mat):
@@ -167,12 +238,14 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
     # %%
     str_desc_name = os.path.basename(name_results_dir)
 
-    fig_runtime.savefig(os.path.join(path_results_dir, 'Runtime_' + str_desc_name +  '.png'), dpi=300)
-    fig_iters.savefig(os.path.join(path_results_dir, 'IterRuntime_' + str_desc_name +  '.png'), dpi=300)
-    fig_iterationruntime.savefig(os.path.join(path_results_dir, 'NumIters_' + str_desc_name +  '.png'), dpi=300)
-    fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + str_desc_name +  '.png'), dpi=300)
-    fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + str_desc_name +  '.png'), dpi=300)
+    # fig_runtime.savefig(os.path.join(path_results_dir, 'Runtime_' + str_desc_name +  '.png'), dpi=300)
+    # fig_iters.savefig(os.path.join(path_results_dir, 'IterRuntime_' + str_desc_name +  '.png'), dpi=300)
+    # fig_iterationruntime.savefig(os.path.join(path_results_dir, 'NumIters_' + str_desc_name +  '.png'), dpi=300)
+    # fig_doa_errors.savefig(os.path.join(path_results_dir, 'DOA_' + str_desc_name +  '.png'), dpi=300)
+    # fig_power_errors.savefig(os.path.join(path_results_dir, 'Power_' + str_desc_name +  '.png'), dpi=300)
     # fig_prob_detection.savefig(os.path.join(path_results_dir, 'Prob_' + str_desc_name +  '.png'), dpi=300)
+    save_figure(fig_runtime_boxplot, path_results_dir, str_desc_name+ "_IterRuntimeBoxplot")
+    save_figure(fig_runtime_violin, path_results_dir, str_desc_name+ "_IterRuntimeViolin")
     plt.close()
     # %%
     experiment_configs_string_to_file(num_mc=num_mc, config_list=config_list, directory=path_results_dir)
