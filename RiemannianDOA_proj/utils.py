@@ -12,6 +12,8 @@ FILENAME_PBS_METADATA = "job_metadata.pkl"
 
 EPS_REL_CHANGE = 1e-4
 
+ALGONAME = "SERCOM"
+
 def save_figure(fig: plt.Figure, path_results_dir: str, name: str):
     fig.savefig(os.path.join(path_results_dir, name +  '.png'), dpi=300)
     fig.savefig(os.path.join(path_results_dir, name +  '.pdf'), format="pdf", bbox_inches="tight")
@@ -245,7 +247,7 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
             succ_match_detected_doa, succ_match_true_doa, mean_HPBW
 
 
-def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=None):
+def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=None, ax=None):
     """
     Display the power spectrum of the DOA estimation.
 
@@ -266,24 +268,29 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
 
     if epsilon_power is None:
         epsilon_power = 10.0 ** (-20 / 10.0)
-    
-    fig = plt.figure()
-    ax = plt.gca()
+    if ax is None:
+        fig = plt.figure()
+        ax = plt.gca()
 
     list_plt = []
     for i_algo, algo_name in enumerate(algo_list.keys()):
         spectrum = list_p_vec[i_algo]
         spectrum[spectrum < epsilon_power] = epsilon_power
         spectrum = convert_linear_to_db(spectrum)
-        pltobj, = ax.plot(doa_scan, spectrum, label=algo_name, **algo_list[algo_name])
+        
+        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD") else algo_name
+        pltobj, = ax.plot(doa_scan, spectrum, label=label, **algo_list[algo_name])
         list_plt.append(pltobj)
-
-    plt_doa, = ax.plot(doa, power_doa_db, 'x', color='black', label='DOA')
-    list_plt.append(plt_doa)
-    plt.legend(handles=list_plt)
     
-    plt.xlabel(r"$\theta$ [degrees]", fontsize=12)
-    plt.ylabel("power [dB]", fontsize=12)
+    plt_doa, = ax.plot(doa, power_doa_db, 'x', color='black', label='DOA')
+    # list_plt.append(plt_doa)
+    
+    lgd = ax.legend(handles=list_plt)
+    for text in lgd.get_texts():
+        if "JBLD" in text.get_text():
+            text.set_fontweight("bold")
+    ax.set_xlabel(r"$\theta$ (degrees)", fontsize=12)
+    ax.set_ylabel(r"$\mathrm{Power}$ (dB)", fontsize=12)
     
     # plt.title('Directions Power Spectrum Estimation')
     return ax
@@ -393,11 +400,12 @@ def get_steering_matrix(theta_degrees, m, calcGradient_wrt_radians=False):
 def get_algo_dict_list(flag_also_use_PER=False):
     # return [("PER",'r-->'), ("SPICE",'m--p'), ("SAMV",'b-^'), ("AIRM",'g--s'), ("JBLD",'y--o')]
     # return [("SPICE",'m--p'), ("SAMV",'r--^'), ("AIRM",'g-s'), ("JBLD",'b--o')]
+    linewidth = 2
     d = {
-        "SPICE": {"linestyle": ":", "color": "m", "marker": "p", "markersize": 5},
-        "SAMV":  {"linestyle": ":", "color": "r", "marker": "s", "markersize": 5},
-        "AIRM":  {"linestyle": "-", "color": "g", "marker": "o"},
-        "JBLD":  {"linestyle": "--", "color": "b", "marker": "o", "markerfacecolor": "none", "markersize": 8},
+        "SPICE": {"linestyle": "--", "color": "#BBB800FF", "marker": "s", "markersize": 4, "linewidth": linewidth},
+        "SAMV":  {"linestyle": "--", "color": "#E65908", "marker": "^", "markersize": 5.5, "linewidth": linewidth},
+        "AIRM":  {"linestyle": "-", "color": "#0CBD56", "marker": "o", "linewidth": linewidth},
+        "JBLD":  {"linestyle": "-", "color": "#2B27FF", "marker": "o", "markerfacecolor": "none", "markersize": 8, "linewidth": linewidth},
     }
     if flag_also_use_PER:
         d = {"PER": {"linestyle": ":", "color": "y", "marker": "^"}, **d}

@@ -7,6 +7,8 @@ import time
 from pathlib import Path
 from utils import *
 from collections import defaultdict
+from matplotlib.font_manager import FontProperties
+
 NUM_MC = 500
 DEFAULT_NUM_JOBS = 334
 # %%
@@ -428,6 +430,42 @@ def plot_doa_errors_per_source(algos_error_data: dict, parameter_name: str, para
     plt.tight_layout()
     return fig
 
+def plot_power_errors_per_source(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list):
+    import matplotlib.pyplot as plt
+    import matplotlib.gridspec as gridspec
+    
+    algo_list = get_algo_dict_list()
+
+    num_sources = algos_error_data["mean_square_doa_errors"]["CRB"][0].shape[0]
+    fig = plt.figure()
+    gs = gridspec.GridSpec(num_sources, 2, height_ratios=[1, 1, 1])  # 3 rows, 2 columns
+
+    # Axes for the 2x2 part
+    axs = [
+        [fig.add_subplot(gs[i_source, 0]), fig.add_subplot(gs[i_source, 1])] for i_source in range(num_sources)
+    ]
+
+    crb_values = np.stack(algos_error_data["mean_square_doa_errors"]["CRB"])
+    for algo_name in algo_list.keys():
+        mean_power_errors = np.stack(algos_error_data["mean_power_errors"][algo_name]) 
+        mse_power_errors = np.stack(algos_error_data["mean_square_power_errors"][algo_name])        
+
+        for i_source in range(num_sources):
+            # Plot mean DOA errors and RMSE for each source
+            axs[i_source][0].plot(parameter_values, mean_power_errors[:, i_source], label=algo_name, **algo_list[algo_name])
+            axs[i_source][1].plot(parameter_values, mse_power_errors[:, i_source], label=algo_name, **algo_list[algo_name])
+
+    # Titles and labels
+    for i_source in range(num_sources):
+        axs[i_source][0].set_title(f"Source {i_source+1}: Power Bias")
+        axs[i_source][0].set_ylabel("Bias [linear]")
+        axs[i_source][1].set_title(f"Source {i_source+1}: Power MSE")
+        axs[i_source][1].set_ylabel("MSE [linear^2]")
+        axs[i_source][0].grid(True)
+        axs[i_source][1].grid(True)
+    
+    plt.tight_layout()
+    return fig
 
 def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False,
                     do_ylogscale: bool = False):
@@ -443,21 +481,28 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         all_sources_doa_rmse = np.sqrt(np.mean(mse_doa_errors, axis=1))
         if normalize_rmse_by_parameter:
             all_sources_doa_rmse = all_sources_doa_rmse / parameter_values
-        ax.plot(parameter_values, all_sources_doa_rmse, label=algo_name, **algo_list[algo_name])
+        
+        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD") else algo_name
+        ax.plot(parameter_values, all_sources_doa_rmse, label=label, **algo_list[algo_name])
         if do_ylogscale:
             ax.set_yscale('log')
             ax.grid(True, which='both', linestyle='--')
     crb_values = np.stack(algos_error_data["mean_square_doa_errors"]["CRB"])
     lower_bound_all_sources_doa_rmse = np.sqrt(np.mean(crb_values, axis=1))
+    xylabel_fontsize = 12
     if normalize_rmse_by_parameter:
         lower_bound_all_sources_doa_rmse = lower_bound_all_sources_doa_rmse / parameter_values
-    ax.plot(parameter_values, lower_bound_all_sources_doa_rmse, '--', color='gray', label='CRB', linewidth=2)
+    ax.plot(parameter_values, lower_bound_all_sources_doa_rmse, '--', color='gray', label='CRB', linewidth=2.5)
     if normalize_rmse_by_parameter:
-        ax.set_ylabel("DOA RMSE / " + parameter_name)
+        ax.set_ylabel("DOA RMSE / " + parameter_name, fontsize=xylabel_fontsize)
     else:
-        ax.set_ylabel(r"$\mathrm{RMSE}_{\mathrm{DOA}}$ (degrees)")
-    ax.set_xlabel(parameter_name + f" {parameter_units}")
-    ax.legend()
+        ax.set_ylabel(r"$\mathrm{RMSE}_{\mathrm{DOA}}$ (degrees)", fontsize=xylabel_fontsize)
+    ax.set_xlabel(parameter_name + f" {parameter_units}", fontsize=xylabel_fontsize)
+    
+    lgd = ax.legend()
+    for text in lgd.get_texts():
+        if "JBLD" in text.get_text():
+            text.set_fontweight("bold")
     ax.grid(True)
     return fig
 
@@ -477,16 +522,22 @@ def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_uni
 
         if normalize_rmse_by_parameter:
             all_sources_power_rmse = all_sources_power_rmse / parameter_values
-        ax.plot(parameter_values, all_sources_power_rmse, label=algo_name, **algo_list[algo_name])
+
+        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD") else algo_name
+        ax.plot(parameter_values, all_sources_power_rmse, label=label, **algo_list[algo_name])
         if do_ylogscale:
                     ax.set_yscale('log')
+    xylabel_fontsize = 12
     if normalize_rmse_by_parameter:
-        ax.set_ylabel("power RMSE / " + parameter_name)
+        ax.set_ylabel("power RMSE / " + parameter_name, fontsize=xylabel_fontsize)
     else:
-        ax.set_ylabel(r"$\mathrm{RMSE}_{\mathrm{Power}}$ (linear)")
-    ax.set_xlabel(parameter_name + f" {parameter_units}")
+        ax.set_ylabel(r"$\mathrm{RMSE}_{\mathrm{Power}}$ (linear)", fontsize=xylabel_fontsize)
+    ax.set_xlabel(parameter_name + f" {parameter_units}", fontsize=xylabel_fontsize)
 
-    ax.legend()
+    lgd = ax.legend()
+    for text in lgd.get_texts():
+        if "JBLD" in text.get_text():
+            text.set_fontweight("bold")
     ax.grid(True)
     return fig
 

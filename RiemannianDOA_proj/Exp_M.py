@@ -160,16 +160,24 @@ def exp_M(cohr_flag: bool = False, power_doa_db: np.ndarray = np.array([0, 0, -5
 
 
         # Labels and ticks
+        xylabel_fontsize = 12
         ax.set_xticks(x)
-        ax.set_xticklabels([f'$M = {vec_m[i]}$' for i in range(num_configs)])
-        ax.set_ylabel('Iteration Runtime (ms)')
+        ax.set_xticklabels([f'$M = {vec_m[i]}$' for i in range(num_configs)],fontsize=xylabel_fontsize)
+        ax.set_ylabel('Iteration Runtime (ms)',fontsize=xylabel_fontsize)
         # ax.set_title('Algorithm runtimes by configuration')
         ax.set_yscale('log')
         # Legend
         from matplotlib.patches import Patch
-        legend_handles = [Patch(facecolor=colors[i], label=algo_names[i]) for i in range(num_algos)]
-        ax.legend(handles=legend_handles)
-
+        labels = [f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD") else algo_name 
+                  for algo_name in algo_names]
+        legend_handles = [Patch(facecolor=colors[i], label=labels[i]) for i in range(num_algos)]
+        lgd = ax.legend(handles=legend_handles)
+        for text in lgd.get_texts():
+            if "JBLD" in text.get_text():
+                text.set_fontweight("bold")
+        
+        delta_x = 0.4
+        ax.set_xlim([0-delta_x,1+delta_x])
         plt.tight_layout()
         # plt.show()
         return fig_runtime_boxplot

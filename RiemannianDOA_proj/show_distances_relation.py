@@ -1,3 +1,4 @@
+# %%
 import os
 from tqdm import tqdm
 os.chdir('/home/or.cohen/thesis_code/RiemannianDOA_proj')
@@ -6,11 +7,13 @@ import matplotlib.pyplot as plt
 # %matplotlib ipympl
 
 from utils import *
+plt.close('all')
 
-f_AMV = lambda eigvals: np.sum((eigvals - 1)**2)
-f_AIRM = lambda eigvals: np.sum(np.log(eigvals)**2)
-f_JBLD = lambda eigvals: np.sum((np.log(0.5 * (eigvals + 1)) - 0.5 * np.log(eigvals)))
-
+f_AMV = lambda eigvals: np.sum((eigvals - 1)**2, axis=0)
+f_SPICE = lambda eigvals: np.sum((np.sqrt(eigvals) - 1/np.sqrt(eigvals))**2, axis=0)
+f_AIRM = lambda eigvals: np.sum(np.log(eigvals)**2, axis=0)
+f_JBLD = lambda eigvals: np.sum((np.log(0.5 * (eigvals + 1)) - 0.5 * np.log(eigvals)), axis=0)
+# %%
 def normalize_vals(vals):
     q_high = np.percentile(vals, 5)
     q_low = np.percentile(vals, 0)
@@ -108,3 +111,55 @@ for i_parameter in range(len(list_tuples)):
 
     save_figure(fig1, "./", f"distances_relation_{parameter_name}")
     save_figure(fig2, "./", f"distances_relation_eigenvalues_{parameter_name}")
+
+# %%
+plt.close('all')
+import matplotlib as mpl
+mpl.rcParams["mathtext.fontset"] = "cm"
+mpl.rcParams["font.family"] = "STIXGeneral"
+
+
+MIN_EIGVAL = 1e-5
+MAX_EIGVAL = 25
+RES_EIGVAL = 2_000
+eigvals = np.linspace(MIN_EIGVAL, MAX_EIGVAL, RES_EIGVAL)[np.newaxis,:]
+
+algo_list = get_algo_dict_list()
+fig_psi, ax = plt.subplots(figsize=(5, 5))
+linewidth = 2
+alpha = 1
+pl_AMV, = ax.plot(eigvals.flatten(), f_AMV(eigvals), label=r'$\psi_\mathrm{AMV}$', color=algo_list['SAMV']['color'], linewidth=linewidth, linestyle='--',dashes=(3, 2))
+pl_AIRM, = ax.plot(eigvals.flatten(), f_AIRM(eigvals), label=r'$\psi_\mathrm{AIRM}$', color=algo_list['AIRM']['color'], linewidth=linewidth)
+pl_JBLD, = ax.plot(eigvals.flatten(), 8*f_JBLD(eigvals), label=r'$8\times\psi_\mathrm{JBLD}$', color=algo_list['JBLD']['color'], linewidth=linewidth,)
+pl_SPICE, = ax.plot(eigvals.flatten(), f_SPICE(eigvals), label=r'$\psi_\mathrm{SPICE}$', color=algo_list['SPICE']['color'], linewidth=linewidth, linestyle='--',dashes=(3, 2))
+
+
+
+ax.set_ylim(-0.2, 25)
+ax.set_xlabel(r'$\lambda$', fontsize=12)
+ax.set_ylabel(r'$\psi(\lambda)$', fontsize=12)
+
+handles, labels = ax.get_legend_handles_labels()
+order = [0, 3, 1, 2]
+ax.legend([handles[i] for i in order],
+          [labels[i] for i in order], loc='upper center', fontsize=12)
+
+save_figure(fig_psi, "./", f"psi_functions_zoomout")
+# %%
+# markerevery = 20
+# pl_AMV.set_marker(algo_list['SAMV']['marker'])
+# pl_AMV.set_markevery(markerevery)
+
+# pl_AIRM.set_marker(algo_list['AIRM']['marker'])
+# pl_AIRM.set_markevery(markerevery)
+
+# pl_JBLD.set_marker(algo_list['JBLD']['marker'])
+# pl_JBLD.set_markevery(markerevery)
+
+# pl_SPICE.set_marker(algo_list['SPICE']['marker'])
+# pl_SPICE.set_markevery(markerevery)
+
+ax.set_ylim(-0.02, 3)
+ax.set_xlim(0, 4)
+plt.show()
+save_figure(fig_psi, "./", f"psi_functions_zoomin")

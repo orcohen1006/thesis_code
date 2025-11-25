@@ -49,9 +49,9 @@ def exp_rho(doa: np.ndarray = np.array([35, 45]), power_doa_db: np.ndarray = np.
     # %%
     results, algos_error_data = analyze_algo_errors(results)
     #
-    fig_doa_errors = plot_doa_errors(algos_error_data, r'$\rho$', "", vec_rho, normalize_rmse_by_parameter=False, do_ylogscale=False)
+    fig_doa_errors = plot_doa_errors(algos_error_data, r'$\rho$ (Correlation Coefficient)', "", vec_rho, normalize_rmse_by_parameter=False, do_ylogscale=False)
     # %%
-    fig_power_errors = plot_power_errors(algos_error_data, r'$\rho$', "", vec_rho, normalize_rmse_by_parameter=False)
+    fig_power_errors = plot_power_errors(algos_error_data, r'$\rho$ (Correlation Coefficient)', "", vec_rho, normalize_rmse_by_parameter=False)
     # 
     # fig_prob_detection = plot_prob_detection(algos_error_data, r'Correlation Coefficient - $\rho$', "", vec_rho)
     # #

@@ -17,10 +17,12 @@ importlib.reload(utils)
 importlib.reload(ToolsMC)
 from utils import *
 from ToolsMC import *
+plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m08-d25_14-55-27/Exp_M_y2025-m08-d25_14-55-27_indp'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m09-d10_00-00-43/Exp_M_y2025-m09-d10_00-00-43_indp'
+    name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
     # %%
@@ -28,27 +30,46 @@ def example_display_power_spectrum():
         print(f"-------------- Config {i_config}:")
         print(results[i_config][0]["config"])
     # %%
+    plt.close('all')
     algo_list = get_algo_dict_list()
-    # i_config = 2
-    # i_mc = inds[5] #468 #3
-    # i_config = 1; i_mc =  inds[31] # 71 # 216 # 253# 3 # 468
-    # i_config = 5; i_mc = 6
-    # i_config = 3; i_mc = inds[3]
-    # i_config = 2; i_mc = 14
-    i_config = 1; i_mc = 0
-
+    # i_config = 2; i_mc = 29 #23 #8 #5 #4
+    i_config = 4; i_mc = inds[16]
+    ax1, ax2 = None, None
     print(results[i_config][0]["config"])
-    ax = display_power_spectrum(results[i_config][i_mc]["config"], results[i_config][i_mc]["p_vec_list"])
+    algo_ids_group1 = [0,1]
+    algo_ids_group2 = [2,3]
+    algos_group1 = {k: v for i, (k, v) in enumerate(algo_list.items()) if i in algo_ids_group1}
+    algos_group2 = {k: v for i, (k, v) in enumerate(algo_list.items()) if i in algo_ids_group2}
+    p_vec_list_group1 = [results[i_config][i_mc]["p_vec_list"][i] for i in algo_ids_group1]
+    p_vec_list_group2 = [results[i_config][i_mc]["p_vec_list"][i] for i in algo_ids_group2]
+    # fig_spec = plt.figure(figsize=(10, 5))
+    # ax1 = fig_spec.add_subplot(1, 2, 1)
+    # ax2 = fig_spec.add_subplot(1, 2, 2)
+    
+    fig_spec = plt.figure(figsize=(6, 7))
+    ax1 = fig_spec.add_subplot(2, 1, 1)
+    ax2 = fig_spec.add_subplot(2, 1, 2)
+    
+    # fig_spec = plt.figure(figsize=(7, 5))
+    # ax1 = plt.gca()
+    # ax2 = ax1
+
+    ax1 = display_power_spectrum(results[i_config][i_mc]["config"], p_vec_list_group1, algo_list=algos_group1, ax=ax1)
+    ax2 = display_power_spectrum(results[i_config][i_mc]["config"], p_vec_list_group2, algo_list=algos_group2, ax=ax2)
 
     doas = results[i_config][i_mc]["config"]["doa"]
     power_doa_db = results[i_config][i_mc]["config"]["power_doa_db"]
-    ax.set_xlim([np.min(doas)-10, np.max(doas)+10])
-    ax.set_ylim([-20, np.max(power_doa_db)+3])
+    DELTA_X = 10
+    ax1.set_xlim([np.min(doas)-DELTA_X, np.max(doas)+DELTA_X])
+    ax2.set_xlim([np.min(doas)-DELTA_X, np.max(doas)+DELTA_X])
+    ax1.set_ylim([-20, np.max(power_doa_db)+3])
+    ax2.set_ylim([-20, np.max(power_doa_db)+3])
     # %%
-    plt.gcf().savefig(os.path.join(path_results_dir, 'Power_Spectrum_i_config_' + str(i_config) + '_i_mc_' + str(i_mc) + '.png'), dpi=300)
+    # plt.gcf().savefig(os.path.join(path_results_dir, 'Power_Spectrum_i_config_' + str(i_config) + '_i_mc_' + str(i_mc) + '.png'), dpi=300)
+    save_figure(fig_spec, path_results_dir, f'Power_Spectrum_i_config_{i_config}_i_mc_ {i_mc}')
     # %%
     algo_list = get_algo_dict_list()
-    i_config = 1
+    i_config = 4
     
     fig = plt.figure()
     fig.suptitle(f"Config {i_config}")
@@ -67,7 +88,7 @@ def example_display_power_spectrum():
     inds = np.argsort(sqerr_dict["AIRM"] - (sqerr_dict["SAMV"] + sqerr_dict["SPICE"])/2)
 
     # %%
-    path_fig = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zCompareMethodsHyperparams_y2025-m08-d25_10-15-57/losses.pkl'
+    path_fig = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m09-d09_11-43-32/Exp_N_y2025-m09-d09_11-46-35_indp/Exp_N_y2025-m09-d09_11-46-35_indp_DOA.pkl'
     with open(path_fig, 'rb') as f:
         my_fig = pickle.load(f)
     plt.show()
@@ -194,6 +215,7 @@ def display_power_spectrum_tmp():
     # %%
 
 if __name__ == "__main__":
+    1/0
     example_display_power_spectrum()
     
 # %%
