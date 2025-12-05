@@ -274,12 +274,19 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
 
     list_plt = []
     for i_algo, algo_name in enumerate(algo_list.keys()):
-        spectrum = list_p_vec[i_algo]
-        spectrum[spectrum < epsilon_power] = epsilon_power
-        spectrum = convert_linear_to_db(spectrum)
-        
         label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD") else algo_name
-        pltobj, = ax.plot(doa_scan, spectrum, label=label, **algo_list[algo_name])
+        est = list_p_vec[i_algo]
+        # check if est is a tuple (for ESPRIT)
+        if isinstance(est, tuple):
+            doa_est_degrees = est
+            doa_to_display = np.array(doa_est_degrees)
+            powers_to_display = 0*doa_to_display
+            pltobj, = ax.plot(doa_to_display, powers_to_display, label=label, **algo_list[algo_name])
+        else:
+            spectrum = est
+            spectrum[spectrum < epsilon_power] = epsilon_power
+            spectrum = convert_linear_to_db(spectrum)
+            pltobj, = ax.plot(doa_scan, spectrum, label=label, **algo_list[algo_name])
         list_plt.append(pltobj)
     
     plt_doa, = ax.plot(doa, power_doa_db, 'x', color='black', label='DOA')
@@ -392,12 +399,15 @@ def get_steering_matrix(theta_degrees, m, calcGradient_wrt_radians=False):
     doa_rad = np.deg2rad(theta_degrees) # Convert to radians
     delta_vec = np.arange(m)    
     A = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(doa_rad)))
+    # print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+    # A = A / np.sqrt(m)
+    
     if calcGradient_wrt_radians:
         dA_dtheta_radians = -1j * np.pi * np.outer(delta_vec, np.sin(doa_rad)) * A  # shape (m, K)
         return A, dA_dtheta_radians
     return A
 
-def get_algo_dict_list(flag_also_use_PER=False):
+def get_algo_dict_list(flag_get_all=False):
     # return [("PER",'r-->'), ("SPICE",'m--p'), ("SAMV",'b-^'), ("AIRM",'g--s'), ("JBLD",'y--o')]
     # return [("SPICE",'m--p'), ("SAMV",'r--^'), ("AIRM",'g-s'), ("JBLD",'b--o')]
     linewidth = 2
@@ -407,8 +417,14 @@ def get_algo_dict_list(flag_also_use_PER=False):
         "AIRM":  {"linestyle": "-", "color": "#0CBD56", "marker": "o", "linewidth": linewidth},
         "JBLD":  {"linestyle": "-", "color": "#2B27FF", "marker": "o", "markerfacecolor": "none", "markersize": 8, "linewidth": linewidth},
     }
-    if flag_also_use_PER:
-        d = {"PER": {"linestyle": ":", "color": "y", "marker": "^"}, **d}
+    if flag_get_all:
+        d = {
+                "PER": {"linestyle": ":", "color": "y", "marker": "^"},
+                "LE_ss": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 6},
+                "MVDR": {"linestyle": "--", "color": "c", "marker": "o", "markersize": 6},
+                "ESPRIT": {"linestyle": "", "color": "r", "marker": "o", "markersize": 8},
+                **d}
+
     return d
 
 

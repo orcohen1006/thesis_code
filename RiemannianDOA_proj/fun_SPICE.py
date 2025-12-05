@@ -59,17 +59,17 @@ def fun_SPICE(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
         
         R = A @ np.diag(p) @ A.conj().T + sigma * np.eye(M)
         
-        '''  --------------------- OLD ---------------------
         R_hat_sqrt = linalg.sqrtm(R_hat)
         Rinv_R_hat_sqrt = np.linalg.solve(R, R_hat_sqrt)
         am_Rinv_R_hat_sqrt = A.conj().T @ Rinv_R_hat_sqrt
         norm_am_Rinv_R_hat_sqrt = np.linalg.norm(am_Rinv_R_hat_sqrt, axis=1)
         norm_Rinv_Rhatsqrt = np.sqrt(np.sum(np.sum(Rinv_R_hat_sqrt.conj() * Rinv_R_hat_sqrt, axis=0))) # more efficient calculation
-        '''
-        Rinv = np.linalg.inv(R)
-        E_mat = Rinv @ R_hat @ Rinv.conj().T 
-        norm_Rinv_Rhatsqrt = np.sqrt(np.real(np.trace(E_mat)))
-        norm_am_Rinv_R_hat_sqrt = np.sqrt(np.diag(A.conj().T @ E_mat @ A))
+        
+        ## OLD AND SLOWER:
+        # Rinv = np.linalg.inv(R)
+        # E_mat = Rinv @ R_hat @ Rinv.conj().T 
+        # norm_Rinv_Rhatsqrt = np.sqrt(np.real(np.trace(E_mat)))
+        # norm_am_Rinv_R_hat_sqrt = np.sqrt(np.diag(A.conj().T @ E_mat @ A))
 
         rho = np.sum(np.sqrt(weight[:N].T) * p * norm_am_Rinv_R_hat_sqrt)
         rho = rho + np.sqrt(gamma) * sigma * norm_Rinv_Rhatsqrt

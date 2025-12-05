@@ -9,13 +9,16 @@ from functools import partial
 from dataclasses import dataclass
 from collections import defaultdict
 import pickle
+from fun_LE import fun_LE_ss
 from utils import *
 from fun_DAS import *
 from fun_SAMV import *
 from fun_SPICE import *
 from fun_Riemannian import *
+from fun_ESPRIT import *
 import os
 import logging
+import scipy.linalg
 # %%
 def run_single_mc_iteration(
         i_mc: int,
@@ -64,7 +67,10 @@ def run_single_mc_iteration(
     for i_algo in range(num_algos):
         t_algo_start = time()
         if algo_list[i_algo] == "PER":
-            p_vec, num_iters, _ = fun_DAS(y_noisy, A, modulus_hat_das, doa_scan, config["doa"])
+            # p_vec, num_iters, _ = fun_DAS(y_noisy, A, modulus_hat_das, doa_scan, config["doa"])
+            p_vec, num_iters, _ = fun_PER(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power)
+        elif algo_list[i_algo] == "MVDR":
+            p_vec, num_iters, _ = fun_MVDR(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power)
         elif algo_list[i_algo] == "SAMV":
             p_vec, num_iters, _ = fun_SAMV(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power)
         elif algo_list[i_algo] == "SPICE":
@@ -73,6 +79,12 @@ def run_single_mc_iteration(
             p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power, loss_name="AIRM")
         elif algo_list[i_algo] == "JBLD":
             p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power, loss_name="JBLD")
+        elif algo_list[i_algo] == "LE_ss":
+            p_vec, num_iters, _ = fun_LE_ss(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power)
+        elif algo_list[i_algo] == "ESPRIT":
+            tuple_of_doa_est_degrees = fun_ESPRIT(y_noisy, num_sources)
+            p_vec = tuple_of_doa_est_degrees
+            num_iter = 0
         else:
             raise ValueError("Algorithm not implemented")
 

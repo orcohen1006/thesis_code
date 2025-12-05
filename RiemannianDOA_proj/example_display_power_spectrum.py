@@ -188,15 +188,17 @@ def example_display_power_spectrum():
 # %%
 def display_power_spectrum_tmp():
     # %%
-    config_dict = create_config(
-        m=12, snr=0, N=40, power_doa_db=np.array([0, 0]), doa=np.array([35, 42]), cohr_flag=False, noncircular_coeff=0.0
+    plt.close('all')
+    config = create_config(
+        m=12, snr=0, N=20, power_doa_db=np.array([0, 0]), doa=np.array([35, 55]), cohr_flag=False, noncircular_coeff=0.0
     )
     
-    algo_list = get_algo_dict_list()
-    # algo_list = {k: v for k, v in algo_list.items() if k in ['AIRM', 'JBLD']}
+    algo_list = get_algo_dict_list(flag_get_all=True)
+    # algo_list = {k: v for k, v in algo_list.items() if k in ['AIRM', 'JBLD', 'LE_ss', 'PER', 'ESPRIT']}
+    algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD','SPICE']}
     result= run_single_mc_iteration(
         i_mc= 1,
-        config=config_dict,
+        config=config,
         algo_list=list(algo_list.keys()))
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # R_hat = result["R_hat"]

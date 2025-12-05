@@ -31,3 +31,30 @@ def fun_DAS(Y, A, DAS_init, DOAscan, DOA):
     num_iters = 0
 
     return p_vec, num_iters, noisepower
+
+
+
+def fun_PER(Y, A, DAS_init, DOAscan, DOA, noisepower):
+
+    
+    M, D = A.shape
+    N = Y.shape[1]
+    R_hat = (Y @ Y.conj().T) / N
+    p_vec = np.diag(A.conj().T @ R_hat @ A).real - noisepower
+    p_vec = np.maximum(p_vec, 0)
+    num_iters = 0
+
+    return p_vec, num_iters, noisepower
+
+def fun_MVDR(Y, A, DAS_init, DOAscan, DOA, noisepower):
+
+    
+    M, D = A.shape
+    N = Y.shape[1]
+    R_hat = (Y @ Y.conj().T) / N
+    invR_hat_A = np.linalg.solve(R_hat, A)
+    tmp = np.sum(A.conj() * invR_hat_A, axis=0).real
+    p_vec = np.maximum(1/tmp - noisepower, 0)
+    num_iters = 0
+
+    return p_vec, num_iters, noisepower
