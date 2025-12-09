@@ -478,17 +478,32 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         mean_doa_errors = np.stack(algos_error_data["mean_doa_errors"][algo_name]) 
         mse_doa_errors = np.stack(algos_error_data["mean_square_doa_errors"][algo_name])
         
-        all_sources_doa_rmse = np.sqrt(np.mean(mse_doa_errors, axis=1))
+        doa_mse = mse_doa_errors
+        doa_mse_mean = np.mean(doa_mse, axis=1)
+        doa_root_mse_mean = np.sqrt(doa_mse_mean)
         if normalize_rmse_by_parameter:
-            all_sources_doa_rmse = all_sources_doa_rmse / parameter_values
+            doa_root_mse_mean = doa_root_mse_mean / parameter_values
         
         label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD") else algo_name
-        ax.plot(parameter_values, all_sources_doa_rmse, label=label, **algo_list[algo_name])
+        pltline = ax.plot(parameter_values, doa_root_mse_mean, label=label, **algo_list[algo_name])
+
+        qlow = np.sqrt(np.percentile(doa_mse, 25, axis=1))
+        qhigh = np.sqrt(np.percentile(doa_mse, 75, axis=1))
+
+        # doa_mse_se = np.std(doa_mse, axis=1, ddof=1)/np.sqrt(doa_mse.shape[1])
+        # qlow = doa_mse_mean - 1.96*doa_mse_se
+        # qhigh = doa_mse_mean + 1.96*doa_mse_se
+        # qlow = np.sqrt(np.maximum(qlow, 0))
+        # qhigh = np.sqrt(qhigh)
+
+        ax.fill_between(parameter_values, qlow, qhigh, color=pltline[0].get_color(), alpha=0.10, linewidth=0.5)
+
         if do_ylogscale:
             ax.set_yscale('log')
             ax.grid(True, which='both', linestyle='--')
     crb_values = np.stack(algos_error_data["mean_square_doa_errors"]["CRB"])
     lower_bound_all_sources_doa_rmse = np.sqrt(np.mean(crb_values, axis=1))
+    # lower_bound_all_sources_doa_rmse = np.mean(crb_values, axis=1)
     xylabel_fontsize = 12
     if normalize_rmse_by_parameter:
         lower_bound_all_sources_doa_rmse = lower_bound_all_sources_doa_rmse / parameter_values
@@ -506,6 +521,77 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
     ax.grid(True)
     return fig
 
+
+def plot_doa_boxplots(algos_error_data, parameter_values, parameter_vals_to_show = None, do_ylogscale=False):
+    
+    import matplotlib.patches as mpatches
+
+    algo_list = get_algo_dict_list()
+
+    indices_to_show = np.arange(len(parameter_values))
+    if parameter_vals_to_show is not None:
+        # find indices of parameter_values that are in parameter_vals_to_show
+        indices_to_show = [i for i, val in enumerate(parameter_values) if val in parameter_vals_to_show]
+        parameter_values = [parameter_values[i] for i in indices_to_show]
+
+    algo_names = list(algo_list.keys())
+    num_algos = len(algo_names)
+    num_snrs = len(parameter_values)
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    x_base = np.arange(num_snrs)
+    group_width = 0.8                     # total width used by all algos per SNR
+    box_width  = 0.8*group_width / num_algos  # width per algo
+
+    legend_patches = []
+
+    for j, algo_name in enumerate(algo_names):
+        # (num_snrs, num_trials)
+        mse = np.stack(algos_error_data["mean_square_doa_errors"][algo_name])
+        rmse = np.sqrt(mse)
+
+        # boxplot data: list over SNR, each is vector over trials
+        box_data = [rmse[i, :] for i in indices_to_show]
+
+
+        # positions for this algo inside each SNR group
+        positions = x_base - group_width/2 + (j + 0.5) * box_width
+
+        # try to reuse the color from your line-style dict
+        style_dict = algo_list[algo_name]
+        color = style_dict.get("color", f"C{j}")
+
+        bp = ax.boxplot(
+            box_data,
+            positions=positions,
+            widths=box_width * 0.9,
+            patch_artist=True,
+            showfliers=False,  # cleaner
+            boxprops=dict(facecolor=color, alpha=0.5),
+            medianprops=dict(color="k", linewidth=1.2),
+            whiskerprops=dict(linewidth=0.8),
+            capprops=dict(linewidth=0.8),
+        )
+
+        legend_patches.append(mpatches.Patch(color=color, alpha=0.5, label=algo_name))
+
+    ax.set_xticks(x_base)
+    ax.set_xticklabels(parameter_values)
+    ax.set_xlabel("SNR (dB)")
+    ax.set_ylabel("RMSE (deg)")
+
+    if do_ylogscale:
+        ax.set_yscale("log")
+
+    ax.grid(True, axis="y", linestyle="--", alpha=0.4)
+
+    # compact legend
+    ax.legend(handles=legend_patches, loc="upper right", fontsize=8, framealpha=0.9)
+
+    fig.tight_layout()
+    return fig
+
 def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False,
                     do_ylogscale: bool = False):
     import matplotlib.pyplot as plt
@@ -516,17 +602,23 @@ def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_uni
     for algo_name in algo_list.keys():
         mean_power_errors = np.stack(algos_error_data["mean_power_errors"][algo_name]) 
         mse_power_errors = np.stack(algos_error_data["mean_square_power_errors"][algo_name])
-        rmse_power_errors = np.sqrt(mse_power_errors)
         
-        all_sources_power_rmse = np.sqrt(np.mean(mse_power_errors, axis=1))
+        power_mse = mse_power_errors
+        power_mse_mean = np.mean(power_mse, axis=1)
+        power_root_mse_mean = np.sqrt(power_mse_mean)
 
         if normalize_rmse_by_parameter:
-            all_sources_power_rmse = all_sources_power_rmse / parameter_values
+            power_root_mse_mean = power_root_mse_mean / parameter_values
 
         label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD") else algo_name
-        ax.plot(parameter_values, all_sources_power_rmse, label=label, **algo_list[algo_name])
-        if do_ylogscale:
-                    ax.set_yscale('log')
+        pltline = ax.plot(parameter_values, power_root_mse_mean, label=label, **algo_list[algo_name])
+
+        qlow = np.sqrt(np.percentile(power_mse, 25, axis=1))
+        qhigh = np.sqrt(np.percentile(power_mse, 75, axis=1))
+        ax.fill_between(parameter_values, qlow, qhigh, color=pltline[0].get_color(), alpha=0.10, linewidth=0.5)
+
+    if do_ylogscale:
+        ax.set_yscale('log')
     xylabel_fontsize = 12
     if normalize_rmse_by_parameter:
         ax.set_ylabel("power RMSE / " + parameter_name, fontsize=xylabel_fontsize)

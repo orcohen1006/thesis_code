@@ -21,7 +21,7 @@ plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m09-d10_00-00-43/Exp_M_y2025-m09-d10_00-00-43_indp'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m12-d09_10-13-20/Exp_SNR_Large_y2025-m12-d09_10-13-20_indp_N_50'
     name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
@@ -189,13 +189,17 @@ def example_display_power_spectrum():
 def display_power_spectrum_tmp():
     # %%
     plt.close('all')
+    doa=np.array([35.0, 43.0, 51.0])
+    power_doa_db=np.array([0, 0, -5])
+
     config = create_config(
-        m=12, snr=0, N=20, power_doa_db=np.array([0, 0]), doa=np.array([35, 55]), cohr_flag=False, noncircular_coeff=0.0
+        m=12, snr=0, N=20, power_doa_db=power_doa_db, doa=doa, cohr_flag=False, noncircular_coeff=0.0
     )
     
     algo_list = get_algo_dict_list(flag_get_all=True)
     # algo_list = {k: v for k, v in algo_list.items() if k in ['AIRM', 'JBLD', 'LE_ss', 'PER', 'ESPRIT']}
-    algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD','SPICE']}
+    algo_list = {k: v for k, v in algo_list.items() if k in ['LE_ss', 'PER', 'ESPRIT']}
+    # algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD','SPICE']}
     result= run_single_mc_iteration(
         i_mc= 1,
         config=config,
@@ -220,4 +224,13 @@ if __name__ == "__main__":
     1/0
     example_display_power_spectrum()
     
+# %%
+def Foo(x):
+    x = x / 2
+    print(x)
+
+x = np.array([10.0,20.0,30.0])
+print(x)
+Foo(x)
+print(x)
 # %%

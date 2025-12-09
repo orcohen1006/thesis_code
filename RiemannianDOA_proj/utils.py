@@ -183,7 +183,7 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
                                 threshold_theta_detect = 2,
                                 allowed_peak_height_relative_to_max=0.01):
     
-    dummy_estimated_doa = 90.0
+    dummy_estimated_doa = 0.0
     dummy_estimated_power = convert_db_to_linear(-10)
 
     if isinstance(p_vec, torch.Tensor):
@@ -414,13 +414,13 @@ def get_algo_dict_list(flag_get_all=False):
     d = {
         "SPICE": {"linestyle": "--", "color": "#BBB800FF", "marker": "s", "markersize": 4, "linewidth": linewidth},
         "SAMV":  {"linestyle": "--", "color": "#E65908", "marker": "^", "markersize": 5.5, "linewidth": linewidth},
+        "LE_ss": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 4, "linewidth": linewidth},
         "AIRM":  {"linestyle": "-", "color": "#0CBD56", "marker": "o", "linewidth": linewidth},
         "JBLD":  {"linestyle": "-", "color": "#2B27FF", "marker": "o", "markerfacecolor": "none", "markersize": 8, "linewidth": linewidth},
     }
     if flag_get_all:
         d = {
                 "PER": {"linestyle": ":", "color": "y", "marker": "^"},
-                "LE_ss": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 6},
                 "MVDR": {"linestyle": "--", "color": "c", "marker": "o", "markersize": 6},
                 "ESPRIT": {"linestyle": "", "color": "r", "marker": "o", "markersize": 8},
                 **d}
