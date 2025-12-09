@@ -142,11 +142,11 @@ if __name__ == "__main__":
     log_path = os.path.join(log_dir, f"mylog_job_{job_id}.log")
 
     # Configure logging to write immediately
-    logging.basicConfig(
-        filename=log_path,
-        level=logging.DEBUG,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-    )
+    # logging.basicConfig(
+    #     filename=log_path,
+    #     level=logging.DEBUG,
+    #     format="%(asctime)s [%(levelname)s] %(message)s",
+    # )
 
     # Also print to stdout in real-time if desired
     console = logging.StreamHandler(sys.stdout)

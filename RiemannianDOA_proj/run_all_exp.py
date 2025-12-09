@@ -22,14 +22,16 @@ def run_all_exp():
     # exp_M(basedir=basedir, power_doa_db=np.array([0]), doa=np.array([35.25]))
 
     # doa=np.array([35.25, 43.25, 51.25])
-    doa=np.array([35, 43, 51])
+    doa=np.array([35.0, 43.0, 51.0])
     power_doa_db=np.array([0, 0, -5])
 
     exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=50)
 
     exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=-1.5)
         
-    exp_rho(basedir=basedir, doa=np.array([35.25, 41.25]), power_doa_db=np.array([0, 0]), N=50)
+    # doa_for_exp_rho = np.array([35.25, 41.25])
+    doa_for_exp_rho = np.array([35.0, 41.0])
+    exp_rho(basedir=basedir, doa=doa_for_exp_rho, power_doa_db=np.array([0, 0]), N=50)
     # ---------------------------------------
     print(f'Total Running Time: {time.time() - t0_overall} sec.')
     return basedir
