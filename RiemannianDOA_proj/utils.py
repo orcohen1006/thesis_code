@@ -414,13 +414,13 @@ def get_algo_dict_list(flag_get_all=False):
     d = {
         "SPICE": {"linestyle": "--", "color": "#BBB800FF", "marker": "s", "markersize": 4, "linewidth": linewidth},
         "SAMV":  {"linestyle": "--", "color": "#E65908", "marker": "^", "markersize": 5.5, "linewidth": linewidth},
-        "LE_ss": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 4, "linewidth": linewidth},
         "AIRM":  {"linestyle": "-", "color": "#0CBD56", "marker": "o", "linewidth": linewidth},
         "JBLD":  {"linestyle": "-", "color": "#2B27FF", "marker": "o", "markerfacecolor": "none", "markersize": 8, "linewidth": linewidth},
     }
     if flag_get_all:
         d = {
                 "PER": {"linestyle": ":", "color": "y", "marker": "^"},
+                "LE_ss": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 4, "linewidth": linewidth},
                 "MVDR": {"linestyle": "--", "color": "c", "marker": "o", "markersize": 6},
                 "ESPRIT": {"linestyle": "", "color": "r", "marker": "o", "markersize": 8},
                 **d}
