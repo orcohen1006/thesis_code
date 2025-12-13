@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from datetime import datetime
+from fun_DAS import fun_PER
 from utils import *
 from OptimizeRiemannianLoss import optimize_adam_AIRM, optimize_adam_LE, optimize_adam_JBLD
 from fun_JBLD import *
@@ -299,7 +300,7 @@ def run_aux(dict_method, list_doa_settings, A, m, MAX_ITERS):
         for idx_setting, setting in enumerate(tqdm(list_doa_settings, desc=f"Testing scenarios for lr={lr}", leave=False)):
             snr, N, seed = setting
             # doa = np.sort(np.array([firstDOA, firstDOA+deltaDOA]))
-            doa=np.array([35.25, 43.25, 51.25])
+            doa=np.array([35, 43, 51])
             power_doa_db=np.array([0, 0, -5])
             A_true = get_steering_matrix(doa, m)
             noise_power_db = np.max(power_doa_db) - snr
@@ -311,14 +312,14 @@ def run_aux(dict_method, list_doa_settings, A, m, MAX_ITERS):
             Y = generate_signal(A_true, power_doa_db, N, noise_power, seed=seed)
 
             # Prepare DAS initial guess
-            modulus_hat_das = np.sum(np.abs(A.conj().T @ (Y / m)), axis=1) / N
+            p_init = fun_PER(Y, A, noise_power)[0]
 
 
             # Prepare R_hat
             R_hat = Y @ Y.conj().T / N
 
             # Optimize with this learning rate
-            p, _, tuple_history = optimize_func(A, R_hat, noise_power, modulus_hat_das,
+            p, _, tuple_history = optimize_func(A, R_hat, noise_power, p_init,
                                                     _max_iter=MAX_ITERS, _lr=lr,
                                                     do_store_history=True)
             step_losses, rel_changes = tuple_history
@@ -392,10 +393,12 @@ if __name__ == "__main__":
                                     #  {'name':'JBLD_cccp_ls_sgd_inner20','optimize_func':partial(optimize_JBLD_cccp, inner_opt='ls_sgd', inner_iters=20), 'lr_values':[5e-2]},
                                     #  {'name':'JBLD_cccp_sgd_inner20','optimize_func':partial(optimize_JBLD_cccp, inner_opt='sgd', inner_iters=20), 'lr_values':[1e-1]},
                                     #  {'name':'JBLD_cccp_adam_inner5','optimize_func':partial(optimize_JBLD_cccp, inner_opt='adam', inner_iters=5), 'lr_values':[1e-2]},
-                                     {'name':'JBLD_adam_cholesky','optimize_func':optimize_adam_cholesky_JBLD, 'lr_values':[1e-2]},
+                                    #  {'name':'JBLD_adam_cholesky','optimize_func':optimize_adam_cholesky_JBLD, 'lr_values':[1e-2]},
                                     #  {'name':'JBLD_BB','optimize_func':optimize_JBLD_BB, 'lr_values':[1]},
                                     #  {'name':'JBLD','optimize_func':optimize_adam_JBLD, 'lr_values':[1e-2]},
                                     #  {'name':'JBLD_cccp_lbfgs_inner5','optimize_func':optimize_JBLD_cccp_lbfgs_inner5, 'lr_values':[1e-2,1e-1, 1]},
                                     #  {'name':'optimize_JBLD_cccp_repar_lbfgs_inner20','optimize_func':optimize_JBLD_cccp_repar_lbfgs_inner20, 'lr_values':[5e-1, 1e0, 2e0]},
                                     #  {'name':'optimize_JBLD_cccp_repar_adam_inner5','optimize_func':optimize_JBLD_cccp_repar_adam_inner5, 'lr_values':[1e-1,5e-1]},
+                                     {'name':'JBLD_adam_LE','optimize_func':optimize_adam_LE, 'lr_values':[1e-3, 1e-2]},
+                                     #
                                      ])

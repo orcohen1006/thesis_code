@@ -31,6 +31,14 @@ def save_doa_configs(workdir: str, config_list: list):
 
 def submit_job_array(workdir: str, config_list: list, num_mc: int, num_jobs: int):
 
+    # delete the directory job_logs if it exists
+    job_logs_dir = Path('.') / "job_logs"
+    if job_logs_dir.exists():
+        import shutil
+        shutil.rmtree(job_logs_dir)
+    #create the job_logs directory
+    os.makedirs(job_logs_dir, exist_ok=True)
+    
     res = subprocess.run(["qsub", "-J", f"0-{num_jobs-1}", FILENAME_PBS_SCRIPT], capture_output=True, text=True)
 
     if res.returncode != 0:

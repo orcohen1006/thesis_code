@@ -57,8 +57,8 @@ def run_single_mc_iteration(
     if do_log:
         logging.info(f"- generated noisy signal y_noisy with shape {y_noisy.shape}.")
         
-    modulus_hat_das = np.sum(np.abs(A.conj().T @ (y_noisy / config["m"])), axis=1) / config["N"]
-    
+    # modulus_hat_das = np.sum(np.abs(A.conj().T @ (y_noisy / config["m"])), axis=1) / config["N"]
+    p_init = fun_PER(y_noisy, A, noise_power)[0]
     # Run on all algorithms
     p_vec_list = [None] * num_algos
     runtime_list = [None] * num_algos
@@ -68,23 +68,25 @@ def run_single_mc_iteration(
         t_algo_start = time()
         if algo_list[i_algo] == "PER":
             # p_vec, num_iters, _ = fun_DAS(y_noisy, A, modulus_hat_das, doa_scan, config["doa"])
-            p_vec, num_iters, _ = fun_PER(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power)
+            p_vec, num_iters, _ = fun_PER(y_noisy, A, noise_power)
         elif algo_list[i_algo] == "MVDR":
-            p_vec, num_iters, _ = fun_MVDR(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power)
+            p_vec, num_iters, _ = fun_MVDR(y_noisy, A, p_init, doa_scan, config["doa"], noise_power)
         elif algo_list[i_algo] == "SAMV":
-            p_vec, num_iters, _ = fun_SAMV(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power)
+            p_vec, num_iters, _ = fun_SAMV(y_noisy, A, p_init, doa_scan, config["doa"], noise_power)
         elif algo_list[i_algo] == "SPICE":
-            p_vec, num_iters, _ = fun_SPICE(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power)
+            p_vec, num_iters, _ = fun_SPICE(y_noisy, A, p_init, doa_scan, config["doa"], noise_power)
         elif algo_list[i_algo] == "AIRM":
-            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power, loss_name="AIRM")
+            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, p_init, doa_scan, config["doa"], noise_power, loss_name="AIRM")
         elif algo_list[i_algo] == "JBLD":
-            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power, loss_name="JBLD")
+            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, p_init, doa_scan, config["doa"], noise_power, loss_name="JBLD")
+        elif algo_list[i_algo] == "LE":
+            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, p_init, doa_scan, config["doa"], noise_power, loss_name="LE")
         elif algo_list[i_algo] == "LE_ss":
-            p_vec, num_iters, _ = fun_LE_ss(y_noisy, A, modulus_hat_das, doa_scan, config["doa"], noise_power)
+            p_vec, num_iters, _ = fun_LE_ss(y_noisy, A, p_init, doa_scan, config["doa"], noise_power)
         elif algo_list[i_algo] == "ESPRIT":
             tuple_of_doa_est_degrees = fun_ESPRIT(y_noisy, num_sources)
             p_vec = tuple_of_doa_est_degrees
-            num_iter = 0
+            num_iters = 0
         else:
             raise ValueError("Algorithm not implemented")
 
@@ -142,11 +144,11 @@ if __name__ == "__main__":
     log_path = os.path.join(log_dir, f"mylog_job_{job_id}.log")
 
     # Configure logging to write immediately
-    # logging.basicConfig(
-    #     filename=log_path,
-    #     level=logging.DEBUG,
-    #     format="%(asctime)s [%(levelname)s] %(message)s",
-    # )
+    logging.basicConfig(
+        filename=log_path,
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
 
     # Also print to stdout in real-time if desired
     console = logging.StreamHandler(sys.stdout)

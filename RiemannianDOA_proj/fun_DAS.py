@@ -34,14 +34,20 @@ def fun_DAS(Y, A, DAS_init, DOAscan, DOA):
 
 
 
-def fun_PER(Y, A, DAS_init, DOAscan, DOA, noisepower):
+def fun_PER(Y, A, noisepower):
 
-    
+    M, D = A.shape
+    scaler = np.linalg.norm(A[:,0])  # assuming all steering vectors have same norm
+    A = A / scaler
+
+    sigma2 = noisepower
     M, D = A.shape
     N = Y.shape[1]
     R_hat = (Y @ Y.conj().T) / N
-    p_vec = np.diag(A.conj().T @ R_hat @ A).real - noisepower
-    p_vec = np.maximum(p_vec, 0)
+    p_vec = np.diag(A.conj().T @ R_hat @ A).real 
+
+    p_vec = np.maximum(p_vec - noisepower, 0)
+    p_vec = p_vec / (scaler**2)
     num_iters = 0
 
     return p_vec, num_iters, noisepower

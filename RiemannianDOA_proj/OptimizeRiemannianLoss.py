@@ -7,9 +7,16 @@ TORCH_DTYPE = torch.complex64
 from utils import EPS_REL_CHANGE
 
 def matrix_logm(B_in):
-    # B_in += get_fixed_noise(size=B_in.shape[0], noise_scale=1e-7)
-    eigvals, eigvecs = torch.linalg.eigh(B_in)
-    # print(torch.min(torch.abs(eigvals[:,None] - eigvals[None,:]).masked_fill((torch.eye(len(eigvals), dtype=bool)), float('inf'))))
+    dim = B_in.shape[-1]
+    # ramp = torch.linspace(0, 1e-5, dim, dtype=B_in.dtype)
+    ramp = torch.arange(0, dim*1e-5, 1e-5, dtype=torch.float32)
+    perturbation = torch.diag(ramp).to(TORCH_DTYPE)
+    B_perturbed = B_in + perturbation
+
+    eigvals, eigvecs = torch.linalg.eigh(B_perturbed)
+    # with torch.no_grad():
+    #     min_eig_diff = torch.min(torch.abs(eigvals[:,None] - eigvals[None,:]).masked_fill((torch.eye(len(eigvals), dtype=bool)), float('inf'))).item()
+    #     print(f"min_eig_diff: {min_eig_diff}, min_eig: {torch.min(eigvals).item()}")
     eigvals_new = torch.log(torch.clamp(eigvals.real, min=1e-10))
     Lam_new = torch.diag(eigvals_new).type(TORCH_DTYPE)
     B_out = eigvecs @ Lam_new @ eigvecs.conj().T
@@ -48,8 +55,8 @@ def loss_LE(p, A, logm_R_hat, sigma2):
 
     logm_R = matrix_logm((A @ P_diag @ A.conj().T + sigma2 * torch.eye(M, dtype=TORCH_DTYPE)))
     diff_matrix = logm_R - logm_R_hat
-    # loss = torch.linalg.matrix_norm(diff_matrix, ord='fro') ** 2
-    loss = torch.sum(diff_matrix * diff_matrix).real
+    loss = torch.linalg.matrix_norm(diff_matrix, ord='fro') ** 2
+    # loss = torch.sum(diff_matrix * diff_matrix).real
     return loss
 
 
@@ -127,10 +134,7 @@ def optimize_adam_LE(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_s
         #     print(f"Parameter NaN/Inf detected")
 
         with torch.no_grad():
-            p_norm = torch.norm(p)
-            rel_change = 0
-            if p_norm > 0:
-                rel_change = (torch.norm(p - p_prev) / p_norm).item()
+            rel_change = (torch.norm(p - p_prev) / (1e-5 + torch.norm(p_prev))).item()
             if do_store_history:
                 rel_change_history.append(rel_change)
                 loss_history.append(loss.item())

@@ -1,12 +1,10 @@
 #!/bin/bash
 #PBS -N OrCohenJob
-#PBS -q zeus_combined_q
+#PBS -q zeus_short_q
 #PBS -l select=1:ncpus=1 
 #PBS -m n
 #PBS -o /home/or.cohen/thesis_code/RiemannianDOA_proj/job_logs/
 #PBS -e /home/or.cohen/thesis_code/RiemannianDOA_proj/job_logs/
-
-rm -f /home/or.cohen/thesis_code/RiemannianDOA_proj/job_logs/*
 
 PBS_O_WORKDIR=$HOME/thesis_code/RiemannianDOA_proj
 cd $PBS_O_WORKDIR

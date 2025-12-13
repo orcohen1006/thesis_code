@@ -189,16 +189,19 @@ def example_display_power_spectrum():
 def display_power_spectrum_tmp():
     # %%
     plt.close('all')
-    doa=np.array([35.0, 43.0, 51.0])
-    power_doa_db=np.array([0, 0, -5])
+    # doa=np.array([35.0, 43.0, 51.0])
+    # power_doa_db=np.array([0, 0, -5])
+
+    doa=np.array([35.0, 41.0])
+    power_doa_db=np.array([0, 0])
 
     config = create_config(
-        m=12, snr=0, N=20, power_doa_db=power_doa_db, doa=doa, cohr_flag=False, noncircular_coeff=0.0
+        m=12, snr=0, N=20, power_doa_db=power_doa_db, doa=doa, cohr_flag=True, noncircular_coeff=0.0
     )
     
     algo_list = get_algo_dict_list(flag_get_all=True)
     # algo_list = {k: v for k, v in algo_list.items() if k in ['AIRM', 'JBLD', 'LE_ss', 'PER', 'ESPRIT']}
-    algo_list = {k: v for k, v in algo_list.items() if k in ['LE_ss', 'PER', 'ESPRIT']}
+    algo_list = {k: v for k, v in algo_list.items() if k in ['SAMV','SPICE', 'JBLD', 'ESPRIT']}
     # algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD','SPICE']}
     result= run_single_mc_iteration(
         i_mc= 1,
