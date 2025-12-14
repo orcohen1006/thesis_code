@@ -11,12 +11,12 @@ from ToolsMC import *
 # %%
 
 def exp_SNR_Large(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.ndarray = np.array([0, 0, -5]),
-                  N=40,
+                  N=40, M=12,
                   cohr_flag: bool = False, basedir:str = '') -> None:
     
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
-    name_results_dir = f'Exp_SNR_Large_{timestamp}_{str_indp_cohr}_N_{N}'
+    name_results_dir = f'Exp_SNR_Large_{timestamp}_{str_indp_cohr}_N_{N}_M_{M}'
     name_results_dir = os.path.join(basedir, name_results_dir)
     path_results_dir = os.path.abspath(name_results_dir)
     print(f"Results will be saved in: {path_results_dir}")
@@ -32,7 +32,7 @@ def exp_SNR_Large(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_d
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=12, snr=vec_snr[i], N=N, 
+                m=M, snr=vec_snr[i], N=N, 
                 power_doa_db=power_doa_db,
                 doa=doa,
                 cohr_flag=cohr_flag,

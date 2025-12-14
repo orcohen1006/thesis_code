@@ -8,8 +8,8 @@ from utils import EPS_REL_CHANGE
 
 def matrix_logm(B_in):
     dim = B_in.shape[-1]
-    # ramp = torch.linspace(0, 1e-5, dim, dtype=B_in.dtype)
-    ramp = torch.arange(0, dim*1e-5, 1e-5, dtype=torch.float32)
+    min_allowed_eig_diff = 1e-4
+    ramp = torch.arange(0, dim*min_allowed_eig_diff, min_allowed_eig_diff, dtype=torch.float32)
     perturbation = torch.diag(ramp).to(TORCH_DTYPE)
     B_perturbed = B_in + perturbation
 
@@ -112,9 +112,6 @@ def optimize_adam_LE(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_s
     A = torch.as_tensor(_A, dtype=TORCH_DTYPE)
 
     M = A.shape[0]
-    tmp_matrix = torch.randn(M, M) + torch.randn(M, M)*1j
-    correction_matrix = (tmp_matrix @ tmp_matrix.conj().T) * 1e-7
-
     p_prev = p.clone().detach()
     optimizer = torch.optim.Adam([p], lr=_lr)
     loss_history = []

@@ -21,7 +21,7 @@ plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m12-d09_10-13-20/Exp_SNR_Large_y2025-m12-d09_10-13-20_indp_N_50'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m12-d13_22-54-20/Exp_SNR_Large_y2025-m12-d13_22-54-20_indp_N_50'
     name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
@@ -192,19 +192,24 @@ def display_power_spectrum_tmp():
     # doa=np.array([35.0, 43.0, 51.0])
     # power_doa_db=np.array([0, 0, -5])
 
-    doa=np.array([35.0, 41.0])
-    power_doa_db=np.array([0, 0])
+    # doa=np.array([35.0, 41.0])
+    # power_doa_db=np.array([0, 0])
 
+    # config = create_config(
+    #     m=12, snr=0, N=20, power_doa_db=power_doa_db, doa=doa, cohr_flag=True, noncircular_coeff=0.0
+    # )
+    
+    
     config = create_config(
-        m=12, snr=0, N=20, power_doa_db=power_doa_db, doa=doa, cohr_flag=True, noncircular_coeff=0.0
+        doa=np.array([35.0, 39.0, 43.0]), power_doa_db=np.array([0, 0, -5])-3, N=100, m=26, snr=0,
     )
     
     algo_list = get_algo_dict_list(flag_get_all=True)
     # algo_list = {k: v for k, v in algo_list.items() if k in ['AIRM', 'JBLD', 'LE_ss', 'PER', 'ESPRIT']}
-    algo_list = {k: v for k, v in algo_list.items() if k in ['SAMV','SPICE', 'JBLD', 'ESPRIT']}
+    algo_list = {k: v for k, v in algo_list.items() if k in ['SPICE', 'JBLD','LE']}
     # algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD','SPICE']}
     result= run_single_mc_iteration(
-        i_mc= 1,
+        i_mc= 0,
         config=config,
         algo_list=list(algo_list.keys()))
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!

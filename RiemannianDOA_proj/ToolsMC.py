@@ -10,7 +10,7 @@ from collections import defaultdict
 from matplotlib.font_manager import FontProperties
 
 NUM_MC = 500
-DEFAULT_NUM_JOBS = 334
+DEFAULT_NUM_JOBS = 600 # 334
 # %%
 def save_job_metadata(workdir: str, config_list: list, num_mc: int, num_jobs: int):
     if os.path.exists(FILENAME_PBS_METADATA):
@@ -38,7 +38,7 @@ def submit_job_array(workdir: str, config_list: list, num_mc: int, num_jobs: int
         shutil.rmtree(job_logs_dir)
     #create the job_logs directory
     os.makedirs(job_logs_dir, exist_ok=True)
-    
+
     res = subprocess.run(["qsub", "-J", f"0-{num_jobs-1}", FILENAME_PBS_SCRIPT], capture_output=True, text=True)
 
     if res.returncode != 0:
