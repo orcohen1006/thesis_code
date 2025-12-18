@@ -22,8 +22,7 @@ def run_all_exp():
     # exp_M(basedir=basedir, power_doa_db=np.array([0]), doa=np.array([35.25]))
 
 
-    # exp_SNR_Large(basedir=basedir, doa=np.array([35.0, 37.0, 39.0]), power_doa_db=np.array([0, 0, -5])-6, N=150, M=50)
-
+    exp_SNR_Large(basedir=basedir, doa=np.array([35.0, 37.0, 39.0]), power_doa_db=np.array([0, 0, -5])-6, N=150, M=50)
 
     # doa=np.array([35.25, 43.25, 51.25])
     doa=np.array([35.0, 43.0, 51.0])

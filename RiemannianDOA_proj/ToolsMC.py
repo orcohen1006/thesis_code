@@ -642,6 +642,94 @@ def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_uni
     return fig
 
 
+
+def plot_iterruntime_boxplot(results, param_vals, param_name, DO_BOXPLOT=True):
+    algo_list = get_algo_dict_list()
+    num_configs = len(results)
+    num_mc = len(results[0])
+    num_algos = len(algo_list)
+    num_iters_mat = np.zeros((num_configs, num_mc, num_algos))
+    runtime_mat = np.zeros((num_configs, num_mc, num_algos))
+    for i_config in range(len(results)):
+        num_iters_mat[i_config,:,:] = np.array([results[i_config][i_mc]["num_iters_list"] for i_mc in range(len(results[i_config]))])
+        runtime_mat[i_config,:,:] = np.array([results[i_config][i_mc]["runtime_list"] for i_mc in range(len(results[i_config]))])
+    iter_runtime_mat = runtime_mat / num_iters_mat  # Shape: (num_configs, num_mc, num_algos)
+
+    # Boxplot settings
+    width = 0.15   # width of each box
+    x = np.arange(num_configs)  # x locations for each config
+    # colors = ['skyblue', 'salmon', 'lightgreen']
+    import matplotlib.colors as mcolors
+
+    def lighten_color(color, amount=0.5):
+        """
+        Lightens the given color by blending it with white.
+        amount=0 returns original color, amount=1 returns white.
+        """
+        try:
+            c = mcolors.to_rgb(color)
+        except ValueError:
+            # if not recognized, default to black
+            c = (0,0,0)
+        white = np.array([1,1,1])
+        return tuple(c + (white - c) * amount)
+    original_colors = [algo_list[d]["color"] for d in algo_list]
+    colors = [lighten_color(c, 0.5) for c in original_colors] 
+    iteration_runtime_ms_mat = runtime_mat#iter_runtime_mat * 1e3  # Convert to milliseconds
+    fig_runtime_boxplot, ax = plt.subplots(figsize=(6,4))
+
+    for algo_idx in range(num_algos):
+        # Shift each algorithm's box a little to the left/right
+        spread = 1.1  # 1 = current spacing, >1 = more spread
+        pos = x + (algo_idx - num_algos/2 + 0.5) * width * spread
+        data_to_plot = [iteration_runtime_ms_mat[config_idx,:,algo_idx] for config_idx in range(num_configs)]
+        
+        if DO_BOXPLOT:
+            bp = ax.boxplot(data_to_plot, positions=pos, widths=width, patch_artist=True)
+            for patch in bp['boxes']:
+                patch.set_facecolor(colors[algo_idx])
+            for whisker in bp['whiskers']:
+                whisker.set_color('black')
+            for cap in bp['caps']:
+                cap.set_color('black')
+            for median in bp['medians']:
+                median.set_color('black')
+        
+        else:
+            vp = ax.violinplot(data_to_plot, positions=pos, widths=width, showmeans=False, showmedians=True, showextrema=False)
+            #set median color black
+            vp['cmedians'].set_color('black')
+            vp['cmedians'].set_linewidth(2)
+            # Fill color
+            for body in vp['bodies']:
+                body.set_facecolor(colors[algo_idx])
+                body.set_alpha(0.5)  # make it transparent
+
+    # Labels and ticks
+    xylabel_fontsize = 12
+    ax.set_xticks(x)
+    ax.set_xticklabels([f'${param_name} = {param_vals[i]}$' for i in range(num_configs)],fontsize=xylabel_fontsize)
+
+    ax.set_ylabel('Iteration Runtime (ms)',fontsize=xylabel_fontsize)
+    # ax.set_title('Algorithm runtimes by configuration')
+    ax.set_yscale('log')
+    # Legend
+    from matplotlib.patches import Patch
+    algo_names = list(algo_list.keys())
+    labels = [f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD") else algo_name 
+                for algo_name in algo_names]
+    legend_handles = [Patch(facecolor=colors[i], label=labels[i]) for i in range(num_algos)]
+    lgd = ax.legend(handles=legend_handles)
+    for text in lgd.get_texts():
+        if "JBLD" in text.get_text():
+            text.set_fontweight("bold")
+    
+    # delta_x = 0.4
+    # ax.set_xlim([0-delta_x,1+delta_x])
+    plt.tight_layout()
+    # plt.show()
+    return fig_runtime_boxplot
+
 # %%
 if __name__ == "__main__":
     # %%

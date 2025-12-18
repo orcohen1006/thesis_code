@@ -8,7 +8,7 @@ from utils import EPS_REL_CHANGE
 
 def matrix_logm(B_in):
     dim = B_in.shape[-1]
-    min_allowed_eig_diff = 1e-4
+    min_allowed_eig_diff = 1e-3
     ramp = torch.arange(0, dim*min_allowed_eig_diff, min_allowed_eig_diff, dtype=torch.float32)
     perturbation = torch.diag(ramp).to(TORCH_DTYPE)
     B_perturbed = B_in + perturbation

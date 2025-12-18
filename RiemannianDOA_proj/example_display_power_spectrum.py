@@ -21,10 +21,17 @@ plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m12-d13_22-54-20/Exp_SNR_Large_y2025-m12-d13_22-54-20_indp_N_50'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m12-d14_01-58-53/Exp_SNR_Large_y2025-m12-d14_01-58-53_indp_N_50_M_12'
     name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
+    # %%
+    m=12
+    vec_n = np.arange(m, 7*m + 1, m)
+    vec_snr = np.arange(-4.5, 4.5 + 1, 1.5)
+
+    plot_iterruntime_boxplot(results, vec_snr, 'SNR', DO_BOXPLOT=True)
+    tmp = 123
     # %%
     for i_config in range(len(results)):
         print(f"-------------- Config {i_config}:")
@@ -200,8 +207,9 @@ def display_power_spectrum_tmp():
     # )
     
     
+    m = 50
     config = create_config(
-        doa=np.array([35.0, 39.0, 43.0]), power_doa_db=np.array([0, 0, -5])-3, N=100, m=26, snr=0,
+        doa=np.array([35.0, 37.0, 39.0]), power_doa_db=np.array([0, 0, -5]) + convert_linear_to_db(12) - convert_linear_to_db(m), N=150, m=m, snr=0 ,
     )
     
     algo_list = get_algo_dict_list(flag_get_all=True)
@@ -209,7 +217,7 @@ def display_power_spectrum_tmp():
     algo_list = {k: v for k, v in algo_list.items() if k in ['SPICE', 'JBLD','LE']}
     # algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD','SPICE']}
     result= run_single_mc_iteration(
-        i_mc= 0,
+        i_mc= 1,
         config=config,
         algo_list=list(algo_list.keys()))
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -222,14 +230,13 @@ def display_power_spectrum_tmp():
     
     ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list)
 
-    # doas = result["config"]["doa"]
-    # power_doa_db = result["config"]["power_doa_db"]
-    # ax.set_xlim([np.min(doas)-10, np.max(doas)+10])
-    # ax.set_ylim([-20, np.max(power_doa_db)+3])
+    doas = result["config"]["doa"]
+    power_doa_db = result["config"]["power_doa_db"]
+    ax.set_xlim([np.min(doas)-10, np.max(doas)+10])
+    ax.set_ylim([-20, np.max(power_doa_db)+3])
     # %%
 
 if __name__ == "__main__":
-    1/0
     example_display_power_spectrum()
     
 # %%
