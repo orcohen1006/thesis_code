@@ -17,7 +17,7 @@ ALGONAME = "SERCOM"
 # =====================================================================
 class GlobalParms: # trick to have a global variable that can be easily modified
     GRID_STEP_DEGREES = 0.5
-    WANTED_ALGO_NAMES = {"SPICE", "SAMV", "AIRM", "JBLD", "LE"}
+    WANTED_ALGO_NAMES = {"SPICE", "SAMV", "AIRM", "JBLD", "LE", "ESPRIT"}
     SENSOR_ARRAY_TYPE = "ULA"
 
 globalParams = GlobalParms()
@@ -482,8 +482,8 @@ def define_all_algo_dict_list():
         "SPICE": {"linestyle": "--", "color": "#BBB800FF", "marker": "s", "markersize": 4, "linewidth": linewidth},
         "SAMV":  {"linestyle": "--", "color": "#E65908", "marker": "^", "markersize": 5.5, "linewidth": linewidth},
         "AIRM":  {"linestyle": "-", "color": "#0CBD56", "marker": "o", "linewidth": linewidth},
-        "JBLD":  {"linestyle": "-", "color": "#2B27FF", "marker": "o", "markerfacecolor": "none", "markersize": 8, "linewidth": linewidth},
         "LE": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 4, "linewidth": linewidth},
+        "JBLD":  {"linestyle": "-", "color": "#2B27FF", "marker": "o", "markerfacecolor": "none", "markersize": 8, "linewidth": linewidth},
         "PER": {"linestyle": ":", "color": "y", "marker": "^"},
         # "LE_ss": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 4, "linewidth": linewidth},
         "MVDR": {"linestyle": "--", "color": "c", "marker": "o", "markersize": 6},

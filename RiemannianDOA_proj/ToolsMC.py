@@ -719,7 +719,7 @@ def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPL
         return tuple(c + (white - c) * amount)
     original_colors = [algo_list[d]["color"] for d in algo_list]
     colors = [lighten_color(c, 0.5) for c in original_colors] 
-    iteration_runtime_ms_mat = runtime_mat#iter_runtime_mat * 1e3  # Convert to milliseconds
+    iteration_runtime_ms_mat = runtime_mat #iter_runtime_mat * 1e3  # Convert to milliseconds
     fig_runtime_boxplot, ax = plt.subplots(figsize=(6,4))
 
     for algo_idx in range(num_algos):
