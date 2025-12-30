@@ -1,3 +1,4 @@
+from unittest import case
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.optimize import linear_sum_assignment
@@ -11,8 +12,16 @@ FILENAME_PBS_METADATA = "job_metadata.pkl"
 
 
 EPS_REL_CHANGE = 1e-4
-
 ALGONAME = "SERCOM"
+
+# =====================================================================
+class GlobalParms: # trick to have a global variable that can be easily modified
+    GRID_STEP_DEGREES = 0.5
+    WANTED_ALGO_NAMES = {"SPICE", "SAMV", "AIRM", "JBLD", "LE"}
+    SENSOR_ARRAY_TYPE = "ULA"
+
+globalParams = GlobalParms()
+# =====================================================================
 
 def save_figure(fig: plt.Figure, path_results_dir: str, name: str):
     fig.savefig(os.path.join(path_results_dir, name +  '.png'), dpi=300)
@@ -185,19 +194,27 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
     
     dummy_estimated_doa = 0.0
     dummy_estimated_power = convert_db_to_linear(-10)
-
-    if isinstance(p_vec, torch.Tensor):
-        p_vec = p_vec.numpy()
     num_sources = len(true_doas)
-    # Find peaks in descending order
-    threshold_peak_height = max(allowed_peak_height_relative_to_max * np.max(p_vec), 0)
-    peak_indices, _ = find_peaks(p_vec, height=threshold_peak_height)
-    num_detected_doas = len(peak_indices)
-    peak_indices = peak_indices[np.argsort(p_vec[peak_indices])[::-1]] # Sort the inidices by peaks values in descending order
-    
-    all_detected_doas = grid_doa[peak_indices]
-    all_detected_powers = p_vec[peak_indices]
+
+    if isinstance(p_vec, tuple):
+        num_detected_doas = len(p_vec)
+        all_detected_doas = np.array(p_vec)
+        all_detected_powers = np.full((num_detected_doas,), np.nan)
+        mean_HPBW = np.full((num_detected_doas,), np.nan)
+    else:    
+        if isinstance(p_vec, torch.Tensor):
+            p_vec = p_vec.numpy()
+        # Find peaks in descending order
+        threshold_peak_height = max(allowed_peak_height_relative_to_max * np.max(p_vec), 0)
+        peak_indices, _ = find_peaks(p_vec, height=threshold_peak_height)
+        num_detected_doas = len(peak_indices)
+        peak_indices = peak_indices[np.argsort(p_vec[peak_indices])[::-1]] # Sort the inidices by peaks values in descending order
         
+        all_detected_doas = grid_doa[peak_indices]
+        all_detected_powers = p_vec[peak_indices]
+            
+        mean_HPBW = compute_list_HPBW(p_vec, grid_doa, peak_indices)    
+
     # all_detected_doas = []
     # all_detected_powers = []
     # for i_detected_doa in range(num_detected_doas):
@@ -241,7 +258,6 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
                 succ_match_true_doa[true_idx] = True
     
 
-    mean_HPBW = compute_list_HPBW(p_vec, grid_doa, peak_indices)    
 
     return num_detected_doas, all_detected_doas, all_detected_powers, selected_doa_error, selected_power_error, \
             succ_match_detected_doa, succ_match_true_doa, mean_HPBW
@@ -274,7 +290,7 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
 
     list_plt = []
     for i_algo, algo_name in enumerate(algo_list.keys()):
-        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD") else algo_name
+        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
         est = list_p_vec[i_algo]
         # check if est is a tuple (for ESPRIT)
         if isinstance(est, tuple):
@@ -391,23 +407,74 @@ def make_non_circular(s, kappa):
     return real + 1j * new_imag
 
 def get_doa_grid():
-    res = 0.5 # resolution in degrees
+    res = globalParams.GRID_STEP_DEGREES
     doa_scan = np.arange(0, 180+res, res)  # doa grid
     return doa_scan
-def get_steering_matrix(theta_degrees, m, calcGradient_wrt_radians=False):
+
+def get_steering_matrix(theta_degrees, M, calcGradient_wrt_radians=False):
+    # write match-case for different array types:
+    match globalParams.SENSOR_ARRAY_TYPE:
+        case "ULA":
+            return get_steering_matrix_ula(theta_degrees, M, calcGradient_wrt_radians)
+        case "HALF_UCA":
+            return get_steering_matrix_half_uca(theta_degrees, M, calcGradient_wrt_radians)
+        case _:
+            raise ValueError(f"Unknown SENSOR_ARRAY_TYPE: {globalParams.SENSOR_ARRAY_TYPE}")
+
+
+def get_steering_matrix_ula(theta_degrees, M, calcGradient_wrt_radians=False):
 
     doa_rad = np.deg2rad(theta_degrees) # Convert to radians
-    delta_vec = np.arange(m)    
+    delta_vec = np.arange(M)    
     A = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(doa_rad)))
     # print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
     # A = A / np.sqrt(m)
     
+    # print("ULA:")
+    # print(A[:,0])
+
     if calcGradient_wrt_radians:
         dA_dtheta_radians = -1j * np.pi * np.outer(delta_vec, np.sin(doa_rad)) * A  # shape (m, K)
         return A, dA_dtheta_radians
     return A
 
-def get_algo_dict_list(flag_get_all=False):
+import numpy as np
+
+def get_steering_matrix_half_uca(theta_degrees, M, calcGradient_wrt_radians=False):
+    theta_degrees = np.asarray(theta_degrees)
+    doa_rad = np.deg2rad(theta_degrees)        # (K,)
+    K = doa_rad.size
+
+    # choose R so arc spacing ≈ λ/2
+    # Arc length = π R, (M-1) segments, each ≈ λ/2:
+    # (M-1)*(λ/2) ≈ π R  =>  R/λ ≈ (M-1)/(2π)
+    radius_over_lambda = (M - 1) / (2.0 * np.pi)
+
+    # Sensor angles: half circle from -π/2 to +π/2
+    sensor_angles = -0.5 * np.pi + np.pi * np.arange(M) / (M - 1)  # (M,)
+
+    # kR = 2π (R/λ)
+    kR = 2.0 * np.pi * radius_over_lambda
+
+    # phase[m,k] = kR * cos(theta_k - phi_m)
+    phase = kR * np.cos(doa_rad[None, :] - sensor_angles[:, None])  # (M, K)
+
+    A = np.exp(1j * phase)  # (M, K)
+
+    # print("HALF_UCA:")
+    # print(A[:,0])
+    
+    if calcGradient_wrt_radians:
+        # d/dθ cos(θ - φ) = -sin(θ - φ)
+        dphase_dtheta = -kR * np.sin(doa_rad[None, :] - sensor_angles[:, None])  # (M, K)
+        # a(θ) = exp(j phase(θ)), so:
+        # dA/dθ = j * A * dphase_dtheta
+        dA_dtheta_radians = 1j * A * dphase_dtheta  # (M, K)
+        return A, dA_dtheta_radians
+
+    return A
+
+def define_all_algo_dict_list():
     # return [("PER",'r-->'), ("SPICE",'m--p'), ("SAMV",'b-^'), ("AIRM",'g--s'), ("JBLD",'y--o')]
     # return [("SPICE",'m--p'), ("SAMV",'r--^'), ("AIRM",'g-s'), ("JBLD",'b--o')]
     linewidth = 2
@@ -417,17 +484,23 @@ def get_algo_dict_list(flag_get_all=False):
         "AIRM":  {"linestyle": "-", "color": "#0CBD56", "marker": "o", "linewidth": linewidth},
         "JBLD":  {"linestyle": "-", "color": "#2B27FF", "marker": "o", "markerfacecolor": "none", "markersize": 8, "linewidth": linewidth},
         "LE": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 4, "linewidth": linewidth},
-    }
-    if flag_get_all:
-        d = {
-                "PER": {"linestyle": ":", "color": "y", "marker": "^"},
-                # "LE_ss": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 4, "linewidth": linewidth},
-                "MVDR": {"linestyle": "--", "color": "c", "marker": "o", "markersize": 6},
-                "ESPRIT": {"linestyle": "", "color": "r", "marker": "o", "markersize": 8},
-                **d}
+        "PER": {"linestyle": ":", "color": "y", "marker": "^"},
+        # "LE_ss": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 4, "linewidth": linewidth},
+        "MVDR": {"linestyle": "--", "color": "c", "marker": "o", "markersize": 6},
+        "ESPRIT": {"linestyle": "--", "color": "black", "marker": "o", "markerfacecolor": "none", "markersize": 6},
+        }
 
     return d
 
+def get_algo_dict_list():
+    all_algo_list = define_all_algo_dict_list()
+    wanted_algo_names = globalParams.WANTED_ALGO_NAMES
+    algo_list = {k: v for k, v in all_algo_list.items() if k in wanted_algo_names}
+    return algo_list
+def get_specific_inorder_algo_list(specific_algo_names):
+    all_algo_list = define_all_algo_dict_list()
+    algo_list = {k: all_algo_list[k] for k in specific_algo_names if k in all_algo_list}
+    return algo_list
 
 def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False, cohr_coeff=1.0, noncircular_coeff=0.0, 
                   impulse_prob=0.0, impulse_factor=1.0):

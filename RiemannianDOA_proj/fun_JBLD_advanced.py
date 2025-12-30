@@ -44,9 +44,6 @@ def make_scipy_objective(loss_fn, device="cpu", dtype=torch.float):
     
     return fun, jac
 
-def hermitian(A: Tensor) -> Tensor:
-    return A.mT.conj()
-
 @torch.no_grad()
 def project_nonneg_(p: Tensor) -> Tensor:
     p.clamp_(min=0)
@@ -57,9 +54,7 @@ def build_R(A: Tensor, p: Tensor, sigma2: float) -> Tensor:
     """R(p) = A diag(p) A^H + sigma2 I
     Works with complex or real A. p is real, shape (K,).
     """
-    # Scale columns by p: A @ diag(p) == A * p (broadcast along rows)
-    As = A * p.unsqueeze(0)  # (M,K)
-    R = As @ hermitian(A)
+    R = (A * p.unsqueeze(0)) @ A.mT.conj()
     M = A.shape[0]
     R = R + sigma2 * torch.eye(M, dtype=R.dtype, device=R.device)
     return R
@@ -95,7 +90,7 @@ def jbl_loss(A: Tensor, p: Tensor, sigma2: float, Rhat: Tensor) -> Tensor:
 
     logdet_Rbar, _ = cholesky_logdet_and_solve(Rbar)
     logdet_R, _ = cholesky_logdet_and_solve(R)
-    logdet_Rhat, _ = cholesky_logdet_and_solve(Rhat)
+    # logdet_Rhat, _ = cholesky_logdet_and_solve(Rhat)
 
     return logdet_Rbar - 0.5 * logdet_R # - 0.5 * logdet_Rhat
 

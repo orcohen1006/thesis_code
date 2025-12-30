@@ -5,8 +5,10 @@ import matplotlib.pyplot as plt
 from Exp_N import *
 from Exp_M import *
 from Exp_Rho import *
-from Exp_SNR_Large import *
+from Exp_SNR import *
+from Exp_SNR_HUCA import *
 from Exp_M import *
+from Exp_OffGrid import *
 from commit_repo_git import git_commit_and_push
 from datetime import datetime
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -22,19 +24,26 @@ def run_all_exp():
     # exp_M(basedir=basedir, power_doa_db=np.array([0]), doa=np.array([35.25]))
 
 
-    exp_SNR_Large(basedir=basedir, doa=np.array([35.0, 37.0, 39.0]), power_doa_db=np.array([0, 0, -5])-6, N=150, M=50)
+    # exp_SNR(basedir=basedir, doa=np.array([35.0, 37.0, 39.0]), power_doa_db=np.array([0, 0, -5])-6, N=150, M=50)
 
     # doa=np.array([35.25, 43.25, 51.25])
     doa=np.array([35.0, 43.0, 51.0])
     power_doa_db=np.array([0, 0, -5])
 
-    exp_SNR_Large(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=50, M=12)
+    # exp_SNR(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=50, M=12)
 
-    exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=-1.5)
+    # exp_N(basedir=basedir, doa=doa, power_doa_db=power_doa_db, snr=-1.5)
         
     # doa_for_exp_rho = np.array([35.25, 41.25])
     doa_for_exp_rho = np.array([35.0, 41.0])
-    exp_rho(basedir=basedir, doa=doa_for_exp_rho, power_doa_db=np.array([0, 0]), N=50)
+    # exp_rho(basedir=basedir, doa=doa_for_exp_rho, power_doa_db=np.array([0, 0]), N=50)
+
+
+    exp_SNR_HUCA(basedir=basedir, doa=doa, power_doa_db=power_doa_db, N=50, M=12)
+
+
+    doa_for_offgrid=np.array([35.0, 51.0])
+    exp_OffGrid(basedir=basedir, doa=doa_for_offgrid, power_doa_db=np.array([0, 0]), N=50, M=12)
     # ---------------------------------------
     print(f'Total Running Time: {time.time() - t0_overall} sec.')
     return basedir

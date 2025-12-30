@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from collections import defaultdict
 import pickle
 from fun_LE import fun_LE_ss
+import utils
 from utils import *
 from fun_DAS import *
 from fun_SAMV import *
@@ -112,7 +113,7 @@ def run_single_mc_iteration(
     result['runtime_list'] = runtime_list
     result['num_iters_list'] = num_iters_list
     result['p_vec_list'] = p_vec_list
-
+    result['algo_names'] = algo_list
     
     return result
 
@@ -172,6 +173,9 @@ if __name__ == "__main__":
     num_mc = metadata["num_mc"]
     num_jobs = metadata["num_jobs"]
     workdir = metadata["workdir"]
+    utils.globalParams.GRID_STEP_DEGREES = metadata["grid_step_degrees"]
+    utils.globalParams.WANTED_ALGO_NAMES = metadata["wanted_algo_names"]
+    utils.globalParams.SENSOR_ARRAY_TYPE = metadata["sensor_array_type"]
 
     total_tasks = num_configs * num_mc
     tasks_per_job = (total_tasks + num_jobs - 1) // num_jobs  # ceil division
@@ -195,6 +199,7 @@ if __name__ == "__main__":
         with open(result_path, 'wb') as f:
             pickle.dump(result, f)
         print(f"(task_id:{task_id}) successfully saved result file: {result_path}")
+
     # %% Example usage
     # i_mc = 0
     # filepath_config = "tmp_config_file.pkl"

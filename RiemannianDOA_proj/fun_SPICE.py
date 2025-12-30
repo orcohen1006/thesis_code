@@ -57,8 +57,9 @@ def fun_SPICE(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
     for jj in range(maxIter):
         p_prev = p.copy()
         
-        R = A @ np.diag(p) @ A.conj().T + sigma * np.eye(M)
-        
+        # R = A @ np.diag(p) @ A.conj().T + sigma * np.eye(M)
+        R = (A * p[np.newaxis, :]) @ A.conj().T + sigma * np.eye(M)
+
         R_hat_sqrt = linalg.sqrtm(R_hat)
         Rinv_R_hat_sqrt = np.linalg.solve(R, R_hat_sqrt)
         am_Rinv_R_hat_sqrt = A.conj().T @ Rinv_R_hat_sqrt

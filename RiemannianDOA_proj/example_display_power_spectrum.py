@@ -21,7 +21,7 @@ plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m12-d14_01-58-53/Exp_SNR_Large_y2025-m12-d14_01-58-53_indp_N_50_M_12'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/Exp_OffGrid_y2025-m12-d30_11-53-57_indp_N_50_M_12'
     name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
@@ -29,9 +29,11 @@ def example_display_power_spectrum():
     m=12
     vec_n = np.arange(m, 7*m + 1, m)
     vec_snr = np.arange(-4.5, 4.5 + 1, 1.5)
-
-    plot_iterruntime_boxplot(results, vec_snr, 'SNR', DO_BOXPLOT=True)
-    tmp = 123
+    # vec_m = np.array([10,100])
+    tmp = [[item for sublist in results for item in sublist]]
+    tmp = [results[3]]
+    plot_iteration_and_runtime_boxplot(tmp, np.array([1]), 'tmp', DO_BOXPLOT=True, logscale_y=False)
+    1+1
     # %%
     for i_config in range(len(results)):
         print(f"-------------- Config {i_config}:")
@@ -76,7 +78,7 @@ def example_display_power_spectrum():
     save_figure(fig_spec, path_results_dir, f'Power_Spectrum_i_config_{i_config}_i_mc_ {i_mc}')
     # %%
     algo_list = get_algo_dict_list()
-    i_config = 4
+    i_config = 0
     
     fig = plt.figure()
     fig.suptitle(f"Config {i_config}")
@@ -85,7 +87,7 @@ def example_display_power_spectrum():
         name_algo = list(algo_list.keys())[i_algo]
         sqerr_dict[name_algo] = np.array([np.sum(results[i_config][i_mc]["selected_doa_error"][i_algo] ** 2)
                      for i_mc in range(len(results[i_config]))])
-        fig.add_subplot(2, 2, i_algo + 1)
+        fig.add_subplot(2, 3, i_algo + 1)
         plt.hist(sqerr_dict[name_algo], bins=50)
         plt.title(name_algo + f", Median={np.median(sqerr_dict[name_algo]):.2f}")
     # space out the subplots
@@ -195,29 +197,35 @@ def example_display_power_spectrum():
 # %%
 def display_power_spectrum_tmp():
     # %%
+    # utils.globalParams.SENSOR_ARRAY_TYPE = "ULA"
+    utils.globalParams.SENSOR_ARRAY_TYPE = "HALF_UCA"
     plt.close('all')
-    # doa=np.array([35.0, 43.0, 51.0])
-    # power_doa_db=np.array([0, 0, -5])
+    # doa=np.array([30.0, 55.0])
+    # power_doa_db=np.array([0, 0])
+
+    doa=np.array([35.0, 43.0, 51.0])
+    power_doa_db=np.array([0, 0, -5])
 
     # doa=np.array([35.0, 41.0])
     # power_doa_db=np.array([0, 0])
 
-    # config = create_config(
-    #     m=12, snr=0, N=20, power_doa_db=power_doa_db, doa=doa, cohr_flag=True, noncircular_coeff=0.0
-    # )
-    
-    
-    m = 50
     config = create_config(
-        doa=np.array([35.0, 37.0, 39.0]), power_doa_db=np.array([0, 0, -5]) + convert_linear_to_db(12) - convert_linear_to_db(m), N=150, m=m, snr=0 ,
+        m=12, snr=0, N=20, power_doa_db=power_doa_db, doa=doa
     )
     
-    algo_list = get_algo_dict_list(flag_get_all=True)
+    # m = 12
+    # config = create_config(
+    #     doa=np.array([35.0, 51.0]), power_doa_db=np.array([0, 0]) + convert_linear_to_db(12) - convert_linear_to_db(m), N=50, m=m, snr=0 ,
+    # )
+    
+    algo_list = define_all_algo_dict_list()
     # algo_list = {k: v for k, v in algo_list.items() if k in ['AIRM', 'JBLD', 'LE_ss', 'PER', 'ESPRIT']}
-    algo_list = {k: v for k, v in algo_list.items() if k in ['SPICE', 'JBLD','LE']}
-    # algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD','SPICE']}
+    # algo_list = {k: v for k, v in algo_list.items() if k in ['PER']}
+    # algo_list = {k: v for k, v in algo_list.items() if k in ['SPICE', 'JBLD','LE']}
+    # algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD']}
+    algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD','SPICE']}
     result= run_single_mc_iteration(
-        i_mc= 1,
+        i_mc= 2,
         config=config,
         algo_list=list(algo_list.keys()))
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -232,7 +240,7 @@ def display_power_spectrum_tmp():
 
     doas = result["config"]["doa"]
     power_doa_db = result["config"]["power_doa_db"]
-    ax.set_xlim([np.min(doas)-10, np.max(doas)+10])
+    # ax.set_xlim([np.min(doas)-10, np.max(doas)+10])
     ax.set_ylim([-20, np.max(power_doa_db)+3])
     # %%
 

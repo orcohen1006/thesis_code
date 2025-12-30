@@ -5,9 +5,11 @@ import pickle
 import subprocess
 import time
 from pathlib import Path
+import utils
 from utils import *
 from collections import defaultdict
 from matplotlib.font_manager import FontProperties
+import time
 
 NUM_MC = 500
 DEFAULT_NUM_JOBS = 600 # 334
@@ -20,6 +22,10 @@ def save_job_metadata(workdir: str, config_list: list, num_mc: int, num_jobs: in
     metadata["num_jobs"] = num_jobs
     metadata["num_mc"] = num_mc
     metadata["workdir"] = workdir
+    metadata["grid_step_degrees"] = utils.globalParams.GRID_STEP_DEGREES
+    metadata["wanted_algo_names"] = utils.globalParams.WANTED_ALGO_NAMES
+    metadata["sensor_array_type"] = utils.globalParams.SENSOR_ARRAY_TYPE
+    
     with open(FILENAME_PBS_METADATA, "wb") as f:
         pickle.dump(metadata, f)
 
@@ -48,16 +54,46 @@ def submit_job_array(workdir: str, config_list: list, num_mc: int, num_jobs: int
     print("Job submission output:", res.stdout)
     return res.stdout.strip()
 
+# def wait_for_results(workdir: str, config_list: list, num_mc:int, job_id:str, t0: float):
+#     expected = len(config_list) * num_mc
+#     while True:
+#         done = len(list(Path(workdir).glob("config_*_mc_*.pkl")))
+#         # workdir is a string of a path, get string of the last two parts of the path
+#         workdir_parts = Path(workdir).parts[-2:] 
+#         print(f"Job {job_id} Waiting... {workdir_parts},   {done}/{expected} results ready. elapsed time: {time.time() - t0:.2f} [sec]")
+#         if done >= expected:
+#             break
+#         time.sleep(5) 
+
+
+
+
+from tqdm import tqdm
 def wait_for_results(workdir: str, config_list: list, num_mc:int, job_id:str, t0: float):
     expected = len(config_list) * num_mc
-    while True:
-        done = len(list(Path(workdir).glob("config_*_mc_*.pkl")))
-        # workdir is a string of a path, get string of the last two parts of the path
-        workdir_parts = Path(workdir).parts[-2:] 
-        print(f"Job {job_id} Waiting... {workdir_parts},   {done}/{expected} results ready. elapsed time: {time.time() - t0:.2f} [sec]")
-        if done >= expected:
-            break
-        time.sleep(5) 
+
+    def count_results():
+        return len(list(Path(workdir).glob("config_*_mc_*.pkl")))
+
+    current = count_results()
+    last_update_time = time.time()
+    pbar = tqdm(total=expected, initial=current, desc="results ready", unit="file")
+
+    while current < expected:
+        new_count = count_results()
+        now = time.time()
+        # Only update by the difference
+        if new_count > current:
+            pbar.update(new_count - current)
+            current = new_count
+            last_update_time = now
+        
+        elapsed = now - last_update_time
+        pbar.set_postfix_str(f"last update: {elapsed:0.1f}s ago")
+        time.sleep(5)
+
+    pbar.close()
+
 
 def collect_results(workdir: str, config_list: list, num_mc:int):
     results = []
@@ -103,9 +139,10 @@ def RunDoaConfigsPBS(workdir: str, config_list: list, num_mc:int, num_jobs: int 
 # %%
 def analyze_algo_errors(results: list):
     from CRB import cramer_rao_lower_bound
-    algo_list = get_algo_dict_list()
+    algo_names = results[0][0]["algo_names"]
+    algo_list = get_specific_inorder_algo_list(algo_names)
     num_algo = len(algo_list)
-    grid_doa = get_doa_grid()
+    grid_doa = utils.get_doa_grid()
     num_configs = len(results)
     num_mc = len(results[0])
     for i_config in range(num_configs):
@@ -184,9 +221,9 @@ def analyze_algo_errors(results: list):
                 # power_errors = np.stack([power_errors[i] for i in bottom_q_percent_indices])
 
                 median_ = np.median(mean_square_errors)
-                inds_to_remove = np.where(mean_square_errors > 1000*median_)[0]
+                inds_to_remove = np.where(mean_square_errors > 1000*(median_+1e-1))[0]
                 prcnt_outliers = len(inds_to_remove) / len(mean_square_errors) * 100
-                if prcnt_outliers > 5: 
+                if prcnt_outliers > 15: 
                     print(f"ERROR: {prcnt_outliers} % outliers detected in config {i_config}, algo {algo_name}. ")
                     doa_errors = np.nan * np.ones_like(doa_errors)
                     power_errors = np.nan * np.ones_like(power_errors)
@@ -489,10 +526,14 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         doa_mse = mse_doa_errors
         doa_mse_mean = np.mean(doa_mse, axis=1)
         doa_root_mse_mean = np.sqrt(doa_mse_mean)
+
+        if any(np.isnan(doa_root_mse_mean)):
+            continue
+
         if normalize_rmse_by_parameter:
             doa_root_mse_mean = doa_root_mse_mean / parameter_values
         
-        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD") else algo_name
+        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
         pltline = ax.plot(parameter_values, doa_root_mse_mean, label=label, **algo_list[algo_name])
 
         qlow = np.sqrt(np.percentile(doa_mse, 25, axis=1))
@@ -615,10 +656,13 @@ def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_uni
         power_mse_mean = np.mean(power_mse, axis=1)
         power_root_mse_mean = np.sqrt(power_mse_mean)
 
+        if any(np.isnan(power_root_mse_mean)):
+            continue
+
         if normalize_rmse_by_parameter:
             power_root_mse_mean = power_root_mse_mean / parameter_values
 
-        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD") else algo_name
+        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
         pltline = ax.plot(parameter_values, power_root_mse_mean, label=label, **algo_list[algo_name])
 
         qlow = np.sqrt(np.percentile(power_mse, 25, axis=1))
@@ -643,7 +687,7 @@ def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_uni
 
 
 
-def plot_iterruntime_boxplot(results, param_vals, param_name, DO_BOXPLOT=True):
+def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPLOT=True, logscale_y=True):
     algo_list = get_algo_dict_list()
     num_configs = len(results)
     num_mc = len(results[0])
@@ -710,13 +754,14 @@ def plot_iterruntime_boxplot(results, param_vals, param_name, DO_BOXPLOT=True):
     ax.set_xticks(x)
     ax.set_xticklabels([f'${param_name} = {param_vals[i]}$' for i in range(num_configs)],fontsize=xylabel_fontsize)
 
-    ax.set_ylabel('Iteration Runtime (ms)',fontsize=xylabel_fontsize)
+    ax.set_ylabel('Runtime (s)',fontsize=xylabel_fontsize)
     # ax.set_title('Algorithm runtimes by configuration')
-    ax.set_yscale('log')
+    if logscale_y:
+        ax.set_yscale('log')
     # Legend
     from matplotlib.patches import Patch
     algo_names = list(algo_list.keys())
-    labels = [f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD") else algo_name 
+    labels = [f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name 
                 for algo_name in algo_names]
     legend_handles = [Patch(facecolor=colors[i], label=labels[i]) for i in range(num_algos)]
     lgd = ax.legend(handles=legend_handles)
@@ -728,6 +773,48 @@ def plot_iterruntime_boxplot(results, param_vals, param_name, DO_BOXPLOT=True):
     # ax.set_xlim([0-delta_x,1+delta_x])
     plt.tight_layout()
     # plt.show()
+
+
+
+    
+    def print_table_with_percentile(table_name, mat):
+        from tabulate import tabulate
+        qlow_mat = np.percentile(mat, 10, axis=1).T
+        qmid_mat = np.percentile(mat, 50, axis=1).T
+        qhigh_mat = np.percentile(mat, 95, axis=1).T
+
+        header = ["Algorithm"] + [f'${param_name} = {param_vals[i]}$' for i in range(num_configs)]
+        table_data = []
+
+        for alg_idx in range(num_algos):
+            row = [algo_names[alg_idx]]
+            for cfg_idx in range(num_configs):
+                formatted_value = (
+                    f"{qmid_mat[alg_idx, cfg_idx]:.4f} "
+                    f"[ {qlow_mat[alg_idx, cfg_idx]:.4f}, "
+                    f"{qhigh_mat[alg_idx, cfg_idx]:.4f} ]"
+                )
+                row.append(formatted_value)
+            table_data.append(row)
+
+        print(f"================   {table_name}   ================")
+        tabulate_data = tabulate(table_data, headers=header, tablefmt="grid")
+        print(tabulate_data)
+        print("==========================================================")
+
+        # with open(os.path.join(path_results_dir, table_name+'.txt'), "w") as f:
+        #     f.write(tabulate_data)
+        # return tabulate_data
+    
+    # print_table("Runtime", runtime_mat.mean(axis=1).T, runtime_mat.std(axis=1).T)
+    # print_table("Num Iters", num_iters_mat.mean(axis=1).T, num_iters_mat.std(axis=1).T)
+    # print_table("Iteration Runtime", iter_runtime_mat.mean(axis=1).T, iter_runtime_mat.std(axis=1).T)
+    # print_table_with_percentile("Runtime", runtime_mat)
+    print_table_with_percentile("Num Iters", num_iters_mat)
+    # print_table_with_percentile("Iteration Runtime [ms]", iter_runtime_mat * 1e3)  # Convert to milliseconds
+
+
+
     return fig_runtime_boxplot
 
 # %%
