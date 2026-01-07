@@ -17,6 +17,7 @@ ALGONAME = "SERCOM"
 # =====================================================================
 class GlobalParms: # trick to have a global variable that can be easily modified
     GRID_STEP_DEGREES = 0.5
+    GRID_MIN_MAX_VALS_DEGREES = (0, 180)
     WANTED_ALGO_NAMES = {"SPICE", "SAMV", "AIRM", "JBLD", "LE", "ESPRIT"}
     SENSOR_ARRAY_TYPE = "ULA"
 
@@ -407,9 +408,10 @@ def make_non_circular(s, kappa):
     return real + 1j * new_imag
 
 def get_doa_grid():
-    res = globalParams.GRID_STEP_DEGREES
-    doa_scan = np.arange(0, 180+res, res)  # doa grid
-    return doa_scan
+    step_deg = globalParams.GRID_STEP_DEGREES
+    minval_deg, maxval_deg = globalParams.GRID_MIN_MAX_VALS_DEGREES
+    doa_grid = np.arange(minval_deg, maxval_deg+step_deg, step_deg)
+    return doa_grid
 
 def get_steering_matrix(theta_degrees, M, calcGradient_wrt_radians=False):
     # write match-case for different array types:

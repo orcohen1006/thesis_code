@@ -42,6 +42,7 @@ def exp_SNR_HUCA(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db
     results = RunDoaConfigsPBS(path_results_dir, config_list, num_mc)
     # %%
     results, algos_error_data = analyze_algo_errors(results)
+
     #
     fig_doa_errors = plot_doa_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False, do_ylogscale=False)
     # tmp = plot_doa_boxplots(algos_error_data, vec_snr, parameter_vals_to_show=[-3, 0], do_ylogscale=True)

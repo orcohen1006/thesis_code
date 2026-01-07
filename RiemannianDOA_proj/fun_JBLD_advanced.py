@@ -579,6 +579,7 @@ def optimize_adam_cholesky_JBLD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr
     rel_change_history = []
 
     for step in range(_max_iter):
+        print(f"JBLD iteration {step}/{_max_iter}", end='\r')
         optimizer.zero_grad()
         loss = jbl_loss(A, p, _sigma2, R_hat)
         loss.backward()

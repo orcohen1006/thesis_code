@@ -8,7 +8,7 @@ from utils import EPS_REL_CHANGE
 
 def matrix_logm(B_in):
     dim = B_in.shape[-1]
-    min_allowed_eig_diff = 1e-3
+    min_allowed_eig_diff = 1e-2
     ramp = torch.arange(0, dim*min_allowed_eig_diff, min_allowed_eig_diff, dtype=torch.float32)
     perturbation = torch.diag(ramp).to(TORCH_DTYPE)
     B_perturbed = B_in + perturbation
@@ -80,6 +80,7 @@ def optimize_adam_AIRM(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do
     rel_change_history = []
 
     for step in range(_max_iter):
+        print(f"AIRM iteration {step}/{_max_iter}", end='\r')
         optimizer.zero_grad()
         loss = loss_AFFINV(p, A, pinv_sqrtm_R_hat, _sigma2)
         loss.backward()
@@ -118,6 +119,7 @@ def optimize_adam_LE(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_s
     rel_change_history = []
 
     for step in range(_max_iter):
+        print(f"LE iteration {step}/{_max_iter}", end='\r')
         optimizer.zero_grad()
         loss = loss_LE(p, A, logm_R_hat, _sigma2)
         # with torch.autograd.detect_anomaly():

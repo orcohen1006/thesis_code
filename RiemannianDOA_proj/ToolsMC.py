@@ -516,7 +516,9 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
                     do_ylogscale: bool = False):
     import matplotlib.pyplot as plt
     
-    algo_list = get_algo_dict_list()
+    algo_names = list(algos_error_data["mean_doa_errors"].keys())
+    algo_list = get_specific_inorder_algo_list(algo_names)
+    # algo_list = get_algo_dict_list()
     fig = plt.figure()
     ax = plt.gca()
     for algo_name in algo_list.keys():

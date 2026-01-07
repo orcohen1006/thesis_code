@@ -21,7 +21,7 @@ plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/Exp_OffGrid_y2025-m12-d30_11-53-57_indp_N_50_M_12'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m12-d30_20-41-57/Exp_Rho_y2025-m12-d30_21-01-54'
     name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
@@ -109,6 +109,8 @@ def example_display_power_spectrum():
 
 
     # %%
+    tmp = plot_iteration_and_runtime_boxplot(results, vec_snr, 'SNR', logscale_y=False)
+    # %%
     algo_list = get_algo_dict_list()
     num_configs = len(results)
     num_mc = len(results[0])
@@ -195,58 +197,88 @@ def example_display_power_spectrum():
     print_table("Iteration Runtime", iter_runtime_mat.mean(axis=1).T, iter_runtime_mat.std(axis=1).T)
 
 # %%
-def display_power_spectrum_tmp():
-    # %%
-    # utils.globalParams.SENSOR_ARRAY_TYPE = "ULA"
-    utils.globalParams.SENSOR_ARRAY_TYPE = "HALF_UCA"
-    plt.close('all')
-    # doa=np.array([30.0, 55.0])
-    # power_doa_db=np.array([0, 0])
 
-    doa=np.array([35.0, 43.0, 51.0])
-    power_doa_db=np.array([0, 0, -5])
+import numpy as np
+from time import time
+import matplotlib.pyplot as plt
+from typing import List, Tuple, Dict, Any, Optional
+# %matplotlib ipympl
 
-    # doa=np.array([35.0, 41.0])
-    # power_doa_db=np.array([0, 0])
+from RunSingleMCIteration import run_single_mc_iteration
+from utils import *
+import os
+import pickle
+# 
+import utils
+import ToolsMC
+import importlib
+importlib.reload(utils)
+importlib.reload(ToolsMC)
+from utils import *
+from ToolsMC import *
+plt.close('all')
+utils.globalParams = GlobalParms()  # reset global params to default values
+utils.globalParams.SENSOR_ARRAY_TYPE = "ULA"
+# utils.globalParams.SENSOR_ARRAY_TYPE = "HALF_UCA"
+# M = 12
+M = 120
 
-    config = create_config(
-        m=12, snr=0, N=20, power_doa_db=power_doa_db, doa=doa
-    )
-    
-    # m = 12
-    # config = create_config(
-    #     doa=np.array([35.0, 51.0]), power_doa_db=np.array([0, 0]) + convert_linear_to_db(12) - convert_linear_to_db(m), N=50, m=m, snr=0 ,
-    # )
-    
-    algo_list = define_all_algo_dict_list()
-    # algo_list = {k: v for k, v in algo_list.items() if k in ['AIRM', 'JBLD', 'LE_ss', 'PER', 'ESPRIT']}
-    # algo_list = {k: v for k, v in algo_list.items() if k in ['PER']}
-    # algo_list = {k: v for k, v in algo_list.items() if k in ['SPICE', 'JBLD','LE']}
-    # algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD']}
-    algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD','SPICE']}
-    result= run_single_mc_iteration(
-        i_mc= 2,
-        config=config,
-        algo_list=list(algo_list.keys()))
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # R_hat = result["R_hat"]
-    # A = get_steering_matrix(get_doa_grid(),R_hat.shape[0])
-    # invR_hat_A = np.linalg.solve(R_hat, A)
-    # p_MVDR = 1/np.sum(A.conj() * invR_hat_A, axis=0)
-    # result["p_vec_list"][0] = p_MVDR
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
-    ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list)
+doa=np.array([35.0, 43.0, 51.0])
+power_doa_db=np.array([0, 0, -5])
 
-    doas = result["config"]["doa"]
-    power_doa_db = result["config"]["power_doa_db"]
-    # ax.set_xlim([np.min(doas)-10, np.max(doas)+10])
-    ax.set_ylim([-20, np.max(power_doa_db)+3])
-    # %%
+# doa=np.array([35.0, .0])
+# power_doa_db=np.array([0, 0])
 
-if __name__ == "__main__":
-    example_display_power_spectrum()
-    
+
+
+resolution_factor = 12 / M
+
+original_diff_doa = doa - doa[0]
+grid_minval_degrees = 40
+num_grid_points = get_doa_grid().shape[0]
+utils.globalParams.GRID_STEP_DEGREES = utils.globalParams.GRID_STEP_DEGREES * resolution_factor
+grid_maxval_degrees = grid_minval_degrees + utils.globalParams.GRID_STEP_DEGREES * (num_grid_points -1)
+utils.globalParams.GRID_MIN_MAX_VALS_DEGREES = (grid_minval_degrees, grid_maxval_degrees)
+doa_min = 45# grid_minval_degrees + 10*utils.globalParams.GRID_STEP_DEGREES
+doa = doa_min + original_diff_doa*resolution_factor
+
+
+
+
+config = create_config(
+    m=M, snr=0+convert_linear_to_db(resolution_factor), N=int(50 / resolution_factor), power_doa_db=power_doa_db, doa=doa
+)
+
+# m = 12
+# config = create_config(
+#     doa=np.array([35.0, 51.0]), power_doa_db=np.array([0, 0]) + convert_linear_to_db(12) - convert_linear_to_db(m), N=50, m=m, snr=0 ,
+# )
+
+algo_list = define_all_algo_dict_list()
+# algo_list = {k: v for k, v in algo_list.items() if k in ['AIRM', 'JBLD', 'LE_ss', 'PER', 'ESPRIT']}
+# algo_list = {k: v for k, v in algo_list.items() if k in ['PER']}
+# algo_list = {k: v for k, v in algo_list.items() if k in ['SPICE', 'JBLD','LE']}
+# algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD']}
+# algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD','SPICE','SAMV']}
+algo_list = {k: v for k, v in algo_list.items() if k in ['SPICE','SAMV','AIRM','JBLD','LE']}
+result= run_single_mc_iteration(
+    i_mc= 0,
+    config=config,
+    algo_list=list(algo_list.keys()))
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# R_hat = result["R_hat"]
+# A = get_steering_matrix(get_doa_grid(),R_hat.shape[0])
+# invR_hat_A = np.linalg.solve(R_hat, A)
+# p_MVDR = 1/np.sum(A.conj() * invR_hat_A, axis=0)
+# result["p_vec_list"][0] = p_MVDR
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list)
+
+doas = result["config"]["doa"]
+power_doa_db = result["config"]["power_doa_db"]
+ax.set_xlim([np.min(doas)-10, np.max(doas)+10])
+ax.set_ylim([-20, np.max(power_doa_db)+3])    
 # %%
 def Foo(x):
     x = x / 2
