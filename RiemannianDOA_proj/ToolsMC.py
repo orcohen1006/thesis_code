@@ -23,6 +23,7 @@ def save_job_metadata(workdir: str, config_list: list, num_mc: int, num_jobs: in
     metadata["num_mc"] = num_mc
     metadata["workdir"] = workdir
     metadata["grid_step_degrees"] = utils.globalParams.GRID_STEP_DEGREES
+    metadata["grid_min_max_vals_degrees"] = utils.globalParams.GRID_MIN_MAX_VALS_DEGREES    
     metadata["wanted_algo_names"] = utils.globalParams.WANTED_ALGO_NAMES
     metadata["sensor_array_type"] = utils.globalParams.SENSOR_ARRAY_TYPE
     
@@ -690,7 +691,22 @@ def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_uni
 
 
 def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPLOT=True, logscale_y=True):
-    algo_list = get_algo_dict_list()
+    algo_names = results[0][0]["algo_names"]
+
+    REMOVE_ESPRIT = True
+    if REMOVE_ESPRIT and "ESPRIT" in algo_names:
+        esprit_index = algo_names.index("ESPRIT")
+        for i_config in range(len(results)):
+            for i_mc in range(len(results[i_config])):
+                # remove ESPRIT data
+                for key in ['runtime_list', 'num_iters_list', 'p_vec_list', 'algo_names']:
+                    del results[i_config][i_mc][key][esprit_index]
+
+
+
+    algo_list = get_specific_inorder_algo_list(algo_names)
+
+
     num_configs = len(results)
     num_mc = len(results[0])
     num_algos = len(algo_list)
@@ -702,8 +718,6 @@ def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPL
     iter_runtime_mat = runtime_mat / num_iters_mat  # Shape: (num_configs, num_mc, num_algos)
 
     # Boxplot settings
-    width = 0.15   # width of each box
-    x = np.arange(num_configs)  # x locations for each config
     # colors = ['skyblue', 'salmon', 'lightgreen']
     import matplotlib.colors as mcolors
 
@@ -721,17 +735,26 @@ def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPL
         return tuple(c + (white - c) * amount)
     original_colors = [algo_list[d]["color"] for d in algo_list]
     colors = [lighten_color(c, 0.5) for c in original_colors] 
-    iteration_runtime_ms_mat = runtime_mat #iter_runtime_mat * 1e3  # Convert to milliseconds
     fig_runtime_boxplot, ax = plt.subplots(figsize=(6,4))
+    
+ 
+    
+    x = np.arange(num_configs)  # x locations for each config
+    width = 0.10  # width of each box
+    gap = 0.03  # gap between boxes inside a group
 
+    group_width = num_algos * width + (num_algos - 1) * gap
+    offsets = (
+        np.arange(num_algos) * (width + gap)
+        - group_width / 2
+        + width / 2
+    )
     for algo_idx in range(num_algos):
-        # Shift each algorithm's box a little to the left/right
-        spread = 1.1  # 1 = current spacing, >1 = more spread
-        pos = x + (algo_idx - num_algos/2 + 0.5) * width * spread
-        data_to_plot = [iteration_runtime_ms_mat[config_idx,:,algo_idx] for config_idx in range(num_configs)]
+        pos = x + offsets[algo_idx]
+        data_to_plot = [runtime_mat[config_idx,:,algo_idx] for config_idx in range(num_configs)]
         
         if DO_BOXPLOT:
-            bp = ax.boxplot(data_to_plot, positions=pos, widths=width, patch_artist=True)
+            bp = ax.boxplot(data_to_plot, positions=pos, widths=width, patch_artist=True, showfliers=False)
             for patch in bp['boxes']:
                 patch.set_facecolor(colors[algo_idx])
             for whisker in bp['whiskers']:
@@ -771,19 +794,24 @@ def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPL
         if "JBLD" in text.get_text():
             text.set_fontweight("bold")
     
-    # delta_x = 0.4
-    # ax.set_xlim([0-delta_x,1+delta_x])
+    delta_x = 0.4
+    ax.set_xlim([0-delta_x,1+delta_x])
+    # set grid only for y axis
+    ax.grid(True, axis='y', linestyle='--', alpha=0.4, which='both')
     plt.tight_layout()
     # plt.show()
 
 
 
     
-    def print_table_with_percentile(table_name, mat):
+    def print_table_with_percentile(table_name, mat, do_only_mean = False):
         from tabulate import tabulate
         qlow_mat = np.percentile(mat, 10, axis=1).T
         qmid_mat = np.percentile(mat, 50, axis=1).T
         qhigh_mat = np.percentile(mat, 95, axis=1).T
+
+        mean_mat = np.mean(mat, axis=1).T
+
 
         header = ["Algorithm"] + [f'${param_name} = {param_vals[i]}$' for i in range(num_configs)]
         table_data = []
@@ -791,11 +819,14 @@ def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPL
         for alg_idx in range(num_algos):
             row = [algo_names[alg_idx]]
             for cfg_idx in range(num_configs):
-                formatted_value = (
-                    f"{qmid_mat[alg_idx, cfg_idx]:.4f} "
-                    f"[ {qlow_mat[alg_idx, cfg_idx]:.4f}, "
-                    f"{qhigh_mat[alg_idx, cfg_idx]:.4f} ]"
-                )
+                if do_only_mean:
+                    formatted_value = f"{mean_mat[alg_idx, cfg_idx]:.4f}"
+                else:
+                    formatted_value = (
+                        f"{qmid_mat[alg_idx, cfg_idx]:.4f} "
+                        f"[ {qlow_mat[alg_idx, cfg_idx]:.4f}, "
+                        f"{qhigh_mat[alg_idx, cfg_idx]:.4f} ]"
+                    )
                 row.append(formatted_value)
             table_data.append(row)
 
@@ -803,7 +834,7 @@ def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPL
         tabulate_data = tabulate(table_data, headers=header, tablefmt="grid")
         print(tabulate_data)
         print("==========================================================")
-
+        return (table_name, tabulate_data)
         # with open(os.path.join(path_results_dir, table_name+'.txt'), "w") as f:
         #     f.write(tabulate_data)
         # return tabulate_data
@@ -812,13 +843,35 @@ def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPL
     # print_table("Num Iters", num_iters_mat.mean(axis=1).T, num_iters_mat.std(axis=1).T)
     # print_table("Iteration Runtime", iter_runtime_mat.mean(axis=1).T, iter_runtime_mat.std(axis=1).T)
     # print_table_with_percentile("Runtime", runtime_mat)
-    print_table_with_percentile("Num Iters", num_iters_mat)
-    # print_table_with_percentile("Iteration Runtime [ms]", iter_runtime_mat * 1e3)  # Convert to milliseconds
+    table_num_iters = print_table_with_percentile("Num Iters", num_iters_mat, do_only_mean=True)
+    table_iter_runtime_ms = print_table_with_percentile("Iteration Runtime [ms]", iter_runtime_mat * 1e3)  # Convert to milliseconds
+    table_runtime_s = print_table_with_percentile("Runtime [s]", runtime_mat)
 
 
 
-    return fig_runtime_boxplot
+    return fig_runtime_boxplot, [table_num_iters, table_iter_runtime_ms, table_runtime_s]
 
+
+def create_runtime_plot_M(list_resultPaths, list_M):
+    import matplotlib.pyplot as plt
+    import pickle
+    num_results = len(list_resultPaths)
+    results = []
+    for i_result in range(num_results):
+        path_results_dir = list_resultPaths[i_result]
+        name_results_dir = os.path.basename(path_results_dir)
+        with open(path_results_dir + '/results.pkl', 'rb') as f:
+            curr_results = pickle.load(f)
+        results.append(curr_results[0])
+
+    fig_runtime_boxplot, list_of_tables = plot_iteration_and_runtime_boxplot(results, list_M, 'M', DO_BOXPLOT=True, logscale_y=True)
+    save_figure(fig_runtime_boxplot, path_results_dir, "boxplot_runtime_vs_M")
+
+    for table_name, table_data in list_of_tables:
+        with open(os.path.join(path_results_dir, table_name+'.txt'), "w") as f:
+            f.write(table_data)
+    
+    
 # %%
 if __name__ == "__main__":
     # %%

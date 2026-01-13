@@ -174,6 +174,7 @@ if __name__ == "__main__":
     num_jobs = metadata["num_jobs"]
     workdir = metadata["workdir"]
     utils.globalParams.GRID_STEP_DEGREES = metadata["grid_step_degrees"]
+    utils.globalParams.GRID_MIN_MAX_VALS_DEGREES = metadata["grid_min_max_vals_degrees"]
     utils.globalParams.WANTED_ALGO_NAMES = metadata["wanted_algo_names"]
     utils.globalParams.SENSOR_ARRAY_TYPE = metadata["sensor_array_type"]
 

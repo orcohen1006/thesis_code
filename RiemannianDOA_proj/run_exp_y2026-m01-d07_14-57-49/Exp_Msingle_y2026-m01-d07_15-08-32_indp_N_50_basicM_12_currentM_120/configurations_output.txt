@@ -1,0 +1,4 @@
+Number of Monte Carlo runs: 500
+
+-------------- Config 0:
+{'m': 120, 'snr': -10.0, 'N': 500, 'power_doa_db': array([ 0,  0, -5]), 'doa': array([45. , 45.8, 46.6]), 'cohr_flag': False, 'cohr_coeff': 1.0, 'noncircular_coeff': 0.0, 'impulse_prob': 0.0, 'impulse_factor': 1.0}

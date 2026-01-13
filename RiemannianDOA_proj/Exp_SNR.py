@@ -13,7 +13,7 @@ from ToolsMC import *
 def exp_SNR(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.ndarray = np.array([0, 0, -5]),
                   N=40, M=12,
                   cohr_flag: bool = False, basedir:str = '') -> None:
-    
+    utils.globalParams = GlobalParms()  # reset global params to default values
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
     name_results_dir = f'Exp_SNR_{timestamp}_{str_indp_cohr}_N_{N}_M_{M}'

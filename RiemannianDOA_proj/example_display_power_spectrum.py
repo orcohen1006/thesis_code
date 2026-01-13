@@ -21,7 +21,7 @@ plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m12-d30_20-41-57/Exp_Rho_y2025-m12-d30_21-01-54'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2026-m01-d07_14-57-49/Exp_Msingle_y2026-m01-d07_15-08-32_indp_N_50_basicM_12_currentM_120'
     name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)

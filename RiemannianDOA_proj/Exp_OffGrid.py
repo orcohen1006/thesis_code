@@ -12,12 +12,12 @@ from ToolsMC import *
 # %%
 
 def exp_OffGrid(doa: np.ndarray = np.array([35, 43, 51]), power_doa_db: np.ndarray = np.array([0, 0, -5]),
-                  N=40, M=12,
+                  N=40, M=12, snr=0,
                   cohr_flag: bool = False, basedir:str = '') -> None:
-    
+    utils.globalParams = GlobalParms()  # reset global params to default values
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
-    name_results_dir = f'Exp_OffGrid_{timestamp}_{str_indp_cohr}_N_{N}_M_{M}'
+    name_results_dir = f'Exp_OffGrid_{timestamp}_{str_indp_cohr}_N_{N}_M_{M}_SNR_{snr}'
     name_results_dir = os.path.join(basedir, name_results_dir)
     path_results_dir = os.path.abspath(name_results_dir)
     print(f"Results will be saved in: {path_results_dir}")
@@ -34,7 +34,7 @@ def exp_OffGrid(doa: np.ndarray = np.array([35, 43, 51]), power_doa_db: np.ndarr
     for i in range(num_configs):
         config_list.append(
             create_config(
-                m=M, snr=0, N=N, 
+                m=M, snr=snr, N=N, 
                 power_doa_db=power_doa_db,
                 doa=doa+vec_delta[i],
                 cohr_flag=cohr_flag,

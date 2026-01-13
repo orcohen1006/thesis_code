@@ -20,7 +20,7 @@ from ToolsMC import *
 
 def exp_rho(doa: np.ndarray = np.array([35, 45]), power_doa_db: np.ndarray = np.array([0, 0]),  N = 40,
             basedir:str = '') -> None:
-
+    utils.globalParams = GlobalParms()  # reset global params to default values
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     name_results_dir = f'Exp_Rho_{timestamp}'
     name_results_dir = os.path.join(basedir, name_results_dir)

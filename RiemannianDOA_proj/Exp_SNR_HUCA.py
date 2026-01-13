@@ -13,7 +13,7 @@ from ToolsMC import *
 def exp_SNR_HUCA(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.ndarray = np.array([0, 0, -5]),
                   N=40, M=18,
                   cohr_flag: bool = False, basedir:str = '') -> None:
-    
+    utils.globalParams = GlobalParms()  # reset global params to default values
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
     name_results_dir = f'Exp_SNR_HUCA_{timestamp}_{str_indp_cohr}_N_{N}_M_{M}'
@@ -25,6 +25,7 @@ def exp_SNR_HUCA(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db
     # %%
     num_mc = NUM_MC
     utils.globalParams.SENSOR_ARRAY_TYPE = "HALF_UCA"
+    utils.globalParams.WANTED_ALGO_NAMES.discard("ESPRIT")  # ESPRIT not applicable for UCA
     vec_snr = np.arange(-4.5, 4.5 + 1, 1.5)
     # %%
     num_configs = len(vec_snr)

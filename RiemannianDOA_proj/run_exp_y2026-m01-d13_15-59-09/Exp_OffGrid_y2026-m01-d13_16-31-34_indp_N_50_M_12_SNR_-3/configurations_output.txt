@@ -1,0 +1,13 @@
+Number of Monte Carlo runs: 500
+
+-------------- Config 0:
+{'m': 12, 'snr': -3, 'N': 50, 'power_doa_db': array([0, 0]), 'doa': array([35., 51.]), 'cohr_flag': False, 'cohr_coeff': 1.0, 'noncircular_coeff': 0.0, 'impulse_prob': 0.0, 'impulse_factor': 1.0}
+
+-------------- Config 1:
+{'m': 12, 'snr': -3, 'N': 50, 'power_doa_db': array([0, 0]), 'doa': array([35.16666667, 51.16666667]), 'cohr_flag': False, 'cohr_coeff': 1.0, 'noncircular_coeff': 0.0, 'impulse_prob': 0.0, 'impulse_factor': 1.0}
+
+-------------- Config 2:
+{'m': 12, 'snr': -3, 'N': 50, 'power_doa_db': array([0, 0]), 'doa': array([35.33333333, 51.33333333]), 'cohr_flag': False, 'cohr_coeff': 1.0, 'noncircular_coeff': 0.0, 'impulse_prob': 0.0, 'impulse_factor': 1.0}
+
+-------------- Config 3:
+{'m': 12, 'snr': -3, 'N': 50, 'power_doa_db': array([0, 0]), 'doa': array([35.5, 51.5]), 'cohr_flag': False, 'cohr_coeff': 1.0, 'noncircular_coeff': 0.0, 'impulse_prob': 0.0, 'impulse_factor': 1.0}

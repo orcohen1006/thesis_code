@@ -21,7 +21,7 @@ from ToolsMC import *
 def exp_N(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.ndarray = np.array([0, 0, -5]),
           snr: float = -3,
           cohr_flag: bool = False, basedir:str = '') -> None:
-
+    utils.globalParams = GlobalParms()  # reset global params to default values
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     str_indp_cohr = 'cohr' if cohr_flag else 'indp'
     name_results_dir = f'Exp_N_{timestamp}_{str_indp_cohr}'
