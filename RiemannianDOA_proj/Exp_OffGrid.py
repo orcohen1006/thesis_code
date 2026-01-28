@@ -62,6 +62,7 @@ def exp_OffGrid(doa: np.ndarray = np.array([35, 43, 51]), power_doa_db: np.ndarr
     # %%
 
 if __name__ == "__main__":
-    exp_OffGrid(doa=np.array([35.0, 51.0]), power_doa_db=np.array([0, 0]) , N=50, M=12, cohr_flag=False, basedir='')
+    # exp_OffGrid(doa=np.array([35.0, 51.0]), power_doa_db=np.array([0, 0]), N=50, M=12, cohr_flag=False, basedir='')
+    exp_OffGrid(doa=np.array([35.0, 51.0]), power_doa_db=np.array([0, 0]), N=50, M=12, snr=5)
 
 # %%

@@ -50,8 +50,16 @@ def exp_rho(doa: np.ndarray = np.array([35, 45]), power_doa_db: np.ndarray = np.
     results, algos_error_data = analyze_algo_errors(results)
     #
     fig_doa_errors = plot_doa_errors(algos_error_data, r'$\rho$ (Correlation Coefficient)', "", vec_rho, normalize_rmse_by_parameter=False, do_ylogscale=False)
-    # %%
     fig_power_errors = plot_power_errors(algos_error_data, r'$\rho$ (Correlation Coefficient)', "", vec_rho, normalize_rmse_by_parameter=False)
+    # 
+    fig_combined = plt.figure(figsize=(8, 8))
+    ax1 = fig_combined.add_subplot(2, 1, 1)
+    ax2 = fig_combined.add_subplot(2, 1, 2)
+    plot_doa_errors(algos_error_data, r'$\rho$ (Correlation Coefficient)', "", vec_rho, plot_on_ax=ax1, do_legend=True)
+    plot_power_errors(algos_error_data, r'$\rho$ (Correlation Coefficient)', "", vec_rho, plot_on_ax=ax2, do_legend=False)
+
+
+    # %%
     # 
     # fig_prob_detection = plot_prob_detection(algos_error_data, r'Correlation Coefficient - $\rho$', "", vec_rho)
     # #
@@ -63,6 +71,7 @@ def exp_rho(doa: np.ndarray = np.array([35, 45]), power_doa_db: np.ndarray = np.
     save_figure(fig_power_errors, path_results_dir, str_desc_name+ "_Power")
     # save_figure(fig_prob_detection, path_results_dir, str_desc_name+ "_Prob")
     # save_figure(fig_qeigvals, path_results_dir, str_desc_name+ "_Qeigvals")
+    save_figure(fig_combined, path_results_dir, str_desc_name+ "_Combined")
     plt.close()
     # %%
 

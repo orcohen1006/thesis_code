@@ -54,6 +54,13 @@ def exp_N(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.nd
     fig_doa_errors = plot_doa_errors(algos_error_data, r'$N/M$', "", vec_n/m, normalize_rmse_by_parameter=False, do_ylogscale=False)
     #  
     fig_power_errors = plot_power_errors(algos_error_data, r'$N/M$', "", vec_n/m, normalize_rmse_by_parameter=False)
+
+    fig_combined = plt.figure(figsize=(8, 8))
+    ax1 = fig_combined.add_subplot(2, 1, 1)
+    ax2 = fig_combined.add_subplot(2, 1, 2)
+    plot_doa_errors(algos_error_data, r'$N/M$', "", vec_n/m, plot_on_ax=ax1, do_legend=True)
+    plot_power_errors(algos_error_data, r'$N/M$', "", vec_n/m,plot_on_ax=ax2, do_legend=False)
+
     # %%
     fig_sep_doa = plot_doa_errors_per_source(algos_error_data, r'$N/M$', "", vec_n/m)
     fig_sep_power = plot_power_errors_per_source(algos_error_data, r'$N/M$', "", vec_n/m)
@@ -68,6 +75,7 @@ def exp_N(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.nd
     save_figure(fig_power_errors, path_results_dir, str_desc_name+ "_Power")
     # save_figure(fig_prob_detection, path_results_dir, str_desc_name+ "_Prob")
     # save_figure(fig_qeigvals, path_results_dir, str_desc_name+ "_Qeigvals")
+    save_figure(fig_combined, path_results_dir, str_desc_name+ "_Combined")
     plt.close()
     # %%
 

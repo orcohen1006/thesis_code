@@ -514,14 +514,18 @@ def plot_power_errors_per_source(algos_error_data: dict, parameter_name: str, pa
     return fig
 
 def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False,
-                    do_ylogscale: bool = False):
+                    do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True):
     import matplotlib.pyplot as plt
     
     algo_names = list(algos_error_data["mean_doa_errors"].keys())
     algo_list = get_specific_inorder_algo_list(algo_names)
     # algo_list = get_algo_dict_list()
-    fig = plt.figure()
-    ax = plt.gca()
+    if plot_on_ax is not None:
+        fig = []
+        ax = plot_on_ax
+    else:
+        fig = plt.figure()
+        ax = plt.gca()
     for algo_name in algo_list.keys():
         mean_doa_errors = np.stack(algos_error_data["mean_doa_errors"][algo_name]) 
         mse_doa_errors = np.stack(algos_error_data["mean_square_doa_errors"][algo_name])
@@ -566,10 +570,11 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         ax.set_ylabel(r"$\mathrm{RMSE}_{\mathrm{DOA}}$ (degrees)", fontsize=xylabel_fontsize)
     ax.set_xlabel(parameter_name + f" {parameter_units}", fontsize=xylabel_fontsize)
     
-    lgd = ax.legend()
-    for text in lgd.get_texts():
-        if "JBLD" in text.get_text():
-            text.set_fontweight("bold")
+    if do_legend:
+        lgd = ax.legend()
+        for text in lgd.get_texts():
+            if "JBLD" in text.get_text():
+                text.set_fontweight("bold")
     ax.grid(True)
     return fig
 
@@ -645,12 +650,19 @@ def plot_doa_boxplots(algos_error_data, parameter_values, parameter_vals_to_show
     return fig
 
 def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False,
-                    do_ylogscale: bool = False):
+                    do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True):
     import matplotlib.pyplot as plt
 
-    algo_list = get_algo_dict_list()
-    fig = plt.figure()
-    ax = plt.gca()
+    
+    algo_names = list(algos_error_data["mean_doa_errors"].keys())
+    algo_list = get_specific_inorder_algo_list(algo_names)
+    # algo_list = get_algo_dict_list()
+    if plot_on_ax is not None:
+        fig = []
+        ax = plot_on_ax
+    else:
+        fig = plt.figure()
+        ax = plt.gca()
     for algo_name in algo_list.keys():
         mean_power_errors = np.stack(algos_error_data["mean_power_errors"][algo_name]) 
         mse_power_errors = np.stack(algos_error_data["mean_square_power_errors"][algo_name])
@@ -681,18 +693,19 @@ def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_uni
         ax.set_ylabel(r"$\mathrm{RMSE}_{\mathrm{Power}}$ (linear)", fontsize=xylabel_fontsize)
     ax.set_xlabel(parameter_name + f" {parameter_units}", fontsize=xylabel_fontsize)
 
-    lgd = ax.legend()
-    for text in lgd.get_texts():
-        if "JBLD" in text.get_text():
-            text.set_fontweight("bold")
+    if do_legend:
+        lgd = ax.legend()
+        for text in lgd.get_texts():
+            if "JBLD" in text.get_text():
+                text.set_fontweight("bold")
     ax.grid(True)
     return fig
 
 
 
 def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPLOT=True, logscale_y=True):
+    
     algo_names = results[0][0]["algo_names"]
-
     REMOVE_ESPRIT = True
     if REMOVE_ESPRIT and "ESPRIT" in algo_names:
         esprit_index = algo_names.index("ESPRIT")

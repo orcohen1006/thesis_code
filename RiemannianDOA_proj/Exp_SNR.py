@@ -44,11 +44,18 @@ def exp_SNR(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.
     results, algos_error_data = analyze_algo_errors(results)
     #
     fig_doa_errors = plot_doa_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False, do_ylogscale=False)
+    fig_power_errors = plot_power_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False, do_ylogscale=False)
+    # 
+    fig_combined = plt.figure(figsize=(8, 8))
+    ax1 = fig_combined.add_subplot(2, 1, 1)
+    ax2 = fig_combined.add_subplot(2, 1, 2)
+    plot_doa_errors(algos_error_data, r'$SNR$', "", vec_snr, plot_on_ax=ax1, do_legend=True)
+    plot_power_errors(algos_error_data, r'$SNR$', "", vec_snr,plot_on_ax=ax2, do_legend=False)
+
     # tmp = plot_doa_boxplots(algos_error_data, vec_snr, parameter_vals_to_show=[-3, 0], do_ylogscale=True)
     # %%
-    tmpfig = plot_doa_errors_per_source(algos_error_data, r'$SNR$', "", vec_snr)
+    # tmpfig = plot_doa_errors_per_source(algos_error_data, r'$SNR$', "", vec_snr)
     #  
-    fig_power_errors = plot_power_errors(algos_error_data, r'$SNR$', "", vec_snr, normalize_rmse_by_parameter=False, do_ylogscale=False)
     #  
     fig_prob_detection = plot_prob_detection(algos_error_data, r'$SNR$', "", vec_snr)
     #
@@ -66,6 +73,7 @@ def exp_SNR(doa: np.ndarray = np.array([35.25, 43.25, 51.25]), power_doa_db: np.
     # save_figure(fig_l0_norm, path_results_dir, str_desc_name+ "_L0")
     save_figure(fig_hpbw, path_results_dir, str_desc_name+ "_HPBW")
     # save_figure(fig_qeigvals, path_results_dir, str_desc_name+ "_Qeigvals")
+    save_figure(fig_combined, path_results_dir, str_desc_name+ "_Combined")
     plt.close()
     # %%
 

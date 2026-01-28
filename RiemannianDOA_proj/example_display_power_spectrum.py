@@ -21,7 +21,7 @@ plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2026-m01-d07_14-57-49/Exp_Msingle_y2026-m01-d07_15-08-32_indp_N_50_basicM_12_currentM_120'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2026-m01-d13_15-59-09/Exp_OffGrid_y2026-m01-d13_16-28-38_indp_N_50_M_12_SNR_0'
     name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
@@ -39,46 +39,53 @@ def example_display_power_spectrum():
         print(f"-------------- Config {i_config}:")
         print(results[i_config][0]["config"])
     # %%
-    plt.close('all')
-    algo_list = get_algo_dict_list()
-    # i_config = 2; i_mc = 29 #23 #8 #5 #4
-    i_config = 4; i_mc = inds[16]
-    ax1, ax2 = None, None
-    print(results[i_config][0]["config"])
-    algo_ids_group1 = [0,1]
-    algo_ids_group2 = [2,3]
-    algos_group1 = {k: v for i, (k, v) in enumerate(algo_list.items()) if i in algo_ids_group1}
-    algos_group2 = {k: v for i, (k, v) in enumerate(algo_list.items()) if i in algo_ids_group2}
-    p_vec_list_group1 = [results[i_config][i_mc]["p_vec_list"][i] for i in algo_ids_group1]
-    p_vec_list_group2 = [results[i_config][i_mc]["p_vec_list"][i] for i in algo_ids_group2]
-    # fig_spec = plt.figure(figsize=(10, 5))
-    # ax1 = fig_spec.add_subplot(1, 2, 1)
-    # ax2 = fig_spec.add_subplot(1, 2, 2)
-    
-    fig_spec = plt.figure(figsize=(6, 7))
-    ax1 = fig_spec.add_subplot(2, 1, 1)
-    ax2 = fig_spec.add_subplot(2, 1, 2)
-    
-    # fig_spec = plt.figure(figsize=(7, 5))
-    # ax1 = plt.gca()
-    # ax2 = ax1
+    i_config = 2; 
+    range_jj = range(10, 11)
+    for jj in range_jj:
+        # 
+        # plt.close('all')
+        algo_list = get_algo_dict_list()
+        # i_config = 2; i_mc = 29 #23 #8 #5 #4
+        # i_config = 4; i_mc = inds[16]
+        i_mc = inds[jj]
+        ax1, ax2 = None, None
+        print(results[i_config][0]["config"])
+        algo_ids_group1 = [0,1]
+        algo_ids_group2 = [2,3,4]
+        algos_group1 = {k: v for i, (k, v) in enumerate(algo_list.items()) if i in algo_ids_group1}
+        algos_group2 = {k: v for i, (k, v) in enumerate(algo_list.items()) if i in algo_ids_group2}
+        p_vec_list_group1 = [results[i_config][i_mc]["p_vec_list"][i] for i in algo_ids_group1]
+        p_vec_list_group2 = [results[i_config][i_mc]["p_vec_list"][i] for i in algo_ids_group2]
+        # fig_spec = plt.figure(figsize=(10, 5))
+        # ax1 = fig_spec.add_subplot(1, 2, 1)
+        # ax2 = fig_spec.add_subplot(1, 2, 2)
+        
+        fig_spec = plt.figure(figsize=(8, 8))
+        ax1 = fig_spec.add_subplot(2, 1, 1)
+        ax2 = fig_spec.add_subplot(2, 1, 2)
+        
+        # fig_spec = plt.figure(figsize=(7, 5))
+        # ax1 = plt.gca()
+        # ax2 = ax1
 
-    ax1 = display_power_spectrum(results[i_config][i_mc]["config"], p_vec_list_group1, algo_list=algos_group1, ax=ax1)
-    ax2 = display_power_spectrum(results[i_config][i_mc]["config"], p_vec_list_group2, algo_list=algos_group2, ax=ax2)
+        ax1 = display_power_spectrum(results[i_config][i_mc]["config"], p_vec_list_group1, algo_list=algos_group1, ax=ax1)
+        ax2 = display_power_spectrum(results[i_config][i_mc]["config"], p_vec_list_group2, algo_list=algos_group2, ax=ax2)
 
-    doas = results[i_config][i_mc]["config"]["doa"]
-    power_doa_db = results[i_config][i_mc]["config"]["power_doa_db"]
-    DELTA_X = 10
-    ax1.set_xlim([np.min(doas)-DELTA_X, np.max(doas)+DELTA_X])
-    ax2.set_xlim([np.min(doas)-DELTA_X, np.max(doas)+DELTA_X])
-    ax1.set_ylim([-20, np.max(power_doa_db)+3])
-    ax2.set_ylim([-20, np.max(power_doa_db)+3])
+        doas = results[i_config][i_mc]["config"]["doa"]
+        power_doa_db = results[i_config][i_mc]["config"]["power_doa_db"]
+        DELTA_X = 10
+        ax1.set_xlim([np.min(doas)-DELTA_X, np.max(doas)+DELTA_X])
+        ax2.set_xlim([np.min(doas)-DELTA_X, np.max(doas)+DELTA_X])
+        ax1.set_ylim([-20, np.max(power_doa_db)+3])
+        ax2.set_ylim([-20, np.max(power_doa_db)+3])
+        if len(range_jj) > 1:
+            fig_spec.suptitle(f"Config {i_config}, MC Iteration {i_mc}, jj={jj}")
     # %%
     # plt.gcf().savefig(os.path.join(path_results_dir, 'Power_Spectrum_i_config_' + str(i_config) + '_i_mc_' + str(i_mc) + '.png'), dpi=300)
     save_figure(fig_spec, path_results_dir, f'Power_Spectrum_i_config_{i_config}_i_mc_ {i_mc}')
     # %%
     algo_list = get_algo_dict_list()
-    i_config = 0
+    i_config = 2
     
     fig = plt.figure()
     fig.suptitle(f"Config {i_config}")
@@ -97,7 +104,7 @@ def example_display_power_spectrum():
     inds = np.argsort(sqerr_dict["AIRM"] - (sqerr_dict["SAMV"] + sqerr_dict["SPICE"])/2)
 
     # %%
-    path_fig = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2025-m09-d09_11-43-32/Exp_N_y2025-m09-d09_11-46-35_indp/Exp_N_y2025-m09-d09_11-46-35_indp_DOA.pkl'
+    path_fig = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2026-m01-d13_15-59-09/Exp_OffGrid_y2026-m01-d13_16-28-38_indp_N_50_M_12_SNR_0/Exp_OffGrid_y2026-m01-d13_16-28-38_indp_N_50_M_12_SNR_0_DOA.pkl'
     with open(path_fig, 'rb') as f:
         my_fig = pickle.load(f)
     plt.show()
@@ -106,8 +113,22 @@ def example_display_power_spectrum():
     curr_path_results_dir = os.path.dirname(path_fig)
     filename_no_ext = os.path.basename(path_fig).replace('.pkl', '')
     save_figure(fig, curr_path_results_dir, filename_no_ext)
+    # %%
+    path_fig_pkl_prefix = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2026-m01-d13_15-59-09/Exp_SNR_y2026-m01-d13_15-59-09_indp_N_50_M_12/Exp_SNR_y2026-m01-d13_15-59-09_indp_N_50_M_12_'
+    with open(path_fig_pkl_prefix + '_DOA.pkl', 'rb') as f:
+        fig_DOA = pickle.load(f)
+    plt.show()
+    with open(path_fig_pkl_prefix + '_Power.pkl', 'rb') as f:
+        fig_Power = pickle.load(f)    
+    plt.show()
 
-
+    # now i want to combine the two figures into one figure with two subplots. only the first subplot will have the legend
+    # the combined figure should be the size of the two figures stacked horizontally.
+    # keep all the original figures properties and plots exactly the same, except for the legend.
+    fig_combined = plt.figure(figsize=(fig_DOA.get_size_inches()[0], fig_DOA.get_size_inches()[1] + fig_Power.get_size_inches()[1]))
+    ax1 = fig_combined.add_subplot(1, 2, 1)
+    ax2 = fig_combined.add_subplot(1, 2, 2)
+        
     # %%
     tmp = plot_iteration_and_runtime_boxplot(results, vec_snr, 'SNR', logscale_y=False)
     # %%
