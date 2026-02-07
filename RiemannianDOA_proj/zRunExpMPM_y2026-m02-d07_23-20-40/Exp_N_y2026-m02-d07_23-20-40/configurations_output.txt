@@ -1,0 +1,10 @@
+Number of Monte Carlo runs: 1000
+
+-------------- Config 0:
+{'m': 12, 'snr': 5, 'N': 16, 'power_doa_db': array([0]), 'doa': array([70.]), 'power_doa_interf_db': array([5., 5.]), 'doa_interf': array([ 50., 120.]), 'L': 2, 'cohr_flag': False}
+
+-------------- Config 1:
+{'m': 12, 'snr': 5, 'N': 24, 'power_doa_db': array([0]), 'doa': array([70.]), 'power_doa_interf_db': array([5., 5.]), 'doa_interf': array([ 50., 120.]), 'L': 2, 'cohr_flag': False}
+
+-------------- Config 2:
+{'m': 12, 'snr': 5, 'N': 72, 'power_doa_db': array([0]), 'doa': array([70.]), 'power_doa_interf_db': array([5., 5.]), 'doa_interf': array([ 50., 120.]), 'L': 2, 'cohr_flag': False}

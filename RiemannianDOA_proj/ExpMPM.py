@@ -31,14 +31,14 @@ def exp(config, scanned_param_name, scanned_param_vals, basedir:str = '') -> Non
     results, algos_error_data = analyze_algo_errors(results)
     # %%
     fig_doa_errors = plot_doa_errors(algos_error_data, f'{scanned_param_name}', "", scanned_param_vals, normalize_rmse_by_parameter=False, do_ylogscale=False, do_legend=False, do_colorbar=True)
-    # fig_power_errors = plot_power_errors(algos_error_data, f'{scanned_param_name}', "", scanned_param_vals, normalize_rmse_by_parameter=False, do_ylogscale=False)
-    fig_sir = plot_sir(results, f'{scanned_param_name}', "", scanned_param_vals, do_ylogscale=False)
+    fig_sir = plot_sir(results, f'{scanned_param_name}', "", scanned_param_vals, do_ylogscale=False, do_legend=False, do_colorbar=True)
+    fig_sir_per_config = plot_sir_per_config(results)
     # %%
     experiment_configs_string_to_file(num_mc=num_mc, config_list=config_list, directory=path_results_dir)
     str_desc_name = os.path.basename(name_results_dir)
     save_figure(fig_doa_errors, path_results_dir, str_desc_name+ "_DOA")
-    # save_figure(fig_power_errors, path_results_dir, str_desc_name+ "_Power")
     save_figure(fig_sir, path_results_dir, str_desc_name+ "_SIR")
+    save_figure(fig_sir_per_config, path_results_dir, str_desc_name+ "_SIR_per_config")
     plt.close()
     # %%
 
@@ -47,6 +47,69 @@ def exp(config, scanned_param_name, scanned_param_vals, basedir:str = '') -> Non
 #    ---------------------------------------
 #    ---------------------------------------
 #    ---------------------------------------
+
+
+
+# %% ---------------------------------------
+def run_on_N_no_interf(basedir):
+    # %% 
+    M = 12
+    L = 2
+    N = int(M*2*L)
+    doa_desired=np.array([70.0])
+    power_doa_desired_db=np.array([0])
+
+
+    doa_interf = np.array([])
+    power_doa_interf_db = np.array([])
+
+    config = create_config(
+        m=M, snr=10, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
+        power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
+    
+    scanned_param_name = 'N'
+    scanned_param_vals = np.arange(int(M*1*L), int(M*3*L) + 1, int(M*0.5*L))
+    # %% 
+    exp(config, scanned_param_name, scanned_param_vals, basedir=basedir)
+
+# %% ---------------------------------------
+def run_on_SNR(basedir):
+    # %% 
+    M = 12
+    L = 2
+    N = int(M*3*L)
+    doa_desired=np.array([70.0])
+    power_doa_desired_db=np.array([0])
+
+    doa_interf = np.array([50.0, 120.0])
+    power_doa_interf_db = np.array([5.0, 5.0])
+
+    config = create_config(
+        m=M, snr=10, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
+        power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
+    scanned_param_name = 'snr'
+    scanned_param_vals = np.array([0, 5, 10])
+    # %% 
+    exp(config, scanned_param_name, scanned_param_vals, basedir=basedir) 
+   
+def run_on_N(basedir):
+    # %% 
+    M = 12
+    L = 2
+    N = int(M*3*L)
+    doa_desired=np.array([70.0])
+    power_doa_desired_db=np.array([0])
+
+    doa_interf = np.array([50.0, 120.0])
+    power_doa_interf_db = np.array([5.0, 5.0])
+
+    config = create_config(
+        m=M, snr=5, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
+        power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
+    scanned_param_name = 'N'
+    scanned_param_vals = np.array([int(M*1*L), int(M*3*L)])
+    # %% 
+    exp(config, scanned_param_name, scanned_param_vals, basedir=basedir) 
 
 
 if __name__ == "__main__":
@@ -60,35 +123,18 @@ if __name__ == "__main__":
     if not os.path.exists(basedir):
         os.makedirs(basedir) 
     # %% ---------------------------------------
-    
-    M = 12
-    L = 2
-    N = int(M*2*L)
-    doa_desired=np.array([70.0])
-    power_doa_desired_db=np.array([0])
-
-    # doa_interf = np.array([50.0, 120.0])
-    # power_doa_interf_db = np.array([5.0, 5.0])
-
-    doa_interf = np.array([])
-    power_doa_interf_db = np.array([])
-
-    config = create_config(
-        m=M, snr=5, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
-        power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
+    run_on_N_no_interf(basedir)
     # %% ---------------------------------------
-    # scanned_param_name, scanned_param_vals = 'snr', np.arange(-20, 20 + 1, 5)
-    # exp(config, scanned_param_name, scanned_param_vals, basedir=basedir)
+    run_on_SNR(basedir)        
+    # %% ---------------------------------------
+    run_on_N(basedir)        
 
-    scanned_param_name = 'N'
-    scanned_param_vals = np.arange(int(M*1*L), int(M*3*L) + 1, int(M*0.5*L))
-    exp(config, scanned_param_name, scanned_param_vals, basedir=basedir)
 
-    # %%
+
 
 
     # %% ---------------------------------------
     print(f'Total Running Time: {time.time() - t0_overall} sec.')
     # %% ---------------------------------------
-    # git_commit_and_push(commit_message=basedir)
+    git_commit_and_push(commit_message=basedir)
 

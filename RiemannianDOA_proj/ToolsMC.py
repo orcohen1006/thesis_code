@@ -612,7 +612,7 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
 
 
 
-def plot_sir(results, parameter_name: str, parameter_units: str, parameter_values: list, do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True):
+def plot_sir(results, parameter_name: str, parameter_units: str, parameter_values: list, do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True, do_colorbar: bool = False):
     import matplotlib.pyplot as plt
     
     algo_names = results[0][0]["algo_names"]
@@ -647,11 +647,14 @@ def plot_sir(results, parameter_name: str, parameter_units: str, parameter_value
         for text in lgd.get_texts():
             if "JBLD" in text.get_text():
                 text.set_fontweight("bold")
+    if do_colorbar:
+        cbar = create_colorbar(algo_list, ax)
+
     ax.grid(True)
     return fig
 
 def plot_sir_boxplot(results, parameter_name: str, parameter_units: str, parameter_values: list, i_config : int = 0,
-                     do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True):
+                     do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True, do_colorbar: bool = False):
     import matplotlib.pyplot as plt
     
     algo_names = results[0][0]["algo_names"]
@@ -683,10 +686,61 @@ def plot_sir_boxplot(results, parameter_name: str, parameter_units: str, paramet
         for text in lgd.get_texts():
             if "JBLD" in text.get_text():
                 text.set_fontweight("bold")
+    if do_colorbar:
+        cbar = create_colorbar(algo_list, ax)
     ax.grid(True)
     return fig
 
 
+def plot_sir_per_config(results):
+    import matplotlib.pyplot as plt
+    
+    algo_names = results[0][0]["algo_names"]
+    algo_list = get_specific_inorder_algo_list(algo_names)
+    q_vals = [extract_q_from_algo_name(algo_name) for algo_name in algo_names]
+    # assert q_vals are in increasing order
+    assert all(q_vals[i] < q_vals[i+1] for i in range(len(q_vals)-1)), "q_vals are not in increasing order"
+
+    num_configs = len(results)
+    fig, axs = plt.subplots(num_configs, 1, figsize=(8, 3*num_configs))
+    if num_configs == 1:
+        axs = [axs]  # make it iterable
+     
+    for i_config in range(num_configs):
+        ax = axs[i_config]
+        
+        list_median = []
+        list_low_percentile = []
+        list_high_percentile = []
+        list_verylow_percentile = []
+        list_veryhigh_percentile = []
+        
+        for i_algo,algo_name in enumerate(algo_names):
+            sir_vals = np.array([results[i_config][i_mc]["sir"][i_algo] for i_mc in range(len(results[i_config]))])
+            low_percentile = np.percentile(sir_vals, 25)
+            high_percentile = np.percentile(sir_vals, 75)
+            very_low_percentile = np.percentile(sir_vals, 5)
+            very_high_percentile = np.percentile(sir_vals, 95)
+            median = np.median(sir_vals)
+            list_median.append(median)
+            list_low_percentile.append(low_percentile)
+            list_high_percentile.append(high_percentile)
+            list_verylow_percentile.append(very_low_percentile)
+            list_veryhigh_percentile.append(very_high_percentile)
+
+        ax.plot(q_vals, list_median, label='Median SIR', color='black')
+        ax.fill_between(q_vals, list_verylow_percentile, list_veryhigh_percentile, color='black', alpha=0.15, label='5-95 percentile range', linewidth=0)
+        ax.fill_between(q_vals, list_low_percentile, list_high_percentile, color='black', alpha=0.3, label='25-75 percentile range', linewidth=0)
+
+        # ax.set_title(f"Config {i_config}")
+        xylabel_fontsize = 12
+        ax.set_xlabel("q value", fontsize=xylabel_fontsize)
+        ax.set_ylabel("SIR", fontsize=xylabel_fontsize)
+        ax.grid(True)
+        # if i_config == 0:  # only add legend to the first subplot
+        #     ax.legend()
+    plt.tight_layout()
+    return fig
 
 def plot_doa_boxplots(algos_error_data, parameter_values, parameter_vals_to_show = None, do_ylogscale=False):
     
