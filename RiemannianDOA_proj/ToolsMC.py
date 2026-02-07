@@ -11,8 +11,8 @@ from collections import defaultdict
 from matplotlib.font_manager import FontProperties
 import time
 
-NUM_MC = 500
-DEFAULT_NUM_JOBS = 600 # 334
+NUM_MC = 1_000 #500
+DEFAULT_NUM_JOBS = 50 #600 # 334
 # %%
 def save_job_metadata(workdir: str, config_list: list, num_mc: int, num_jobs: int):
     if os.path.exists(FILENAME_PBS_METADATA):
@@ -137,6 +137,24 @@ def RunDoaConfigsPBS(workdir: str, config_list: list, num_mc:int, num_jobs: int 
     print(f"RunDoaConfigsPBS: Total elapsed time: {time.time() - t0:.2f} [sec]")
     return results
 
+
+
+
+## 
+
+def RunDoaConfigsLocally(workdir: str, config_list: list, num_mc:int):
+    from RunSingleMCIteration import run_single_mc_iteration
+    print("Running locally with ", num_mc, " Monte Carlo iterations per configuration.")
+    t0 = time.time()
+    results = []
+    for i_config, config in enumerate(config_list):
+        curr_config_results = []
+        for i_mc in range(num_mc):
+            result = run_single_mc_iteration(i_mc=i_mc, config=config, do_log=False)
+            curr_config_results.append(result)
+        results.append(curr_config_results)
+    print(f"Local run: Total elapsed time: {time.time() - t0:.2f} [sec]")
+    return results
 # %%
 def analyze_algo_errors(results: list):
     from CRB import cramer_rao_lower_bound
@@ -159,8 +177,9 @@ def analyze_algo_errors(results: list):
             selected_power_error = [None] * num_algo
             succ_match_detected_doa = [None] * num_algo
             succ_match_true_doa = [None] * num_algo
-            # num_detected_aic = [None] * num_algo
-            # num_detected_mdl = [None] * num_algo
+
+            sir = [None] * num_algo
+
             l0_norm = [None] * num_algo
             list_HPBW = [None] * num_algo
             for i_alg in range(num_algo):
@@ -172,6 +191,19 @@ def analyze_algo_errors(results: list):
                         convert_db_to_linear(result["config"]["power_doa_db"]), threshold_theta_detect=threshold_theta_detect)
                 l0_norm[i_alg] = thresholded_l0_norm(result["p_vec_list"][i_alg], threshold=convert_db_to_linear(np.min(config["power_doa_db"]))*0.01)
 
+
+                grid_index_desired_doa = np.argmin(np.abs(grid_doa - config["doa"][0]))
+                estimated_power_at_desired = result["p_vec_list"][i_alg][grid_index_desired_doa]
+                if len(config["doa_interf"]) == 0:
+                    sir[i_alg] = np.inf
+                else:
+                    sir[i_alg]  = 0.0
+                    for doa_interf in config["doa_interf"]:
+                        grid_index_interf_doa = np.argmin(np.abs(grid_doa - doa_interf))
+                        estimated_power_at_interf = result["p_vec_list"][i_alg][grid_index_interf_doa]
+                        sir[i_alg] += estimated_power_at_desired / (1e-20 + estimated_power_at_interf)
+                    sir[i_alg] /= len(config["doa_interf"])
+
             result["num_detected"] = num_detected
             result["selected_doa_error"] = selected_doa_error
             result["selected_power_error"] = selected_power_error
@@ -181,6 +213,7 @@ def analyze_algo_errors(results: list):
             result["list_HPBW"] = list_HPBW
             # result["num_detected_aic"] = num_detected_aic
             # result["num_detected_mdl"] = num_detected_mdl
+            result["sir"] = sir
 
 
     algos_error_data = {key: defaultdict(lambda: [None]*num_configs) for key in 
@@ -194,7 +227,7 @@ def analyze_algo_errors(results: list):
             if all([num_det >= len(config["doa"]) for num_det in results[i_config][i_mc]["num_detected"]])
             ]
 
-        print(f"Config {i_config}: {len(indices_mc_all_algos_detected_enough_sources)}/{num_mc} MC iterations where all algos detected enough sources.")
+        # print(f"Config {i_config}: {len(indices_mc_all_algos_detected_enough_sources)}/{num_mc} MC iterations where all algos detected enough sources.")
         for i_algo, algo_name in enumerate(algo_list.keys()):
             # inds = indices_mc_all_algos_detected_enough_sources
             # inds = [
@@ -215,23 +248,17 @@ def analyze_algo_errors(results: list):
                                             for i_mc in inds])
                 mean_square_errors = np.mean(doa_errors**2, axis=1)
 
-                # prcnt_worst_results_to_ignore = 2
-                # index = np.ceil((100 - prcnt_worst_results_to_ignore) / 100 * len(mean_square_errors)).astype(int)
-                # bottom_q_percent_indices = np.argsort(mean_square_errors)[:index]
-                # doa_errors = np.stack([doa_errors[i] for i in bottom_q_percent_indices])
-                # power_errors = np.stack([power_errors[i] for i in bottom_q_percent_indices])
-
-                median_ = np.median(mean_square_errors)
-                inds_to_remove = np.where(mean_square_errors > 1000*(median_+1e-1))[0]
-                prcnt_outliers = len(inds_to_remove) / len(mean_square_errors) * 100
-                if prcnt_outliers > 15: 
-                    print(f"ERROR: {prcnt_outliers} % outliers detected in config {i_config}, algo {algo_name}. ")
-                    doa_errors = np.nan * np.ones_like(doa_errors)
-                    power_errors = np.nan * np.ones_like(power_errors)
-                elif prcnt_outliers > 0:
-                    print(f"WARNING: {prcnt_outliers} % outliers detected in config {i_config}, algo {algo_name}. Removing them.")
-                    doa_errors = np.delete(doa_errors, inds_to_remove, axis=0)
-                    power_errors = np.delete(power_errors, inds_to_remove, axis=0)
+                # median_ = np.median(mean_square_errors)
+                # inds_to_remove = np.where(mean_square_errors > 1000*(median_+1e-1))[0]
+                # prcnt_outliers = len(inds_to_remove) / len(mean_square_errors) * 100
+                # if prcnt_outliers > 15: 
+                #     print(f"ERROR: {prcnt_outliers} % outliers detected in config {i_config}, algo {algo_name}. ")
+                #     doa_errors = np.nan * np.ones_like(doa_errors)
+                #     power_errors = np.nan * np.ones_like(power_errors)
+                # elif prcnt_outliers > 0:
+                #     print(f"WARNING: {prcnt_outliers} % outliers detected in config {i_config}, algo {algo_name}. Removing them.")
+                #     doa_errors = np.delete(doa_errors, inds_to_remove, axis=0)
+                #     power_errors = np.delete(power_errors, inds_to_remove, axis=0)
 
 
             algos_error_data["mean_doa_errors"][algo_name][i_config] = np.mean(doa_errors, axis=0)
@@ -514,7 +541,7 @@ def plot_power_errors_per_source(algos_error_data: dict, parameter_name: str, pa
     return fig
 
 def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units: str, parameter_values: list, normalize_rmse_by_parameter: bool = False,
-                    do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True):
+                    do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True, do_colorbar: bool = False):
     import matplotlib.pyplot as plt
     
     algo_names = list(algos_error_data["mean_doa_errors"].keys())
@@ -575,8 +602,90 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         for text in lgd.get_texts():
             if "JBLD" in text.get_text():
                 text.set_fontweight("bold")
+    if do_colorbar:
+        cbar = create_colorbar(algo_list, ax)
+        
     ax.grid(True)
     return fig
+
+
+
+
+
+def plot_sir(results, parameter_name: str, parameter_units: str, parameter_values: list, do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True):
+    import matplotlib.pyplot as plt
+    
+    algo_names = results[0][0]["algo_names"]
+    algo_list = get_specific_inorder_algo_list(algo_names)
+    # algo_list = get_algo_dict_list()
+    if plot_on_ax is not None:
+        fig = []
+        ax = plot_on_ax
+    else:
+        fig = plt.figure()
+        ax = plt.gca()
+    for i_algo,algo_name in enumerate(algo_names):
+        sir_matrix = np.stack([np.array([results[i_config][i_mc]["sir"][i_algo] for i_mc in range(len(results[i_config]))]) for i_config in range(len(results))])
+        sir_mean = np.mean(sir_matrix, axis=1)
+
+        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
+        pltline = ax.plot(parameter_values, sir_mean, label=label, **algo_list[algo_name])
+
+        qlow = np.percentile(sir_matrix, 25, axis=1)
+        qhigh = np.percentile(sir_matrix, 75, axis=1)
+        ax.fill_between(parameter_values, qlow, qhigh, color=pltline[0].get_color(), alpha=0.10, linewidth=0.5)
+
+        if do_ylogscale:
+            ax.set_yscale('log')
+            ax.grid(True, which='both', linestyle='--')
+    xylabel_fontsize = 12
+    ax.set_ylabel(r"$\mathrm{SIR}$", fontsize=xylabel_fontsize)
+    ax.set_xlabel(parameter_name + f" {parameter_units}", fontsize=xylabel_fontsize)
+    
+    if do_legend:
+        lgd = ax.legend()
+        for text in lgd.get_texts():
+            if "JBLD" in text.get_text():
+                text.set_fontweight("bold")
+    ax.grid(True)
+    return fig
+
+def plot_sir_boxplot(results, parameter_name: str, parameter_units: str, parameter_values: list, i_config : int = 0,
+                     do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True):
+    import matplotlib.pyplot as plt
+    
+    algo_names = results[0][0]["algo_names"]
+    algo_list = get_specific_inorder_algo_list(algo_names)
+    # algo_list = get_algo_dict_list()
+    if plot_on_ax is not None:
+        fig = []
+        ax = plot_on_ax
+    else:
+        fig = plt.figure()
+        ax = plt.gca()
+    for i_algo,algo_name in enumerate(algo_names):
+        sir_vals = np.array([results[i_config][i_mc]["sir"][i_algo] for i_mc in range(len(results[i_config]))])
+
+
+        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
+        
+        raise NotImplementedError("Boxplot over SIR not implemented yet.")
+
+        if do_ylogscale:
+            ax.set_yscale('log')
+            ax.grid(True, which='both', linestyle='--')
+    xylabel_fontsize = 12
+    ax.set_ylabel(r"$\mathrm{SIR}$", fontsize=xylabel_fontsize)
+    ax.set_xlabel(parameter_name + f" {parameter_units}", fontsize=xylabel_fontsize)
+    
+    if do_legend:
+        lgd = ax.legend()
+        for text in lgd.get_texts():
+            if "JBLD" in text.get_text():
+                text.set_fontweight("bold")
+    ax.grid(True)
+    return fig
+
 
 
 def plot_doa_boxplots(algos_error_data, parameter_values, parameter_vals_to_show = None, do_ylogscale=False):

@@ -17,6 +17,7 @@ from fun_SAMV import *
 from fun_SPICE import *
 from fun_Riemannian import *
 from fun_ESPRIT import *
+from fun_CMPM import *
 import os
 import logging
 import scipy.linalg
@@ -25,7 +26,8 @@ def run_single_mc_iteration(
         i_mc: int,
         config: dict,
         algo_list : Optional[List[str]] = None,
-        do_log: bool = False
+        do_log: bool = False,
+        do_save_G_tensor_results: bool = False
 ):
 
     t0 = time()
@@ -51,7 +53,28 @@ def run_single_mc_iteration(
 
     num_algos = len(algo_list)
 
-    y_noisy = generate_signal(A_true, power_doa_db, config["N"], noise_power, cohr_flag=config["cohr_flag"], 
+    if utils.RUNNING_MPM:
+        A_interf = get_steering_matrix(config["doa_interf"], config["m"])
+        power_interf_db = config["power_doa_interf_db"]
+        num_interference_sources = len(config["doa_interf"])
+        interference_segments_ind_mat = np.zeros((num_interference_sources, config["L"]), dtype=bool)
+        for i_interf in range(num_interference_sources):
+            if (i_interf % 2) == 0:
+                segment_index = (0 + i_interf) % config["L"]
+            else:
+                segment_index = (config["L"] - 1 - (i_interf - 1)) % config["L"]
+            interference_segments_ind_mat[i_interf, segment_index] = True
+
+        # print(interference_segments_ind_mat)
+
+        y_noisy = generate_signal_with_interference(
+                    A_desired=A_true, power_desired_db=power_doa_db,
+                    A_interf=A_interf, power_interf_db=power_interf_db, 
+                    N=config["N"], noise_power=noise_power,
+                    L=config["L"], interference_segments_ind_mat=interference_segments_ind_mat,
+                    seed=i_mc)
+    else:
+        y_noisy = generate_signal(A_true, power_doa_db, config["N"], noise_power, cohr_flag=config["cohr_flag"], 
                               cohr_coeff = config["cohr_coeff"], noncircular_coeff=config["noncircular_coeff"],
                               seed=i_mc)
 
@@ -67,7 +90,10 @@ def run_single_mc_iteration(
 
     for i_algo in range(num_algos):
         t_algo_start = time()
-        if algo_list[i_algo] == "PER":
+        if utils.RUNNING_MPM and algo_list[i_algo].startswith("CMPM_q="):
+            q = float(algo_list[i_algo].split('=')[1])
+            p_vec, num_iters, _ = fun_CMPM(y_noisy, A, config["L"], q, noise_power)
+        elif algo_list[i_algo] == "PER":
             # p_vec, num_iters, _ = fun_DAS(y_noisy, A, modulus_hat_das, doa_scan, config["doa"])
             p_vec, num_iters, _ = fun_PER(y_noisy, A, noise_power)
         elif algo_list[i_algo] == "MVDR":
@@ -97,8 +123,8 @@ def run_single_mc_iteration(
         msg = f"{algo_list[i_algo]}: #iters= {num_iters}, runtime= {runtime_list[i_algo]} [sec]"
         if do_log:
             logging.info(msg)
-        else:
-            print(msg)
+        # else:
+        #     print(msg)
 
     msg = f"i_mc = {i_mc + 1}, elapsed time: {time() - t0 :.2f} [sec]"
     if do_log:
@@ -114,7 +140,13 @@ def run_single_mc_iteration(
     result['num_iters_list'] = num_iters_list
     result['p_vec_list'] = p_vec_list
     result['algo_names'] = algo_list
-    
+    if do_save_G_tensor_results:
+        G_tensor = get_G_tensor(y_noisy, config["L"])
+        list_p_vec_for_G_tensor = []
+        for l in range(config["L"]):
+            p_vec = np.sum(A.conj() * (G_tensor[l,:,:] @ A), axis=0).real  
+            list_p_vec_for_G_tensor .append(p_vec)
+        result['list_p_vec_for_G_tensor'] = list_p_vec_for_G_tensor 
     return result
 
 # def load_all_results(dirpath: str, prefix_result_files: str) -> None:

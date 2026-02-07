@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import pickle
 import os
 
+RUNNING_MPM = True
+
 FILENAME_PBS_SCRIPT = "job_byOrCohen.pbs"
 FILENAME_PBS_METADATA = "job_metadata.pkl"
 
@@ -263,8 +265,13 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
     return num_detected_doas, all_detected_doas, all_detected_powers, selected_doa_error, selected_power_error, \
             succ_match_detected_doa, succ_match_true_doa, mean_HPBW
 
+class NormalizePowerType:
+    NONE = 0
+    MAX = 1
+    DESIRED = 2
 
-def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=None, ax=None):
+def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=None, ax=None, normalize_power=NormalizePowerType.NONE,
+                           do_legend=False, do_colorbar=True):
     """
     Display the power spectrum of the DOA estimation.
 
@@ -278,7 +285,7 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
     doa = config["doa"]
 
 
-    doa_scan = get_doa_grid()
+    grid_doa = get_doa_grid()
 
     if algo_list is None:
         algo_list = get_algo_dict_list()
@@ -288,7 +295,9 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
     if ax is None:
         fig = plt.figure()
         ax = plt.gca()
+        # fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})        
 
+    
     list_plt = []
     for i_algo, algo_name in enumerate(algo_list.keys()):
         label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
@@ -302,69 +311,57 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
         else:
             spectrum = est
             spectrum[spectrum < epsilon_power] = epsilon_power
+            if normalize_power == NormalizePowerType.MAX:
+                spectrum = spectrum / np.max(spectrum)
+            elif normalize_power == NormalizePowerType.DESIRED:
+                grid_index_desired_doa = np.argmin(np.abs(grid_doa - config["doa"][0]))
+                spectrum = spectrum / spectrum[grid_index_desired_doa]
             spectrum = convert_linear_to_db(spectrum)
-            pltobj, = ax.plot(doa_scan, spectrum, label=label, **algo_list[algo_name])
+
+            curr_dict = {**algo_list[algo_name], "marker": "none"}
+            pltobj, = ax.plot(grid_doa, spectrum, label=label, **curr_dict)
+            # pltobj, = ax.plot(grid_doa*np.pi/180, spectrum, label=label, **algo_list[algo_name])
+            
         list_plt.append(pltobj)
     
-    plt_doa, = ax.plot(doa, power_doa_db, 'x', color='black', label='DOA')
+    # plt_doa, = ax.plot(doa, power_doa_db, 'x', color='black', label='DOA')
     # list_plt.append(plt_doa)
     
-    lgd = ax.legend(handles=list_plt)
-    for text in lgd.get_texts():
-        if "JBLD" in text.get_text():
-            text.set_fontweight("bold")
+    # ax.set_thetamin(0)
+    # ax.set_thetamax(180)
+
+    if do_colorbar:
+        cbar = create_colorbar(algo_list, ax)
+        
+    for desired in config["doa"]:
+        ax.axvline(x=desired, color='k', linestyle='-', linewidth=2)
+    for interf in config["doa_interf"]:
+        ax.axvline(x=interf, color='k', linestyle=':', linewidth=2)
+
+    if do_legend:
+        lgd = ax.legend(handles=list_plt)
+        for text in lgd.get_texts():
+            if "JBLD" in text.get_text():
+                text.set_fontweight("bold")
+
     ax.set_xlabel(r"$\theta$ (degrees)", fontsize=12)
     ax.set_ylabel(r"$\mathrm{Power}$ (dB)", fontsize=12)
     
     # plt.title('Directions Power Spectrum Estimation')
     return ax
 
-# def detect_DOAs(p_vec, grid_doa, doa):
-#     num_sources = len(doa)
-#     # Find peaks in descending order
-#     peak_indices, _ = find_peaks(p_vec)
-#     peak_values = p_vec[peak_indices]
-#     sorted_indices = np.argsort(-peak_values)  # Sort in descending order
-#     peak_indices = peak_indices[sorted_indices]
-#     peak_indices = np.atleast_1d(peak_indices)
-#     if (not isinstance(peak_indices, np.ndarray)) or len(peak_indices) < num_sources:
-#         # Not all peaks detected
-#         print("Not all peaks detected")
-#         detection_status = 0
-#         doa_error = np.nan
-#         detected_powers = np.nan
-#         return detected_powers, doa_error, detection_status
+def extract_q_from_algo_name(algo_name):
+    return float(algo_name.split('=')[1])
 
-#     # Check whether the detection is correct
-#     detected_doas = grid_doa[peak_indices[:num_sources]]
+def create_colorbar(algo_list, ax):
+    colormap = get_colormap()
+    q_vals = np.array([extract_q_from_algo_name(algo_name) for algo_name in algo_list.keys()])
+    sm = plt.cm.ScalarMappable(cmap=colormap, norm=plt.Normalize(vmin=q_vals.min(), vmax=q_vals.max()))
+    cbar = plt.colorbar(sm, ax=ax, orientation='horizontal', location="top",pad=0.05)
+    cbar.set_label('q values', fontsize=12)
+    cbar.ax.tick_params(labelsize=10)
+    return cbar
 
-#     # Sort detected DOAs in ascending order
-#     sorted_indices = np.argsort(detected_doas)
-#     detected_doas = detected_doas[sorted_indices]
-#     doa_error = detected_doas - doa
-
-#     detection_status = 1  # detection successful
-#     # The powers from large value to small value
-#     detected_powers = p_vec[peak_indices[:num_sources]]
-#     # Sort the power according to the DOA
-#     detected_powers = detected_powers[sorted_indices]
-
-#     return detected_powers, doa_error, detection_status
-    
-def model_order_selection(R, N):
-
-    eigs = np.linalg.eigvalsh(R)[::-1]  # Sort eigenvalues in descending order
-    M = len(eigs)
-    aic = np.zeros(M)
-    mdl = np.zeros(M)
-    for k in range(M):
-        num = M - k
-        geo = np.product(eigs[k:])**(1/num)
-        arith = np.mean(eigs[k:])
-        plunge = num * np.log(arith / geo)
-        aic[k] = 2 * N * plunge + 2 * k * (2*M - k)
-        mdl[k] = N * plunge + 0.5 * k * (2*M - k) * np.log(N)
-    return np.argmin(aic), np.argmin(mdl)
 
 def generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=False, cohr_coeff = 1.0, noncircular_coeff = 0.0, 
                     impulse_prob=0.0, impulse_factor=1.0,
@@ -398,6 +395,46 @@ def generate_signal(A_true, power_doa_db, t_samples, noise_power, cohr_flag=Fals
 
     return y_noisy
 
+
+def generate_signal_with_interference(
+        A_desired, power_desired_db,
+        A_interf, power_interf_db, 
+        N, noise_power,
+        L, interference_segments_ind_mat,
+        seed=None):
+    
+    if seed is not None:
+        np.random.seed(seed)
+    M = A_desired.shape[0]
+    K_desired = A_desired.shape[1]
+    K_interf = A_interf.shape[1]
+    amplitude_desired = np.sqrt(10.0 ** (power_desired_db / 10.0))
+    amplitude_interf = np.sqrt(10.0 ** (power_interf_db / 10.0))
+    # Generate signal
+    noise = np.sqrt(noise_power / 2) * (np.random.randn(M, N) + 1j * np.random.randn(M, N))
+    waveform_desired = np.exp(1j * 2 * np.pi * np.random.rand(K_desired, N)) * np.tile(amplitude_desired, (N, 1)).T
+    waveform_interf = np.exp(1j * 2 * np.pi * np.random.rand(K_interf, N)) * np.tile(amplitude_interf, (N, 1)).T
+
+    # Zero out interference in segments where there is no interference
+    for i_interf in range(K_interf):
+        for l in range(L):
+            start_ind, end_ind = get_segment_start_end_indices(N, L, l)
+            if interference_segments_ind_mat[i_interf, l] == False:
+                waveform_interf[i_interf, start_ind:end_ind] *= 0
+    
+    Y = A_desired @ waveform_desired + A_interf @ waveform_interf + noise
+    return Y
+    
+def get_segment_start_end_indices(N, L, l):
+    segment_len = np.ceil(N / L)
+    start_ind = int(l * segment_len)
+    end_ind = int(min((l + 1) * segment_len, N))
+    return start_ind, end_ind
+
+
+
+
+
 def make_non_circular(s, kappa):
     """
     Takes a circular signal s (K x N), returns non-circular version.
@@ -429,8 +466,9 @@ def get_steering_matrix_ula(theta_degrees, M, calcGradient_wrt_radians=False):
     doa_rad = np.deg2rad(theta_degrees) # Convert to radians
     delta_vec = np.arange(M)    
     A = np.exp(1j * np.pi * np.outer(delta_vec, np.cos(doa_rad)))
-    # print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-    # A = A / np.sqrt(m)
+    
+    if RUNNING_MPM:
+        A = A / np.sqrt(M)
     
     # print("ULA:")
     # print(A[:,0])
@@ -476,50 +514,85 @@ def get_steering_matrix_half_uca(theta_degrees, M, calcGradient_wrt_radians=Fals
 
     return A
 
+def get_colormap():
+    # return plt.cm.vanimo
+    return plt.cm.managua
+
 def define_all_algo_dict_list():
-    # return [("PER",'r-->'), ("SPICE",'m--p'), ("SAMV",'b-^'), ("AIRM",'g--s'), ("JBLD",'y--o')]
-    # return [("SPICE",'m--p'), ("SAMV",'r--^'), ("AIRM",'g-s'), ("JBLD",'b--o')]
-    linewidth = 2
-    d = {
-        "SPICE": {"linestyle": "--", "color": "#BBB800FF", "marker": "s", "markersize": 4, "linewidth": linewidth},
-        "SAMV":  {"linestyle": "--", "color": "#E65908", "marker": "^", "markersize": 5.5, "linewidth": linewidth},
-        "AIRM":  {"linestyle": "-", "color": "#0CBD56", "marker": "o", "linewidth": linewidth},
-        "LE": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 4, "linewidth": linewidth},
-        "JBLD":  {"linestyle": "-", "color": "#2B27FF", "marker": "o", "markerfacecolor": "none", "markersize": 8, "linewidth": linewidth},
-        "PER": {"linestyle": ":", "color": "y", "marker": "^"},
-        # "LE_ss": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 4, "linewidth": linewidth},
-        "MVDR": {"linestyle": "--", "color": "c", "marker": "o", "markersize": 6},
-        "ESPRIT": {"linestyle": "--", "color": "black", "marker": "o", "markerfacecolor": "none", "markersize": 6},
-        }
+    if RUNNING_MPM:
+        q_vals = np.arange(-1, 1.01, 0.25)
+        colormap = get_colormap()
+        keys = [f"CMPM_q={q}" for q in q_vals]
+        # linewidth = 1.5
+        # d = {key: {"linestyle": "-", "color": colormap(i / (len(q_vals)-1)), "marker": "o", "markersize": 4, "linewidth": linewidth} 
+        linewidth = 2.5
+        d = {key: {"linestyle": "-", "color": colormap(i / (len(q_vals)-1)), "linewidth": linewidth, 
+                   "marker": "o", "markerfacecolor": "none", "markersize": 6} 
+             for i, key in enumerate(keys)}
+        
+    else:
+        linewidth = 2
+        d = {
+            "SPICE": {"linestyle": "--", "color": "#BBB800FF", "marker": "s", "markersize": 4, "linewidth": linewidth},
+            "SAMV":  {"linestyle": "--", "color": "#E65908", "marker": "^", "markersize": 5.5, "linewidth": linewidth},
+            "AIRM":  {"linestyle": "-", "color": "#0CBD56", "marker": "o", "linewidth": linewidth},
+            "LE": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 4, "linewidth": linewidth},
+            "JBLD":  {"linestyle": "-", "color": "#2B27FF", "marker": "o", "markerfacecolor": "none", "markersize": 8, "linewidth": linewidth},
+            "PER": {"linestyle": ":", "color": "y", "marker": "^"},
+            # "LE_ss": {"linestyle": "-.", "color": "m", "marker": "s", "markersize": 4, "linewidth": linewidth},
+            "MVDR": {"linestyle": "--", "color": "c", "marker": "o", "markersize": 6},
+            "ESPRIT": {"linestyle": "--", "color": "black", "marker": "o", "markerfacecolor": "none", "markersize": 6},
+            }
 
     return d
 
+def get_segements_dict_list(L):
+    import matplotlib as mpl
+    colormap = mpl.colormaps['Accent']
+    seg_ids = np.arange(1, L+1)
+    keys = [f"segment {seg_id}" for seg_id in seg_ids]
+    linewidth = 2.5
+    d = {key: {"linestyle": "-.", "color": colormap(i), "linewidth": linewidth} 
+            for i, key in enumerate(keys)}
+    return d
+
 def get_algo_dict_list():
-    all_algo_list = define_all_algo_dict_list()
-    wanted_algo_names = globalParams.WANTED_ALGO_NAMES
-    algo_list = {k: v for k, v in all_algo_list.items() if k in wanted_algo_names}
-    return algo_list
+    # all_algo_list = define_all_algo_dict_list()
+    # wanted_algo_names = globalParams.WANTED_ALGO_NAMES
+    # algo_list = {k: v for k, v in all_algo_list.items() if k in wanted_algo_names}
+    # return algo_list
+    return define_all_algo_dict_list()
+
 def get_specific_inorder_algo_list(specific_algo_names):
     all_algo_list = define_all_algo_dict_list()
     algo_list = {k: all_algo_list[k] for k in specific_algo_names if k in all_algo_list}
     return algo_list
 
-def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False, cohr_coeff=1.0, noncircular_coeff=0.0, 
-                  impulse_prob=0.0, impulse_factor=1.0):
-    """
-    Create a configuration dictionary to hold parameters for simulations.
-    """
+# def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False, cohr_coeff=1.0, noncircular_coeff=0.0, 
+#                   impulse_prob=0.0, impulse_factor=1.0):
+#     return {
+#         "m": m,
+#         "snr": snr,
+#         "N": N,
+#         "power_doa_db": power_doa_db,
+#         "doa": doa,
+#         "cohr_flag": cohr_flag,
+#         "cohr_coeff": cohr_coeff,
+#         "noncircular_coeff": noncircular_coeff,
+#         "impulse_prob": impulse_prob,
+#         "impulse_factor": impulse_factor,
+#     }
+def create_config(m, snr, N, power_doa_db, doa, power_doa_interf_db, doa_interf, L):
     return {
         "m": m,
         "snr": snr,
         "N": N,
         "power_doa_db": power_doa_db,
         "doa": doa,
-        "cohr_flag": cohr_flag,
-        "cohr_coeff": cohr_coeff,
-        "noncircular_coeff": noncircular_coeff,
-        "impulse_prob": impulse_prob,
-        "impulse_factor": impulse_factor,
+        "power_doa_interf_db": power_doa_interf_db,
+        "doa_interf": doa_interf,
+        "L": L,
+        "cohr_flag": False,
     }
 
 def experiment_configs_string_to_file(num_mc, config_list, directory="", filename="configurations_output.txt"):
@@ -533,3 +606,14 @@ def experiment_configs_string_to_file(num_mc, config_list, directory="", filenam
         f.write(configs_output)
 
 
+
+def get_G_tensor(Y, L):
+    M, N = Y.shape
+    G_tensor = np.zeros((L,M,M), dtype=complex)
+    for l in range(L):
+        start, end = get_segment_start_end_indices(N, L, l)
+        W = end - start
+        Yl = Y[:, start:end]
+        G = (Yl @ Yl.conj().T) / W
+        G_tensor[l,:,:] = (G + G.conj().T) * 0.5
+    return G_tensor

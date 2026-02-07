@@ -21,7 +21,7 @@ plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2026-m01-d13_15-59-09/Exp_OffGrid_y2026-m01-d13_16-28-38_indp_N_50_M_12_SNR_0'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m02-d07_20-44-08/Exp_N_y2026-m02-d07_20-44-08'
     name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
@@ -225,6 +225,7 @@ import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict, Any, Optional
 # %matplotlib ipympl
 
+
 from RunSingleMCIteration import run_single_mc_iteration
 from utils import *
 import os
@@ -238,68 +239,141 @@ importlib.reload(ToolsMC)
 from utils import *
 from ToolsMC import *
 plt.close('all')
-utils.globalParams = GlobalParms()  # reset global params to default values
-utils.globalParams.SENSOR_ARRAY_TYPE = "ULA"
-# utils.globalParams.SENSOR_ARRAY_TYPE = "HALF_UCA"
-# M = 12
-M = 120
 
-doa=np.array([35.0, 43.0, 51.0])
-power_doa_db=np.array([0, 0, -5])
+M = 12
+L = 2
+W = 10*M
+N = int(W*L)
+doa_desired=np.array([70.0])
+power_doa_desired_db=np.array([0])
 
-# doa=np.array([35.0, .0])
-# power_doa_db=np.array([0, 0])
+doa_interf = np.array([55.0, 120.0])
+power_doa_interf_db = np.array([3.0, 3.0])
 
-
-
-resolution_factor = 12 / M
-
-original_diff_doa = doa - doa[0]
-grid_minval_degrees = 40
-num_grid_points = get_doa_grid().shape[0]
-utils.globalParams.GRID_STEP_DEGREES = utils.globalParams.GRID_STEP_DEGREES * resolution_factor
-grid_maxval_degrees = grid_minval_degrees + utils.globalParams.GRID_STEP_DEGREES * (num_grid_points -1)
-utils.globalParams.GRID_MIN_MAX_VALS_DEGREES = (grid_minval_degrees, grid_maxval_degrees)
-doa_min = 45# grid_minval_degrees + 10*utils.globalParams.GRID_STEP_DEGREES
-doa = doa_min + original_diff_doa*resolution_factor
-
-
-
+# doa_interf = np.array([])
+# power_doa_interf_db = np.array([])
 
 config = create_config(
-    m=M, snr=0+convert_linear_to_db(resolution_factor), N=int(50 / resolution_factor), power_doa_db=power_doa_db, doa=doa
-)
-
-# m = 12
-# config = create_config(
-#     doa=np.array([35.0, 51.0]), power_doa_db=np.array([0, 0]) + convert_linear_to_db(12) - convert_linear_to_db(m), N=50, m=m, snr=0 ,
-# )
+    m=M, snr=10, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
+    power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
 
 algo_list = define_all_algo_dict_list()
-# algo_list = {k: v for k, v in algo_list.items() if k in ['AIRM', 'JBLD', 'LE_ss', 'PER', 'ESPRIT']}
-# algo_list = {k: v for k, v in algo_list.items() if k in ['PER']}
-# algo_list = {k: v for k, v in algo_list.items() if k in ['SPICE', 'JBLD','LE']}
-# algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD']}
-# algo_list = {k: v for k, v in algo_list.items() if k in ['JBLD','SPICE','SAMV']}
-algo_list = {k: v for k, v in algo_list.items() if k in ['SPICE','SAMV','AIRM','JBLD','LE']}
 result= run_single_mc_iteration(
     i_mc= 0,
     config=config,
+    algo_list=list(algo_list.keys()),
+    do_save_G_tensor_results= True)
+
+ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list,
+                            normalize_power=NormalizePowerType.NONE, do_legend=False, do_colorbar=True)
+
+
+
+ax = display_power_spectrum(result["config"], result["list_p_vec_for_G_tensor"], algo_list=get_segements_dict_list(config["L"]),
+                            normalize_power=NormalizePowerType.NONE, do_legend=True, do_colorbar=False)
+
+
+
+# create figure with 2 subplots:
+# fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8))
+# display_power_spectrum(result["config"], result["list_p_vec_for_G_tensor"][0], algo_list=algo_list,
+#                             normalize_power=NormalizePowerType.NONE, ax=ax1)
+
+# %%
+
+import numpy as np
+from time import time
+import matplotlib.pyplot as plt
+from typing import List, Tuple, Dict, Any, Optional
+# %matplotlib ipympl
+
+
+from RunSingleMCIteration import run_single_mc_iteration
+from utils import *
+import os
+import pickle
+# 
+import utils
+import ToolsMC
+import importlib
+importlib.reload(utils)
+importlib.reload(ToolsMC)
+from utils import *
+from ToolsMC import *
+plt.close('all')
+
+M = 12
+L = 2
+W = 1*M
+N = int(W*L)
+doa_desired=np.array([70.0])
+power_doa_desired_db=np.array([0])
+
+# doa_interf = np.array([55.0, 120.0])
+# power_doa_interf_db = np.array([3.0, 3.0])
+
+doa_interf = np.array([])
+power_doa_interf_db = np.array([])
+
+config = create_config(
+    m=M, snr=10, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
+    power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
+
+configs_to_display = []
+
+currconfig = config.copy()
+currconfig["N"] = int(0.7*M*L)
+currconfig["snr"] = 10
+configs_to_display.append(currconfig)
+
+currconfig = config.copy()
+currconfig["N"] = int(0.7*M*L)
+currconfig["snr"] = 0
+configs_to_display.append(currconfig)
+
+currconfig = config.copy()
+currconfig["N"] = int(1*M*L)
+currconfig["snr"] = 10
+configs_to_display.append(currconfig)
+
+currconfig = config.copy()
+currconfig["N"] = int(1*M*L)
+currconfig["snr"] = 0
+configs_to_display.append(currconfig)
+
+currconfig = config.copy()
+currconfig["N"] = int(3*M*L)
+currconfig["snr"] = 10
+configs_to_display.append(currconfig)
+
+currconfig = config.copy()
+currconfig["N"] = int(3*M*L)
+currconfig["snr"] = 0
+configs_to_display.append(currconfig)
+
+
+currconfig = config.copy()
+currconfig["N"] = int(50*M*L)
+currconfig["snr"] = 10
+configs_to_display.append(currconfig)
+
+currconfig = config.copy()
+currconfig["N"] = int(50*M*L)
+currconfig["snr"] = 0
+configs_to_display.append(currconfig)
+
+for i, currconfig in enumerate(configs_to_display):
+    result= run_single_mc_iteration(
+    i_mc= 0,
+    config=currconfig,
     algo_list=list(algo_list.keys()))
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# R_hat = result["R_hat"]
-# A = get_steering_matrix(get_doa_grid(),R_hat.shape[0])
-# invR_hat_A = np.linalg.solve(R_hat, A)
-# p_MVDR = 1/np.sum(A.conj() * invR_hat_A, axis=0)
-# result["p_vec_list"][0] = p_MVDR
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list)
+    ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list,
+                            normalize_power=NormalizePowerType.NONE)
+    plt.suptitle(f"SNR={currconfig['snr']}, W/M={currconfig['N']/M/config['L']}")
 
-doas = result["config"]["doa"]
-power_doa_db = result["config"]["power_doa_db"]
-ax.set_xlim([np.min(doas)-10, np.max(doas)+10])
-ax.set_ylim([-20, np.max(power_doa_db)+3])    
+
+
 # %%
 def Foo(x):
     x = x / 2

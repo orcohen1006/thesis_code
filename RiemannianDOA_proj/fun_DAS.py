@@ -64,3 +64,5 @@ def fun_MVDR(Y, A, DAS_init, DOAscan, DOA, noisepower):
     num_iters = 0
 
     return p_vec, num_iters, noisepower
+
+
