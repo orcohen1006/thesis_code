@@ -544,6 +544,9 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
                     do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True, do_colorbar: bool = False):
     import matplotlib.pyplot as plt
     
+    if type(parameter_values[0]) == np.ndarray:
+        parameter_values = np.array([param[0] for param in parameter_values])
+
     algo_names = list(algos_error_data["mean_doa_errors"].keys())
     algo_list = get_specific_inorder_algo_list(algo_names)
     # algo_list = get_algo_dict_list()
@@ -615,6 +618,9 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
 def plot_sir(results, parameter_name: str, parameter_units: str, parameter_values: list, do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True, do_colorbar: bool = False):
     import matplotlib.pyplot as plt
     
+    if type(parameter_values[0]) == np.ndarray:
+        parameter_values = np.array([param[0] for param in parameter_values])
+
     algo_names = results[0][0]["algo_names"]
     algo_list = get_specific_inorder_algo_list(algo_names)
     # algo_list = get_algo_dict_list()

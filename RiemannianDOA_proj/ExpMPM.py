@@ -111,6 +111,26 @@ def run_on_N(basedir):
     # %% 
     exp(config, scanned_param_name, scanned_param_vals, basedir=basedir) 
 
+def run_on_inputSIR(basedir):
+    # %% 
+    M = 12
+    L = 2
+    N = int(M*3*L)
+    doa_desired=np.array([70.0])
+    power_doa_desired_db=np.array([0])
+
+    doa_interf = np.array([50.0, 120.0])
+    power_doa_interf_db = np.array([5.0, 5.0])
+
+    config = create_config(
+        m=M, snr=5, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
+        power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
+    scanned_param_name = 'power_doa_interf_db'
+    scanned_param_vals = [np.array([0.0, 0.0])-5, np.array([0.0, 0.0]), np.array([0.0, 0.0])+5]
+    
+    # %% 
+    exp(config, scanned_param_name, scanned_param_vals, basedir=basedir) 
+
 
 if __name__ == "__main__":
 
@@ -123,12 +143,13 @@ if __name__ == "__main__":
     if not os.path.exists(basedir):
         os.makedirs(basedir) 
     # %% ---------------------------------------
-    run_on_N_no_interf(basedir)
+    # run_on_N_no_interf(basedir)
     # %% ---------------------------------------
-    run_on_SNR(basedir)        
+    # run_on_SNR(basedir)        
     # %% ---------------------------------------
-    run_on_N(basedir)        
-
+    # run_on_N(basedir)        
+    # %% ---------------------------------------
+    run_on_inputSIR(basedir) 
 
 
 
