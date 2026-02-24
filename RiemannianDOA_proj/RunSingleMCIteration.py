@@ -87,12 +87,14 @@ def run_single_mc_iteration(
     p_vec_list = [None] * num_algos
     runtime_list = [None] * num_algos
     num_iters_list = [None] * num_algos
+    eigsG_list = [None] * num_algos
 
     for i_algo in range(num_algos):
         t_algo_start = time()
         if utils.RUNNING_MPM and algo_list[i_algo].startswith("CMPM_q="):
             q = float(algo_list[i_algo].split('=')[1])
-            p_vec, num_iters, _ = fun_CMPM(y_noisy, A, config["L"], q, noise_power)
+            p_vec, num_iters, _, eigsG = fun_CMPM(y_noisy, A, config["L"], q, noise_power)
+            eigsG_list[i_algo] = eigsG
         elif algo_list[i_algo] == "PER":
             # p_vec, num_iters, _ = fun_DAS(y_noisy, A, modulus_hat_das, doa_scan, config["doa"])
             p_vec, num_iters, _ = fun_PER(y_noisy, A, noise_power)
@@ -136,6 +138,7 @@ def run_single_mc_iteration(
     result["i_mc"] = i_mc
     result['config'] = config
     # result["R_hat"] = (y_noisy @ y_noisy.conj().T) / config["N"]
+    result['eigsG_list'] = eigsG_list
     result['runtime_list'] = runtime_list
     result['num_iters_list'] = num_iters_list
     result['p_vec_list'] = p_vec_list

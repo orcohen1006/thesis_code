@@ -33,6 +33,7 @@ def exp(config, scanned_param_name, scanned_param_vals, basedir:str = '') -> Non
     fig_doa_errors = plot_doa_errors(algos_error_data, f'{scanned_param_name}', "", scanned_param_vals, normalize_rmse_by_parameter=False, do_ylogscale=False, do_legend=False, do_colorbar=True)
     fig_sir = plot_sir(results, f'{scanned_param_name}', "", scanned_param_vals, do_ylogscale=False, do_legend=False, do_colorbar=True)
     fig_sir_per_config = plot_sir_per_config(results)
+    fig_eigsG = plot_eigsG_per_config(results, do_ylogscale=False)
     # %%
     experiment_configs_string_to_file(num_mc=num_mc, config_list=config_list, directory=path_results_dir)
     str_desc_name = os.path.basename(name_results_dir)
@@ -123,7 +124,7 @@ def run_on_inputSIR(basedir):
     power_doa_interf_db = np.array([5.0, 5.0])
 
     config = create_config(
-        m=M, snr=5, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
+        m=M, snr=10, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
         power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
     scanned_param_name = 'power_doa_interf_db'
     scanned_param_vals = [np.array([0.0, 0.0])-5, np.array([0.0, 0.0]), np.array([0.0, 0.0])+5]
@@ -157,5 +158,5 @@ if __name__ == "__main__":
     # %% ---------------------------------------
     print(f'Total Running Time: {time.time() - t0_overall} sec.')
     # %% ---------------------------------------
-    git_commit_and_push(commit_message=basedir)
+    # git_commit_and_push(commit_message=basedir)
 

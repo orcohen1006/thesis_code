@@ -514,6 +514,23 @@ def get_steering_matrix_half_uca(theta_degrees, M, calcGradient_wrt_radians=Fals
 
     return A
 
+
+def model_order_selection(R, N):
+
+    eigs = np.linalg.eigvalsh(R)[::-1]  # Sort eigenvalues in descending order
+    M = len(eigs)
+    aic = np.zeros(M)
+    mdl = np.zeros(M)
+    for k in range(M):
+        num = M - k
+        geo = np.product(eigs[k:])**(1/num)
+        arith = np.mean(eigs[k:])
+        plunge = num * np.log(arith / geo)
+        aic[k] = 2 * N * plunge + 2 * k * (2*M - k)
+        mdl[k] = N * plunge + 0.5 * k * (2*M - k) * np.log(N)
+    return np.argmin(aic), np.argmin(mdl)
+
+
 def get_colormap():
     # return plt.cm.vanimo
     return plt.cm.managua

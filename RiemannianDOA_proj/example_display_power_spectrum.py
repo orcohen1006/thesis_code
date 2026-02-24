@@ -21,7 +21,7 @@ plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m02-d07_22-32-32/Exp_snr_y2026-m02-d07_22-32-32'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m02-d08_01-17-30/Exp_power_doa_interf_db_y2026-m02-d08_01-17-30'
     name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
@@ -242,7 +242,7 @@ plt.close('all')
 
 M = 12
 L = 2
-W = 10*M
+W = 3*M
 N = int(W*L)
 doa_desired=np.array([70.0])
 power_doa_desired_db=np.array([0])
@@ -254,7 +254,7 @@ power_doa_interf_db = np.array([3.0, 3.0])
 # power_doa_interf_db = np.array([])
 
 config = create_config(
-    m=M, snr=10, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
+    m=M, snr=5, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
     power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
 
 algo_list = define_all_algo_dict_list()
@@ -266,18 +266,26 @@ result= run_single_mc_iteration(
 
 ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list,
                             normalize_power=NormalizePowerType.NONE, do_legend=False, do_colorbar=True)
-
+fig_q_spectrum = plt.gcf()
 
 
 ax = display_power_spectrum(result["config"], result["list_p_vec_for_G_tensor"], algo_list=get_segements_dict_list(config["L"]),
                             normalize_power=NormalizePowerType.NONE, do_legend=True, do_colorbar=False)
-
+fig_segments_spectrum = plt.gcf()
 
 
 # create figure with 2 subplots:
 # fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8))
 # display_power_spectrum(result["config"], result["list_p_vec_for_G_tensor"][0], algo_list=algo_list,
 #                             normalize_power=NormalizePowerType.NONE, ax=ax1)
+
+# %%
+from datetime import datetime
+path_dir = "Figs_Spectrum_" + datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
+os.makedirs(path_dir)
+save_figure(fig_q_spectrum, path_dir, name="q_spectrum")
+save_figure(fig_segments_spectrum, path_dir, name="segments_spectrum")
+
 
 # %%
 

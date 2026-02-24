@@ -47,5 +47,6 @@ def fun_CMPM(Y, A, L, q, noise_power):
     p_vec = np.sum(A.conj() * (G_hat @ A), axis=0).real
     # p_vec = np.maximum(p_vec - noise_power, 0)
     p_vec = p_vec / (scaler**2)
-    return p_vec, 0, 0
 
+    eigsG = np.linalg.eigvalsh(G_hat)
+    return p_vec, 0, 0, eigsG
