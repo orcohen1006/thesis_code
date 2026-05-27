@@ -311,17 +311,17 @@ from ToolsMC import *
 plt.close('all')
 
 M = 12
-L = 2
+L = 5
 W = 1*M
 N = int(W*L)
 doa_desired=np.array([70.0])
 power_doa_desired_db=np.array([0])
 
-# doa_interf = np.array([55.0, 120.0])
-# power_doa_interf_db = np.array([3.0, 3.0])
+doa_interf = np.array([55.0, 120.0])
+power_doa_interf_db = np.array([3.0, 3.0])
 
-doa_interf = np.array([])
-power_doa_interf_db = np.array([])
+# doa_interf = np.array([])
+# power_doa_interf_db = np.array([])
 
 config = create_config(
     m=M, snr=10, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
@@ -329,56 +329,42 @@ config = create_config(
 
 configs_to_display = []
 
-currconfig = config.copy()
-currconfig["N"] = int(0.7*M*L)
-currconfig["snr"] = 10
-configs_to_display.append(currconfig)
+# N_vals = [int(1*M*L), int(2*M*L), int(3*M*L)]
+# snr_vals = [10, 0, -5]
 
-currconfig = config.copy()
-currconfig["N"] = int(0.7*M*L)
-currconfig["snr"] = 0
-configs_to_display.append(currconfig)
+# N_vals = [int(1.5*M*L)]
+# snr_vals = [5, 0, -2.5, -5]
 
-currconfig = config.copy()
-currconfig["N"] = int(1*M*L)
-currconfig["snr"] = 10
-configs_to_display.append(currconfig)
+N_vals = [int(1*M*L), int(1.5*M*L), int(2*M*L)]
+snr_vals = [5, 0, -2.5]
 
-currconfig = config.copy()
-currconfig["N"] = int(1*M*L)
-currconfig["snr"] = 0
-configs_to_display.append(currconfig)
+for N in N_vals:
+    for snr in snr_vals:
+        currconfig = config.copy()
+        currconfig["N"] = N
+        currconfig["snr"] = snr
+        configs_to_display.append(currconfig)
 
-currconfig = config.copy()
-currconfig["N"] = int(3*M*L)
-currconfig["snr"] = 10
-configs_to_display.append(currconfig)
-
-currconfig = config.copy()
-currconfig["N"] = int(3*M*L)
-currconfig["snr"] = 0
-configs_to_display.append(currconfig)
-
-
-currconfig = config.copy()
-currconfig["N"] = int(50*M*L)
-currconfig["snr"] = 10
-configs_to_display.append(currconfig)
-
-currconfig = config.copy()
-currconfig["N"] = int(50*M*L)
-currconfig["snr"] = 0
-configs_to_display.append(currconfig)
+ 
+fig, axes = plt.subplots(len(N_vals), len(snr_vals), figsize=(len(snr_vals)*4, len(N_vals)*4))
+axes = axes.flatten()
 
 for i, currconfig in enumerate(configs_to_display):
-    result= run_single_mc_iteration(
-    i_mc= 0,
-    config=currconfig,
-    algo_list=list(algo_list.keys()))
+    algo_list = define_all_algo_dict_list()
+    result = run_single_mc_iteration(
+        i_mc=0,
+        config=currconfig,
+        algo_list=list(algo_list.keys()))
 
-    ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list,
+    ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list, ax=axes[i],
+                            do_colorbar=False,
                             normalize_power=NormalizePowerType.NONE)
-    plt.suptitle(f"SNR={currconfig['snr']}, W/M={currconfig['N']/M/config['L']}")
+    axes[i].set_title(f"W/M={currconfig['N']/M/config['L']}, SNR={currconfig['snr']}")
+
+fig.suptitle("Power Spectrum Analysis")
+plt.tight_layout()
+plt.show()
+
 
 
 

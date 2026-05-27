@@ -355,7 +355,7 @@ def extract_q_from_algo_name(algo_name):
 
 def create_colorbar(algo_list, ax):
     colormap = get_colormap()
-    q_vals = np.array([extract_q_from_algo_name(algo_name) for algo_name in algo_list.keys()])
+    q_vals = np.array([extract_q_from_algo_name(algo_name) for algo_name in algo_list.keys() if algo_name.startswith("CMPM_q=")])
     sm = plt.cm.ScalarMappable(cmap=colormap, norm=plt.Normalize(vmin=q_vals.min(), vmax=q_vals.max()))
     cbar = plt.colorbar(sm, ax=ax, orientation='horizontal', location="top",pad=0.05)
     cbar.set_label('q values', fontsize=12)
@@ -546,6 +546,12 @@ def define_all_algo_dict_list():
         d = {key: {"linestyle": "-", "color": colormap(i / (len(q_vals)-1)), "linewidth": linewidth, 
                    "marker": "o", "markerfacecolor": "none", "markersize": 6} 
              for i, key in enumerate(keys)}
+        
+        # add other algorithms with fixed styles
+        d.update({
+            "MinSpectrum": {"linestyle": "--", "color": "#3BC966", "linewidth": linewidth, 
+                   "marker": "o", "markerfacecolor": "none", "markersize": 6},
+        })
         
     else:
         linewidth = 2

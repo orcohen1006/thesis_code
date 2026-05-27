@@ -64,11 +64,10 @@ def karcher_mean(G_tensor: np.ndarray,
     dtype = G_tensor.dtype
     I = np.eye(M, dtype=dtype)
 
-    # C_l = R_l + delta I (optional)
-    if delta > 0.0:
-        C = herm(G_tensor + delta * I)
-    else:
-        C = herm(G_tensor)
+    # C_l = R_l + delta I
+    C = np.empty_like(G_tensor, dtype=dtype)
+    for ell in range(L):
+        C[ell] = herm(G_tensor[ell] + delta * I)
 
     # Log-Euclidean initialization: X0 = exp( mean log(C_l) )
     mean_logC = np.zeros((M, M), dtype=dtype)
@@ -93,7 +92,9 @@ def karcher_mean(G_tensor: np.ndarray,
         Delta = herm(Delta)
 
         # Stopping based on ||Delta||_F / sqrt(M)
-        if np.linalg.norm(Delta, ord='fro') / sqrtM <= epsilon:
+        rel_change = np.linalg.norm(Delta, ord='fro') / sqrtM
+        # print(f"q={0},iter={_k}: rel_change = {rel_change}")
+        if  rel_change <= epsilon:
             break
 
         X = herm(X_sqrt @ expm_herm(Delta) @ X_sqrt)
@@ -105,9 +106,9 @@ def karcher_mean(G_tensor: np.ndarray,
 
 def mpm(G_tensor: np.ndarray,
         q: float,
-        epsilon: float = 1e-6,
-        max_iter: int = 200,
-        delta: float = 0.0,
+        epsilon: float = 1e-4,
+        max_iter: int = 10,
+        delta: float = 1e-3,
         q0_thresh: float = 1e-10,
         eig_floor: float = _EIG_FLOOR_DEFAULT) -> np.ndarray:
     """
@@ -139,19 +140,16 @@ def mpm(G_tensor: np.ndarray,
     dtype = G_tensor.dtype
     I = np.eye(M, dtype=dtype)
 
+    C = np.empty_like(G_tensor, dtype=dtype)
     # Build C_ell using inverse-reduction for q<0
     if q < 0.0:
         # C_ell = (R_ell + delta I)^(-1)
-        C = np.empty_like(G_tensor, dtype=dtype)
         for ell in range(L):
-            A = herm(G_tensor[ell]) + delta * I
-            C[ell] = herm(inv_herm_pd(A))
+            C[ell] = herm(inv_herm_pd(herm(G_tensor[ell] + delta * I)))
     else:
-        # For q>0, diagonal loading is optional (usually delta=0).
-        if delta > 0.0:
-            C = herm(G_tensor + delta * I)
-        else:
-            C = herm(G_tensor)
+        # For q>0,  no diagonal loading.
+        for ell in range(L):
+            C[ell] = herm(G_tensor[ell])
 
     # Initialization: X0 = ( mean C_ell^alpha )^(1/alpha)
     mean_Ca = np.zeros((M, M), dtype=dtype)
@@ -176,7 +174,9 @@ def mpm(G_tensor: np.ndarray,
         X_next = herm(X_sqrt @ S @ X_sqrt)
 
         denom = np.linalg.norm(X, ord='fro') + 1e-30
-        if np.linalg.norm(X_next - X, ord='fro') / denom <= epsilon:
+        rel_change = np.linalg.norm(X_next - X, ord='fro') / denom
+        # print(f"q={q},iter={_k}: rel_change = {rel_change}")
+        if  rel_change <= epsilon:
             X = X_next
             break
         X = X_next

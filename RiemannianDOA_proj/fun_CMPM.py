@@ -1,6 +1,10 @@
 import numpy as np
 from utils import *
+from mpm import mpm
+from time import time
 
+USE_MVDR = True
+DELTA_FOR_DIAG_LOADING = 1e-3
 
 def fun_CMPM(Y, A, L, q, noise_power):
 
@@ -9,6 +13,10 @@ def fun_CMPM(Y, A, L, q, noise_power):
     M, N = Y.shape
     G_tensor = get_G_tensor(Y, L)
 
+    '''                             OLD
+    # ===================================
+    # ===================================
+    # ===================================
     if np.abs(q - 0) < eps_q: # q == 0
         # Log-Euclidean mean: exp( mean(log(G_l)) )
         S = np.zeros((M, M), dtype=Y.dtype)
@@ -42,11 +50,43 @@ def fun_CMPM(Y, A, L, q, noise_power):
 
     #
     G_hat = (G_hat + G_hat.conj().T) * 0.5
+    # ===================================
+    # ===================================
+    # ===================================
+    '''
+    t0 = time()
+    G_hat = mpm(G_tensor, q, delta=DELTA_FOR_DIAG_LOADING)
+    dt = time() - t0
+    # print(f"time={dt}[sec]")
+
     scaler = np.linalg.norm(A[:,0])  # assuming all steering vectors have same norm
     A = A / scaler
-    p_vec = np.sum(A.conj() * (G_hat @ A), axis=0).real
+    
+    if USE_MVDR:
+        G_hat_inv_A = np.linalg.solve(G_hat, A)
+        p_vec = 1 / np.sum(A.conj() * G_hat_inv_A, axis=0).real
+    else: # use Bartlett
+        p_vec = np.sum(A.conj() * (G_hat @ A), axis=0).real
+
     # p_vec = np.maximum(p_vec - noise_power, 0)
     p_vec = p_vec / (scaler**2)
 
     eigsG = np.linalg.eigvalsh(G_hat)
     return p_vec, 0, 0, eigsG
+
+
+def fun_MinSpectrum(Y, A, L, q, noise_power):
+    G_tensor = get_G_tensor(Y, L)
+    scaler = np.linalg.norm(A[:,0])  # assuming all steering vectors have same norm
+    A = A / scaler
+    p_vec = np.inf * np.ones(A.shape[1])
+    for l in range(L):
+        if USE_MVDR:
+            G_hat_l_inv_A = np.linalg.solve(G_tensor[l,:,:] + DELTA_FOR_DIAG_LOADING * np.eye(A.shape[0]), A)
+            p_vec_l = 1 / np.sum(A.conj() * G_hat_l_inv_A, axis=0).real
+        else: # use Bartlett            
+            p_vec_l = np.sum(A.conj() * (G_tensor[l,:,:] @ A), axis=0).real
+        # element-wise minimum between p_vec and p_vec_l
+        p_vec = np.minimum(p_vec, p_vec_l)
+    p_vec = p_vec / (scaler**2)
+    return p_vec, 0, 0, None

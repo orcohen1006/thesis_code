@@ -95,6 +95,9 @@ def run_single_mc_iteration(
             q = float(algo_list[i_algo].split('=')[1])
             p_vec, num_iters, _, eigsG = fun_CMPM(y_noisy, A, config["L"], q, noise_power)
             eigsG_list[i_algo] = eigsG
+        elif utils.RUNNING_MPM and algo_list[i_algo] == "MinSpectrum":
+            p_vec, num_iters, _, _ = fun_MinSpectrum(y_noisy, A, config["L"], 1.0, noise_power)
+            eigsG_list[i_algo] = None
         elif algo_list[i_algo] == "PER":
             # p_vec, num_iters, _ = fun_DAS(y_noisy, A, modulus_hat_das, doa_scan, config["doa"])
             p_vec, num_iters, _ = fun_PER(y_noisy, A, noise_power)
