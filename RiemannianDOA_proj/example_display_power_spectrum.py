@@ -21,7 +21,7 @@ plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m02-d08_01-17-30/Exp_power_doa_interf_db_y2026-m02-d08_01-17-30'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m06-d01_23-12-44/Exp_snr_y2026-m06-d01_23-12-44'
     name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
@@ -241,20 +241,21 @@ from ToolsMC import *
 plt.close('all')
 
 M = 12
-L = 2
+L = 5
 W = 3*M
 N = int(W*L)
+snr = 3
 doa_desired=np.array([70.0])
 power_doa_desired_db=np.array([0])
 
-doa_interf = np.array([55.0, 120.0])
-power_doa_interf_db = np.array([3.0, 3.0])
+doa_interf = np.array([50.0, 120.0])
+power_doa_interf_db = np.array([0.0, 0.0])
 
 # doa_interf = np.array([])
 # power_doa_interf_db = np.array([])
 
 config = create_config(
-    m=M, snr=5, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
+    m=M, snr=snr, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
     power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
 
 algo_list = define_all_algo_dict_list()
@@ -265,8 +266,9 @@ result= run_single_mc_iteration(
     do_save_G_tensor_results= True)
 
 ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list,
-                            normalize_power=NormalizePowerType.NONE, do_legend=False, do_colorbar=True)
+                            normalize_power=NormalizePowerType.NONE, do_legend=False, do_colorbar=True, algos_to_leave_out = ["OptimalNI", "MinSpectrum"])
 fig_q_spectrum = plt.gcf()
+# save_figure(fig_q_spectrum, ".", "q_spectrum_example")
 
 
 ax = display_power_spectrum(result["config"], result["list_p_vec_for_G_tensor"], algo_list=get_segements_dict_list(config["L"]),
@@ -317,7 +319,7 @@ N = int(W*L)
 doa_desired=np.array([70.0])
 power_doa_desired_db=np.array([0])
 
-doa_interf = np.array([55.0, 120.0])
+doa_interf = np.array([50.0, 120.0])
 power_doa_interf_db = np.array([3.0, 3.0])
 
 # doa_interf = np.array([])
@@ -335,7 +337,8 @@ configs_to_display = []
 # N_vals = [int(1.5*M*L)]
 # snr_vals = [5, 0, -2.5, -5]
 
-N_vals = [int(1*M*L), int(1.5*M*L), int(2*M*L)]
+# N_vals = [int(1.5*M*L), int(3*M*L)]
+N_vals = [int(2*M*L), int(3*M*L)]
 snr_vals = [5, 0, -2.5]
 
 for N in N_vals:
@@ -358,7 +361,7 @@ for i, currconfig in enumerate(configs_to_display):
 
     ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list, ax=axes[i],
                             do_colorbar=False,
-                            normalize_power=NormalizePowerType.NONE)
+                            normalize_power=NormalizePowerType.PDF)
     axes[i].set_title(f"W/M={currconfig['N']/M/config['L']}, SNR={currconfig['snr']}")
 
 fig.suptitle("Power Spectrum Analysis")

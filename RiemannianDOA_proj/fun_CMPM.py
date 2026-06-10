@@ -3,7 +3,7 @@ from utils import *
 from mpm import mpm
 from time import time
 
-USE_MVDR = True
+USE_MVDR = False
 DELTA_FOR_DIAG_LOADING = 1e-3
 
 def fun_CMPM(Y, A, L, q, noise_power):

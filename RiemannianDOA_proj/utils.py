@@ -269,9 +269,10 @@ class NormalizePowerType:
     NONE = 0
     MAX = 1
     DESIRED = 2
+    PDF = 3
 
 def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=None, ax=None, normalize_power=NormalizePowerType.NONE,
-                           do_legend=False, do_colorbar=True):
+                           do_legend=False, do_colorbar=True, algos_to_leave_out = []):
     """
     Display the power spectrum of the DOA estimation.
 
@@ -300,6 +301,8 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
     
     list_plt = []
     for i_algo, algo_name in enumerate(algo_list.keys()):
+        if algo_name in algos_to_leave_out:
+            continue
         label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
         est = list_p_vec[i_algo]
         # check if est is a tuple (for ESPRIT)
@@ -316,6 +319,8 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
             elif normalize_power == NormalizePowerType.DESIRED:
                 grid_index_desired_doa = np.argmin(np.abs(grid_doa - config["doa"][0]))
                 spectrum = spectrum / spectrum[grid_index_desired_doa]
+            elif normalize_power == NormalizePowerType.PDF:
+                spectrum = spectrum / np.sum(spectrum)
             spectrum = convert_linear_to_db(spectrum)
 
             curr_dict = {**algo_list[algo_name], "marker": "none"}
@@ -549,10 +554,13 @@ def define_all_algo_dict_list():
         
         # add other algorithms with fixed styles
         d.update({
-            "MinSpectrum": {"linestyle": "--", "color": "#3BC966", "linewidth": linewidth, 
-                   "marker": "o", "markerfacecolor": "none", "markersize": 6},
+            "MinSpectrum": {"linestyle": "--", "color": "#8CBE00", "linewidth": linewidth, 
+                   "marker": "o", "markerfacecolor": "none", "markersize": 5},
         })
-        
+        d.update({
+            "OptimalNI": {"linestyle": "--", "color": "#FF45EF", "linewidth": linewidth, 
+                   "marker": "o", "markerfacecolor": "none", "markersize": 5},
+        })
     else:
         linewidth = 2
         d = {
@@ -640,3 +648,22 @@ def get_G_tensor(Y, L):
         G = (Yl @ Yl.conj().T) / W
         G_tensor[l,:,:] = (G + G.conj().T) * 0.5
     return G_tensor
+
+
+def calc_nismse(curr_p_vec, p_vec_ni, grid_index, half_window_num_grid_points):
+    # Extract the power values around the desired DOA index
+    start_index = max(0, grid_index - half_window_num_grid_points)
+    end_index = min(len(curr_p_vec), grid_index + half_window_num_grid_points)
+    
+    curr_window = curr_p_vec[start_index:end_index+1]
+    ni_window = p_vec_ni[start_index:end_index+1]
+
+    # Normalize the power values
+    # curr_window = curr_window / curr_p_vec[grid_index_desired_doa]
+    # ni_window = ni_window / p_vec_ni[grid_index_desired_doa]
+
+    # Calculate the MSE in this window
+    nismse = np.mean((curr_window - ni_window) ** 2)
+    
+    
+    return nismse

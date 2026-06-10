@@ -58,12 +58,18 @@ def run_single_mc_iteration(
         power_interf_db = config["power_doa_interf_db"]
         num_interference_sources = len(config["doa_interf"])
         interference_segments_ind_mat = np.zeros((num_interference_sources, config["L"]), dtype=bool)
+        # for i_interf in range(num_interference_sources):
+        #     if (i_interf % 2) == 0:
+        #         segment_index = (0 + i_interf) % config["L"]
+        #     else:
+        #         segment_index = (config["L"] - 1 - (i_interf - 1)) % config["L"]
+        #     interference_segments_ind_mat[i_interf, segment_index] = True
+
         for i_interf in range(num_interference_sources):
-            if (i_interf % 2) == 0:
-                segment_index = (0 + i_interf) % config["L"]
-            else:
-                segment_index = (config["L"] - 1 - (i_interf - 1)) % config["L"]
-            interference_segments_ind_mat[i_interf, segment_index] = True
+            first_segment_index = (i_interf % 2) 
+            for segment_index in range(first_segment_index, config["L"], 2):
+                interference_segments_ind_mat[i_interf, segment_index] = True
+
 
         # print(interference_segments_ind_mat)
 
@@ -81,7 +87,6 @@ def run_single_mc_iteration(
     if do_log:
         logging.info(f"- generated noisy signal y_noisy with shape {y_noisy.shape}.")
         
-    # modulus_hat_das = np.sum(np.abs(A.conj().T @ (y_noisy / config["m"])), axis=1) / config["N"]
     p_init = fun_PER(y_noisy, A, noise_power)[0]
     # Run on all algorithms
     p_vec_list = [None] * num_algos
@@ -98,6 +103,13 @@ def run_single_mc_iteration(
         elif utils.RUNNING_MPM and algo_list[i_algo] == "MinSpectrum":
             p_vec, num_iters, _, _ = fun_MinSpectrum(y_noisy, A, config["L"], 1.0, noise_power)
             eigsG_list[i_algo] = None
+        elif utils.RUNNING_MPM and algo_list[i_algo] == "OptimalNI":
+            R_desired = A_true @ np.diag(convert_db_to_linear(config["power_doa_db"])) @ A_true.conj().T + noise_power * np.eye(config["m"])
+            if USE_MVDR:
+                p_vec = 1 / np.sum(A.conj() * np.linalg.solve(R_desired, A), axis=0).real
+            else:
+                p_vec = np.sum(A.conj() * (R_desired @ A), axis=0).real
+            num_iters, eigsG_list[i_algo] = 0, None
         elif algo_list[i_algo] == "PER":
             # p_vec, num_iters, _ = fun_DAS(y_noisy, A, modulus_hat_das, doa_scan, config["doa"])
             p_vec, num_iters, _ = fun_PER(y_noisy, A, noise_power)
@@ -120,7 +132,7 @@ def run_single_mc_iteration(
             p_vec = tuple_of_doa_est_degrees
             num_iters = 0
         else:
-            raise ValueError("Algorithm not implemented")
+            raise ValueError(f"Algorithm '{algo_list[i_algo]}' not implemented")
 
         runtime_list[i_algo] = time() - t_algo_start
         num_iters_list[i_algo] = num_iters

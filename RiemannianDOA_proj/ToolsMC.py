@@ -170,6 +170,12 @@ def analyze_algo_errors(results: list):
         threshold_theta_detect = 5 # np.abs(tmp_doa - tmp_doa.T).max()
         print(f"Config {i_config}: threshold_theta_detect = {threshold_theta_detect}")
         noise_power = 10.0 ** ((np.max(config["power_doa_db"]) - config["snr"]) / 10.0)
+
+        A_desired = get_steering_matrix(config["doa"], config["m"])
+        A = get_steering_matrix(get_doa_grid(), config["m"])
+        R_desired = A_desired @ np.diag(convert_db_to_linear(config["power_doa_db"])) @ A_desired.conj().T + noise_power * np.eye(config["m"])
+        p_vec_ni = 1 / np.sum(A.conj() * np.linalg.solve(R_desired, A), axis=0).real # no interferences
+
         for i_mc in range(num_mc):
             result = results[i_config][i_mc]
             num_detected = [None] * num_algo
@@ -179,7 +185,8 @@ def analyze_algo_errors(results: list):
             succ_match_true_doa = [None] * num_algo
 
             sir = [None] * num_algo
-
+            directivity = [None] * num_algo
+            nismse = [None] * num_algo
             l0_norm = [None] * num_algo
             list_HPBW = [None] * num_algo
             for i_alg in range(num_algo):
@@ -191,18 +198,22 @@ def analyze_algo_errors(results: list):
                         convert_db_to_linear(result["config"]["power_doa_db"]), threshold_theta_detect=threshold_theta_detect)
                 l0_norm[i_alg] = thresholded_l0_norm(result["p_vec_list"][i_alg], threshold=convert_db_to_linear(np.min(config["power_doa_db"]))*0.01)
 
-
+                curr_p_vec = result["p_vec_list"][i_alg]
                 grid_index_desired_doa = np.argmin(np.abs(grid_doa - config["doa"][0]))
-                estimated_power_at_desired = result["p_vec_list"][i_alg][grid_index_desired_doa]
+                estimated_power_at_desired = curr_p_vec[grid_index_desired_doa]
                 if len(config["doa_interf"]) == 0:
                     sir[i_alg] = np.inf
                 else:
                     sir[i_alg]  = 0.0
                     for doa_interf in config["doa_interf"]:
                         grid_index_interf_doa = np.argmin(np.abs(grid_doa - doa_interf))
-                        estimated_power_at_interf = result["p_vec_list"][i_alg][grid_index_interf_doa]
+                        estimated_power_at_interf = curr_p_vec[grid_index_interf_doa]
                         sir[i_alg] += estimated_power_at_desired / (1e-20 + estimated_power_at_interf)
                     sir[i_alg] /= len(config["doa_interf"])
+
+                directivity[i_alg] = estimated_power_at_desired / (np.sum(curr_p_vec) - estimated_power_at_desired)
+                nismse_half_window_num_grid_points = int(10 / utils.globalParams.GRID_STEP_DEGREES)
+                nismse[i_alg] = calc_nismse(curr_p_vec, p_vec_ni, grid_index_desired_doa, half_window_num_grid_points=nismse_half_window_num_grid_points)
 
             result["num_detected"] = num_detected
             result["selected_doa_error"] = selected_doa_error
@@ -214,8 +225,8 @@ def analyze_algo_errors(results: list):
             # result["num_detected_aic"] = num_detected_aic
             # result["num_detected_mdl"] = num_detected_mdl
             result["sir"] = sir
-
-
+            result["directivity"] = directivity
+            result["nismse"] = nismse
     algos_error_data = {key: defaultdict(lambda: [None]*num_configs) for key in 
                         ["mean_doa_errors", "mean_power_errors", "mean_square_doa_errors", "mean_square_power_errors", 
                          "prob_detect","prob_false_detection", "prob_full_detection"]}
@@ -659,6 +670,96 @@ def plot_sir(results, parameter_name: str, parameter_units: str, parameter_value
     ax.grid(True)
     return fig
 
+def plot_directivity(results, parameter_name: str, parameter_units: str, parameter_values: list, do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True, do_colorbar: bool = False):
+    import matplotlib.pyplot as plt
+    
+    if type(parameter_values[0]) == np.ndarray:
+        parameter_values = np.array([param[0] for param in parameter_values])
+
+    algo_names = results[0][0]["algo_names"]
+    algo_list = get_specific_inorder_algo_list(algo_names)
+    # algo_list = get_algo_dict_list()
+    if plot_on_ax is not None:
+        fig = []
+        ax = plot_on_ax
+    else:
+        fig = plt.figure()
+        ax = plt.gca()
+    for i_algo,algo_name in enumerate(algo_names):
+        directivity_matrix = np.stack([np.array([results[i_config][i_mc]["directivity"][i_algo] for i_mc in range(len(results[i_config]))]) for i_config in range(len(results))])
+        directivity_mean = np.mean(directivity_matrix, axis=1)
+
+        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
+        pltline = ax.plot(parameter_values, directivity_mean, label=label, **algo_list[algo_name])
+
+        qlow = np.percentile(directivity_matrix, 25, axis=1)
+        qhigh = np.percentile(directivity_matrix, 75, axis=1)
+        ax.fill_between(parameter_values, qlow, qhigh, color=pltline[0].get_color(), alpha=0.10, linewidth=0.5)
+
+        if do_ylogscale:
+            ax.set_yscale('log')
+            ax.grid(True, which='both', linestyle='--')
+    xylabel_fontsize = 12
+    ax.set_ylabel(r"$\mathrm{Directivity}$", fontsize=xylabel_fontsize)
+    ax.set_xlabel(parameter_name + f" {parameter_units}", fontsize=xylabel_fontsize)
+    
+    if do_legend:
+        lgd = ax.legend()
+        for text in lgd.get_texts():
+            if "JBLD" in text.get_text():
+                text.set_fontweight("bold")
+    if do_colorbar:
+        cbar = create_colorbar(algo_list, ax)
+
+    ax.grid(True)
+    return fig
+
+
+def plot_nismse(results, parameter_name: str, parameter_units: str, parameter_values: list, do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True, do_colorbar: bool = False):
+    import matplotlib.pyplot as plt
+    
+    if type(parameter_values[0]) == np.ndarray:
+        parameter_values = np.array([param[0] for param in parameter_values])
+
+    algo_names = results[0][0]["algo_names"]
+    algo_list = get_specific_inorder_algo_list(algo_names)
+    # algo_list = get_algo_dict_list()
+    if plot_on_ax is not None:
+        fig = []
+        ax = plot_on_ax
+    else:
+        fig = plt.figure()
+        ax = plt.gca()
+    for i_algo,algo_name in enumerate(algo_names):
+        nismse_matrix = np.stack([np.array([results[i_config][i_mc]["nismse"][i_algo] for i_mc in range(len(results[i_config]))]) for i_config in range(len(results))])
+        nismse_mean = np.mean(nismse_matrix, axis=1)
+
+        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
+        pltline = ax.plot(parameter_values, nismse_mean, label=label, **algo_list[algo_name])
+
+        qlow = np.percentile(nismse_matrix, 25, axis=1)
+        qhigh = np.percentile(nismse_matrix, 75, axis=1)
+        ax.fill_between(parameter_values, qlow, qhigh, color=pltline[0].get_color(), alpha=0.10, linewidth=0.5)
+
+        if do_ylogscale:
+            ax.set_yscale('log')
+            ax.grid(True, which='both', linestyle='--')
+    xylabel_fontsize = 12
+    ax.set_ylabel(r"$\mathrm{NISMSE}$", fontsize=xylabel_fontsize)
+    ax.set_xlabel(parameter_name + f" {parameter_units}", fontsize=xylabel_fontsize)
+    
+    if do_legend:
+        lgd = ax.legend()
+        for text in lgd.get_texts():
+            if "JBLD" in text.get_text():
+                text.set_fontweight("bold")
+    if do_colorbar:
+        cbar = create_colorbar(algo_list, ax)
+
+    ax.grid(True)
+    return fig
+
+
 def plot_sir_boxplot(results, parameter_name: str, parameter_units: str, parameter_values: list, i_config : int = 0,
                      do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True, do_colorbar: bool = False):
     import matplotlib.pyplot as plt
@@ -703,7 +804,7 @@ def plot_sir_per_config(results):
     
     algo_names = results[0][0]["algo_names"]
     algo_list = get_specific_inorder_algo_list(algo_names)
-    q_vals = [extract_q_from_algo_name(algo_name) for algo_name in algo_names]
+    q_vals = np.array([extract_q_from_algo_name(algo_name) for algo_name in algo_list.keys() if algo_name.startswith("CMPM_q=")])
     # assert q_vals are in increasing order
     assert all(q_vals[i] < q_vals[i+1] for i in range(len(q_vals)-1)), "q_vals are not in increasing order"
 
@@ -722,6 +823,8 @@ def plot_sir_per_config(results):
         list_veryhigh_percentile = []
         
         for i_algo,algo_name in enumerate(algo_names):
+            if not algo_name.startswith("CMPM_q="):
+                continue
             sir_vals = np.array([results[i_config][i_mc]["sir"][i_algo] for i_mc in range(len(results[i_config]))])
             low_percentile = np.percentile(sir_vals, 25)
             high_percentile = np.percentile(sir_vals, 75)
