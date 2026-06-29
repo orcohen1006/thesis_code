@@ -1,0 +1,34 @@
+Number of Monte Carlo runs: 500
+
+-------------- Config 0:
+{'m': 12, 'snr': 3, 'N': 96, 'power_doa_db': array([0., 0.]), 'doa': array([ 70., 135.]), 'power_doa_interf_db': array([-10., -10.]), 'doa_interf': array([ 65., 110.]), 'L': 4, 'cohr_flag': False}
+
+-------------- Config 1:
+{'m': 12, 'snr': 3, 'N': 96, 'power_doa_db': array([0., 0.]), 'doa': array([ 70., 135.]), 'power_doa_interf_db': array([-8., -8.]), 'doa_interf': array([ 65., 110.]), 'L': 4, 'cohr_flag': False}
+
+-------------- Config 2:
+{'m': 12, 'snr': 3, 'N': 96, 'power_doa_db': array([0., 0.]), 'doa': array([ 70., 135.]), 'power_doa_interf_db': array([-6., -6.]), 'doa_interf': array([ 65., 110.]), 'L': 4, 'cohr_flag': False}
+
+-------------- Config 3:
+{'m': 12, 'snr': 3, 'N': 96, 'power_doa_db': array([0., 0.]), 'doa': array([ 70., 135.]), 'power_doa_interf_db': array([-4., -4.]), 'doa_interf': array([ 65., 110.]), 'L': 4, 'cohr_flag': False}
+
+-------------- Config 4:
+{'m': 12, 'snr': 3, 'N': 96, 'power_doa_db': array([0., 0.]), 'doa': array([ 70., 135.]), 'power_doa_interf_db': array([-2., -2.]), 'doa_interf': array([ 65., 110.]), 'L': 4, 'cohr_flag': False}
+
+-------------- Config 5:
+{'m': 12, 'snr': 3, 'N': 96, 'power_doa_db': array([0., 0.]), 'doa': array([ 70., 135.]), 'power_doa_interf_db': array([0., 0.]), 'doa_interf': array([ 65., 110.]), 'L': 4, 'cohr_flag': False}
+
+-------------- Config 6:
+{'m': 12, 'snr': 3, 'N': 96, 'power_doa_db': array([0., 0.]), 'doa': array([ 70., 135.]), 'power_doa_interf_db': array([2., 2.]), 'doa_interf': array([ 65., 110.]), 'L': 4, 'cohr_flag': False}
+
+-------------- Config 7:
+{'m': 12, 'snr': 3, 'N': 96, 'power_doa_db': array([0., 0.]), 'doa': array([ 70., 135.]), 'power_doa_interf_db': array([4., 4.]), 'doa_interf': array([ 65., 110.]), 'L': 4, 'cohr_flag': False}
+
+-------------- Config 8:
+{'m': 12, 'snr': 3, 'N': 96, 'power_doa_db': array([0., 0.]), 'doa': array([ 70., 135.]), 'power_doa_interf_db': array([6., 6.]), 'doa_interf': array([ 65., 110.]), 'L': 4, 'cohr_flag': False}
+
+-------------- Config 9:
+{'m': 12, 'snr': 3, 'N': 96, 'power_doa_db': array([0., 0.]), 'doa': array([ 70., 135.]), 'power_doa_interf_db': array([8., 8.]), 'doa_interf': array([ 65., 110.]), 'L': 4, 'cohr_flag': False}
+
+-------------- Config 10:
+{'m': 12, 'snr': 3, 'N': 96, 'power_doa_db': array([0., 0.]), 'doa': array([ 70., 135.]), 'power_doa_interf_db': array([10., 10.]), 'doa_interf': array([ 65., 110.]), 'L': 4, 'cohr_flag': False}

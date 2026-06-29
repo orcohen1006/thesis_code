@@ -3,7 +3,7 @@ import numpy as np
 from time import time
 import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict, Any, Optional
-# %matplotlib ipympl
+%matplotlib ipympl
 
 from RunSingleMCIteration import run_single_mc_iteration
 from utils import *
@@ -21,7 +21,7 @@ plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m06-d01_23-12-44/Exp_snr_y2026-m06-d01_23-12-44'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m06-d23_12-29-43/Exp_snr_y2026-m06-d23_12-29-43'
     name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
@@ -223,7 +223,7 @@ import numpy as np
 from time import time
 import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict, Any, Optional
-# %matplotlib ipympl
+%matplotlib ipympl
 
 
 from RunSingleMCIteration import run_single_mc_iteration
@@ -241,15 +241,14 @@ from ToolsMC import *
 plt.close('all')
 
 M = 12
-L = 5
-W = 3*M
-N = int(W*L)
-snr = 3
-doa_desired=np.array([70.0])
-power_doa_desired_db=np.array([0])
+L = 4
+N = int(2*M*L)
+snr = 5
+doa_desired=np.array([70.0, 135.0])
+power_doa_desired_db=np.array([0.0, 0.0])
 
-doa_interf = np.array([50.0, 120.0])
-power_doa_interf_db = np.array([0.0, 0.0])
+doa_interf = np.array([62.0, 110.0])
+power_doa_interf_db = np.array([0.0, 0.0]) + 4
 
 # doa_interf = np.array([])
 # power_doa_interf_db = np.array([])
@@ -266,7 +265,8 @@ result= run_single_mc_iteration(
     do_save_G_tensor_results= True)
 
 ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list,
-                            normalize_power=NormalizePowerType.NONE, do_legend=False, do_colorbar=True, algos_to_leave_out = ["OptimalNI", "MinSpectrum"])
+                            normalize_power=NormalizePowerType.NONE, do_legend=False, do_colorbar=True, 
+                            algos_to_leave_out = ["OptimalNI"])
 fig_q_spectrum = plt.gcf()
 # save_figure(fig_q_spectrum, ".", "q_spectrum_example")
 
@@ -295,8 +295,7 @@ import numpy as np
 from time import time
 import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict, Any, Optional
-# %matplotlib ipympl
-
+%matplotlib ipympl
 
 from RunSingleMCIteration import run_single_mc_iteration
 from utils import *
@@ -313,14 +312,19 @@ from ToolsMC import *
 plt.close('all')
 
 M = 12
-L = 5
+L = 4
 W = 1*M
 N = int(W*L)
-doa_desired=np.array([70.0])
-power_doa_desired_db=np.array([0])
+doa_desired=np.array([70.0, 135.0])
+power_doa_desired_db=np.array([0.0, 0.0])
 
-doa_interf = np.array([50.0, 120.0])
-power_doa_interf_db = np.array([3.0, 3.0])
+doa_interf = np.array([65.0, 110.0])
+power_doa_interf_db = np.array([0.0, 0.0]) + 4
+
+
+# doa_interf = np.array([40.0, 60.0, 120.0, 150.0])
+# power_doa_interf_db = np.array([3.0, 3.0, 3.0, 3.0])
+
 
 # doa_interf = np.array([])
 # power_doa_interf_db = np.array([])
@@ -338,8 +342,9 @@ configs_to_display = []
 # snr_vals = [5, 0, -2.5, -5]
 
 # N_vals = [int(1.5*M*L), int(3*M*L)]
-N_vals = [int(2*M*L), int(3*M*L)]
-snr_vals = [5, 0, -2.5]
+# N_vals = [int(1.2*M*L), int(2*M*L), int(3*M*L), int(6*M*L)]
+N_vals = [int(2*M*L), int(10*M*L)]
+snr_vals = [10, 0, -2.5, -5]
 
 for N in N_vals:
     for snr in snr_vals:
@@ -361,7 +366,8 @@ for i, currconfig in enumerate(configs_to_display):
 
     ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list, ax=axes[i],
                             do_colorbar=False,
-                            normalize_power=NormalizePowerType.PDF)
+                            normalize_power=NormalizePowerType.NONE, 
+                            algos_to_leave_out = ["OptimalNI","OptimalCMPM"])
     axes[i].set_title(f"W/M={currconfig['N']/M/config['L']}, SNR={currconfig['snr']}")
 
 fig.suptitle("Power Spectrum Analysis")

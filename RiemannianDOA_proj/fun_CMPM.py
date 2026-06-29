@@ -3,70 +3,59 @@ from utils import *
 from mpm import mpm
 from time import time
 
-USE_MVDR = False
-DELTA_FOR_DIAG_LOADING = 1e-3
-
 def fun_CMPM(Y, A, L, q, noise_power):
 
     eps_eigval = 1e-10
     eps_q = 1e-10
     M, N = Y.shape
     G_tensor = get_G_tensor(Y, L)
-
-    '''                             OLD
-    # ===================================
-    # ===================================
-    # ===================================
-    if np.abs(q - 0) < eps_q: # q == 0
-        # Log-Euclidean mean: exp( mean(log(G_l)) )
-        S = np.zeros((M, M), dtype=Y.dtype)
-        for l in range(L):
-            evals, evecs = np.linalg.eigh(G_tensor[l,:,:])
-            evals = np.maximum(evals.real, eps_eigval)
-            loge = np.log(evals)
-            logG = (evecs * loge[None, :]) @ evecs.conj().T
-            S += logG
-        S /= L
-        evalsS, evecsS = np.linalg.eigh((S + S.conj().T) * 0.5)
-        G_hat = (evecsS * np.exp(evalsS.real)[None, :]) @ evecsS.conj().T
-    elif np.abs(q - 1) < eps_q: # q == 1
-        G_hat = np.mean(G_tensor, axis=0)
-    else:
-        # ( mean(G_l^q) )^(1/q)
-        Q = np.zeros((M, M), dtype=Y.dtype)
-        for l in range(L):
-            evals, evecs = np.linalg.eigh(G_tensor[l,:,:])
-            evals = np.maximum(evals.real, eps_eigval)
-            evals_q = evals ** q
-            Gq = (evecs * evals_q[None, :]) @ evecs.conj().T
-            Q += Gq
-        Q /= L
-        Q = (Q + Q.conj().T) * 0.5
-
-        evalsQ, evecsQ = np.linalg.eigh(Q)
-        evalsQ = np.maximum(evalsQ.real, eps_eigval)
-        evals_1q = evalsQ ** (1.0 / q)
-        G_hat = (evecsQ * evals_1q[None, :]) @ evecsQ.conj().T
-
-    #
-    G_hat = (G_hat + G_hat.conj().T) * 0.5
-    # ===================================
-    # ===================================
-    # ===================================
-    '''
     t0 = time()
-    G_hat = mpm(G_tensor, q, delta=DELTA_FOR_DIAG_LOADING)
+    G_hat = mpm(G_tensor, q, delta=globalParams.DELTA_FOR_DIAG_LOADING)
     dt = time() - t0
     # print(f"time={dt}[sec]")
 
     scaler = np.linalg.norm(A[:,0])  # assuming all steering vectors have same norm
     A = A / scaler
     
-    if USE_MVDR:
-        G_hat_inv_A = np.linalg.solve(G_hat, A)
-        p_vec = 1 / np.sum(A.conj() * G_hat_inv_A, axis=0).real
-    else: # use Bartlett
-        p_vec = np.sum(A.conj() * (G_hat @ A), axis=0).real
+    p_vec = CreateSpectrum(G_hat, A, globalParams.SPECTRUM_TYPE, globalParams.SPECTRUM_NORMALIZATION)
+
+    p_vec = p_vec / (scaler**2)
+
+    # p_vec = esprit(G_hat, 2)
+
+    eigsG = np.linalg.eigvalsh(G_hat)
+    return p_vec, 0, 0, eigsG
+
+
+
+
+def fun_OptimalCMPM(Y, A, L, q_vals, noise_power):
+
+    eps_eigval = 1e-10
+    eps_q = 1e-10
+    M, N = Y.shape
+    G_tensor = get_G_tensor(Y, L)
+
+    C_sum = np.zeros((M, M), dtype=complex)
+    for q in q_vals:
+        G_hat = mpm(G_tensor, q, delta=globalParams.DELTA_FOR_DIAG_LOADING)
+        eigvals, eigvecs = np.linalg.eigh(G_hat)
+        # sort eigenvalues in descending order and eigenvectors accordingly
+        idx = np.argsort(eigvals)[::-1]
+        eigvals = eigvals[idx]
+        eigvecs = eigvecs[:, idx]
+        num_sources = np.argmax(eigvals[:-1] / eigvals[1:]) + 1 # Scree plot (largest eigenvalue ratio)
+        # num_sources = 2
+        source_subspace = eigvecs[:, :num_sources]
+        C_sum += source_subspace @ source_subspace.conj().T
+    G_hat = C_sum / len(q_vals)
+
+
+
+    scaler = np.linalg.norm(A[:,0])  # assuming all steering vectors have same norm
+    A = A / scaler
+    
+    p_vec = CreateSpectrum(G_hat, A, globalParams.SPECTRUM_TYPE, globalParams.SPECTRUM_NORMALIZATION)
 
     # p_vec = np.maximum(p_vec - noise_power, 0)
     p_vec = p_vec / (scaler**2)
@@ -75,18 +64,123 @@ def fun_CMPM(Y, A, L, q, noise_power):
     return p_vec, 0, 0, eigsG
 
 
+
+
 def fun_MinSpectrum(Y, A, L, q, noise_power):
     G_tensor = get_G_tensor(Y, L)
     scaler = np.linalg.norm(A[:,0])  # assuming all steering vectors have same norm
     A = A / scaler
     p_vec = np.inf * np.ones(A.shape[1])
     for l in range(L):
-        if USE_MVDR:
-            G_hat_l_inv_A = np.linalg.solve(G_tensor[l,:,:] + DELTA_FOR_DIAG_LOADING * np.eye(A.shape[0]), A)
-            p_vec_l = 1 / np.sum(A.conj() * G_hat_l_inv_A, axis=0).real
-        else: # use Bartlett            
-            p_vec_l = np.sum(A.conj() * (G_tensor[l,:,:] @ A), axis=0).real
+        p_vec_l = CreateSpectrum(G_tensor[l,:,:] , A, globalParams.SPECTRUM_TYPE, globalParams.SPECTRUM_NORMALIZATION)
         # element-wise minimum between p_vec and p_vec_l
         p_vec = np.minimum(p_vec, p_vec_l)
     p_vec = p_vec / (scaler**2)
     return p_vec, 0, 0, None
+
+
+
+
+
+def fun_ProjectOutInterf(Y, A, L, q, noise_power):
+    G_tensor = get_G_tensor(Y, L)
+    scaler = np.linalg.norm(A[:,0])  # assuming all steering vectors have same norm
+    A = A / scaler
+
+    G_hat = covariance_of_ProjectOutInterf(G_tensor)
+    p_vec = CreateSpectrum(G_hat, A, globalParams.SPECTRUM_TYPE, globalParams.SPECTRUM_NORMALIZATION)
+
+    p_vec = p_vec / (scaler**2)
+
+    # p_vec = esprit(G_hat, 2)
+
+    return p_vec, 0, 0, None
+
+def covariance_of_ProjectOutInterf(
+    G_tensor: np.ndarray,
+    n_interf_per_segment: int | list[int] = 1,
+) -> np.ndarray:
+    """
+    Interference subspace projection baseline covariance estimator.
+
+    For each segment covariance, estimates the interference subspace from
+    its dominant eigenvectors, projects it out, then returns the arithmetic
+    mean of the projected (cleaned) covariances.
+
+    This is a natural practitioner heuristic: it uses all segments and
+    directly targets per-segment interference, but requires knowing (or
+    estimating) the number of interferers per segment. It makes no use of
+    Riemannian geometry and provides no theoretical monotonicity guarantees.
+
+    Parameters
+    ----------
+    G_tensor : ndarray, shape (L, M, M)
+        Segment sample covariance matrices. Must be HPD.
+    n_interf_per_segment : int or list of int
+        Number of interference sources (dominant eigenvectors to remove)
+        per segment. If int, the same value is used for all segments.
+        If list, must have length L.
+
+    Returns
+    -------
+    C_baseline : ndarray, shape (M, M)
+        Arithmetic mean of the interference-projected segment covariances.
+        Hermitian and positive semi-definite (positive definite if
+        n_interf_per_segment < M for all segments).
+
+    Notes
+    -----
+    The projection for segment ell is:
+        P_ell = I - U_ell @ U_ell^H
+    where U_ell in C^{M x k_ell} holds the k_ell dominant eigenvectors
+    of R_hat_ell. The cleaned covariance is:
+        R_clean_ell = P_ell @ R_hat_ell @ P_ell^H
+    The output is (1/L) * sum_ell R_clean_ell.
+
+    Assumption cost vs. MPM: this method requires knowing n_interf_per_segment,
+    whereas MPM requires only q. For a fair experimental comparison, either
+    use oracle knowledge of interference count (upper-bounding this baseline's
+    performance) or estimate it via an MDL/AIC model-order selector.
+    """
+    L, M, M2 = G_tensor.shape
+    assert M == M2, "Segment covariances must be square."
+
+    # Resolve per-segment interference counts
+    if isinstance(n_interf_per_segment, int):
+        k_list = [n_interf_per_segment] * L
+    else:
+        k_list = list(n_interf_per_segment)
+    assert len(k_list) == L, "n_interf_per_segment list length must equal L."
+    assert all(0 <= k < M for k in k_list), (
+        "Each n_interf_per_segment must be in [0, M)."
+    )
+
+    C_sum = np.zeros((M, M), dtype=complex)
+
+    for ell in range(L):
+        R = G_tensor[ell]  # (M, M), HPD
+        k = k_list[ell]
+
+        if k == 0:
+            # No projection for this segment
+            C_sum += R
+            continue
+
+        # Eigendecomposition — use eigh for guaranteed real eigenvalues
+        # on Hermitian input; eigenvalues returned in ascending order.
+        eigenvalues, eigenvectors = np.linalg.eigh(R)
+
+        # Dominant k eigenvectors = interference subspace estimate
+        # eigh returns ascending order, so dominant are the last k columns.
+        U_interf = eigenvectors[:, -k:]  # (M, k)
+
+        # Orthogonal projector onto the interference subspace complement
+        P_orth = np.eye(M, dtype=complex) - U_interf @ U_interf.conj().T  # (M, M)
+
+        # Project out interference subspace
+        R_clean = P_orth @ R @ P_orth.conj().T  # (M, M)
+
+        C_sum += R_clean
+
+    C_baseline = C_sum / L
+    return C_baseline

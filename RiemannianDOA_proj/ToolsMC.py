@@ -11,7 +11,7 @@ from collections import defaultdict
 from matplotlib.font_manager import FontProperties
 import time
 
-NUM_MC = 1_000 #500
+NUM_MC = 500
 DEFAULT_NUM_JOBS = 50 #600 # 334
 # %%
 def save_job_metadata(workdir: str, config_list: list, num_mc: int, num_jobs: int):
@@ -174,8 +174,9 @@ def analyze_algo_errors(results: list):
         A_desired = get_steering_matrix(config["doa"], config["m"])
         A = get_steering_matrix(get_doa_grid(), config["m"])
         R_desired = A_desired @ np.diag(convert_db_to_linear(config["power_doa_db"])) @ A_desired.conj().T + noise_power * np.eye(config["m"])
-        p_vec_ni = 1 / np.sum(A.conj() * np.linalg.solve(R_desired, A), axis=0).real # no interferences
-
+        # p_vec_ni = 1 / np.sum(A.conj() * np.linalg.solve(R_desired, A), axis=0).real # no interferences
+        # i_algo_ni = algo_list.index("OptimalNI") if "OptimalNI" in algo_list else None
+        i_algo_ni = None
         for i_mc in range(num_mc):
             result = results[i_config][i_mc]
             num_detected = [None] * num_algo
@@ -186,7 +187,8 @@ def analyze_algo_errors(results: list):
 
             sir = [None] * num_algo
             directivity = [None] * num_algo
-            nismse = [None] * num_algo
+            desired_nismse = [None] * num_algo
+            interf_nismse = [None] * num_algo
             l0_norm = [None] * num_algo
             list_HPBW = [None] * num_algo
             for i_alg in range(num_algo):
@@ -200,6 +202,7 @@ def analyze_algo_errors(results: list):
 
                 curr_p_vec = result["p_vec_list"][i_alg]
                 grid_index_desired_doa = np.argmin(np.abs(grid_doa - config["doa"][0]))
+                grid_indices_interference_doa = [np.argmin(np.abs(grid_doa - doa_interf)) for doa_interf in config["doa_interf"]]
                 estimated_power_at_desired = curr_p_vec[grid_index_desired_doa]
                 if len(config["doa_interf"]) == 0:
                     sir[i_alg] = np.inf
@@ -212,9 +215,12 @@ def analyze_algo_errors(results: list):
                     sir[i_alg] /= len(config["doa_interf"])
 
                 directivity[i_alg] = estimated_power_at_desired / (np.sum(curr_p_vec) - estimated_power_at_desired)
-                nismse_half_window_num_grid_points = int(10 / utils.globalParams.GRID_STEP_DEGREES)
-                nismse[i_alg] = calc_nismse(curr_p_vec, p_vec_ni, grid_index_desired_doa, half_window_num_grid_points=nismse_half_window_num_grid_points)
 
+                if i_algo_ni is not None:
+                    p_vec_ni = result["p_vec_list"][i_algo_ni]
+                    nismse_half_window_num_grid_points = int(10 / utils.globalParams.GRID_STEP_DEGREES)
+                    desired_nismse[i_alg] = calc_nismse(curr_p_vec, p_vec_ni, grid_index_desired_doa, half_window_num_grid_points=nismse_half_window_num_grid_points)
+                    interf_nismse[i_alg] = np.mean([calc_nismse(curr_p_vec, p_vec_ni, grid_index_interf_doa, half_window_num_grid_points=nismse_half_window_num_grid_points) for grid_index_interf_doa in grid_indices_interference_doa])
             result["num_detected"] = num_detected
             result["selected_doa_error"] = selected_doa_error
             result["selected_power_error"] = selected_power_error
@@ -226,7 +232,8 @@ def analyze_algo_errors(results: list):
             # result["num_detected_mdl"] = num_detected_mdl
             result["sir"] = sir
             result["directivity"] = directivity
-            result["nismse"] = nismse
+            result["desired_nismse"] = desired_nismse
+            result["interf_nismse"] = interf_nismse
     algos_error_data = {key: defaultdict(lambda: [None]*num_configs) for key in 
                         ["mean_doa_errors", "mean_power_errors", "mean_square_doa_errors", "mean_square_power_errors", 
                          "prob_detect","prob_false_detection", "prob_full_detection"]}
@@ -611,11 +618,25 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         ax.set_ylabel(r"$\mathrm{RMSE}_{\mathrm{DOA}}$ (degrees)", fontsize=xylabel_fontsize)
     ax.set_xlabel(parameter_name + f" {parameter_units}", fontsize=xylabel_fontsize)
     
+    
     if do_legend:
         lgd = ax.legend()
         for text in lgd.get_texts():
             if "JBLD" in text.get_text():
                 text.set_fontweight("bold")
+        
+    # remove from legend the algos with name that contains "CMPM_q=" (not just text, the entire label):
+    handles, labels = ax.get_legend_handles_labels()
+    new_handles = []
+    new_labels = []
+    for handle, label in zip(handles, labels):
+        if "CMPM_q=" not in label:
+            new_handles.append(handle)
+            new_labels.append(label)
+    ax.legend(new_handles, new_labels)
+    
+    
+            
     if do_colorbar:
         cbar = create_colorbar(algo_list, ax)
         
@@ -664,6 +685,14 @@ def plot_sir(results, parameter_name: str, parameter_units: str, parameter_value
         for text in lgd.get_texts():
             if "JBLD" in text.get_text():
                 text.set_fontweight("bold")
+    handles, labels = ax.get_legend_handles_labels()
+    new_handles = []
+    new_labels = []
+    for handle, label in zip(handles, labels):
+        if "CMPM_q=" not in label:
+            new_handles.append(handle)
+            new_labels.append(label)
+    ax.legend(new_handles, new_labels)
     if do_colorbar:
         cbar = create_colorbar(algo_list, ax)
 
@@ -715,7 +744,7 @@ def plot_directivity(results, parameter_name: str, parameter_units: str, paramet
     return fig
 
 
-def plot_nismse(results, parameter_name: str, parameter_units: str, parameter_values: list, do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True, do_colorbar: bool = False):
+def plot_dnismse(results, parameter_name: str, parameter_units: str, parameter_values: list, do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True, do_colorbar: bool = False):
     import matplotlib.pyplot as plt
     
     if type(parameter_values[0]) == np.ndarray:
@@ -731,7 +760,7 @@ def plot_nismse(results, parameter_name: str, parameter_units: str, parameter_va
         fig = plt.figure()
         ax = plt.gca()
     for i_algo,algo_name in enumerate(algo_names):
-        nismse_matrix = np.stack([np.array([results[i_config][i_mc]["nismse"][i_algo] for i_mc in range(len(results[i_config]))]) for i_config in range(len(results))])
+        nismse_matrix = np.stack([np.array([results[i_config][i_mc]["desired_nismse"][i_algo] for i_mc in range(len(results[i_config]))]) for i_config in range(len(results))])
         nismse_mean = np.mean(nismse_matrix, axis=1)
 
         label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
@@ -745,7 +774,62 @@ def plot_nismse(results, parameter_name: str, parameter_units: str, parameter_va
             ax.set_yscale('log')
             ax.grid(True, which='both', linestyle='--')
     xylabel_fontsize = 12
-    ax.set_ylabel(r"$\mathrm{NISMSE}$", fontsize=xylabel_fontsize)
+    ax.set_ylabel(r"$\mathrm{DNISMSE}$", fontsize=xylabel_fontsize)
+    ax.set_xlabel(parameter_name + f" {parameter_units}", fontsize=xylabel_fontsize)
+    
+    if do_legend:
+        lgd = ax.legend()
+        for text in lgd.get_texts():
+            if "JBLD" in text.get_text():
+                text.set_fontweight("bold")
+    # remove from legend the algos with name that contains "CMPM_q=" (not just text, the entire label):
+    handles, labels = ax.get_legend_handles_labels()
+    new_handles = []
+    new_labels = []
+    for handle, label in zip(handles, labels):
+        if "CMPM_q=" not in label:
+            new_handles.append(handle)
+            new_labels.append(label)
+    ax.legend(new_handles, new_labels)
+
+    if do_colorbar:
+        cbar = create_colorbar(algo_list, ax)
+
+    ax.grid(True)
+    return fig
+
+
+def plot_inismse(results, parameter_name: str, parameter_units: str, parameter_values: list, do_ylogscale: bool = False, plot_on_ax=None, do_legend: bool = True, do_colorbar: bool = False):
+    import matplotlib.pyplot as plt
+    
+    if type(parameter_values[0]) == np.ndarray:
+        parameter_values = np.array([param[0] for param in parameter_values])
+
+    algo_names = results[0][0]["algo_names"]
+    algo_list = get_specific_inorder_algo_list(algo_names)
+    # algo_list = get_algo_dict_list()
+    if plot_on_ax is not None:
+        fig = []
+        ax = plot_on_ax
+    else:
+        fig = plt.figure()
+        ax = plt.gca()
+    for i_algo,algo_name in enumerate(algo_names):
+        nismse_matrix = np.stack([np.array([results[i_config][i_mc]["interf_nismse"][i_algo] for i_mc in range(len(results[i_config]))]) for i_config in range(len(results))])
+        nismse_mean = np.mean(nismse_matrix, axis=1)
+
+        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
+        pltline = ax.plot(parameter_values, nismse_mean, label=label, **algo_list[algo_name])
+
+        qlow = np.percentile(nismse_matrix, 25, axis=1)
+        qhigh = np.percentile(nismse_matrix, 75, axis=1)
+        ax.fill_between(parameter_values, qlow, qhigh, color=pltline[0].get_color(), alpha=0.10, linewidth=0.5)
+
+        if do_ylogscale:
+            ax.set_yscale('log')
+            ax.grid(True, which='both', linestyle='--')
+    xylabel_fontsize = 12
+    ax.set_ylabel(r"$\mathrm{INISMSE}$", fontsize=xylabel_fontsize)
     ax.set_xlabel(parameter_name + f" {parameter_units}", fontsize=xylabel_fontsize)
     
     if do_legend:

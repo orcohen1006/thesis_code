@@ -16,13 +16,27 @@ FILENAME_PBS_METADATA = "job_metadata.pkl"
 EPS_REL_CHANGE = 1e-4
 ALGONAME = "SERCOM"
 
+class NormalizePowerType:
+    NONE = 0
+    MAX = 1
+    DESIRED = 2
+    PEAK_NEAR_DESIRED = 3
+    PDF = 4
+
+class SpectrumType:
+    Bartlett = 0
+    MVDR = 1
+    MUSIC = 2
+
 # =====================================================================
 class GlobalParms: # trick to have a global variable that can be easily modified
     GRID_STEP_DEGREES = 0.5
     GRID_MIN_MAX_VALS_DEGREES = (0, 180)
     WANTED_ALGO_NAMES = {"SPICE", "SAMV", "AIRM", "JBLD", "LE", "ESPRIT"}
     SENSOR_ARRAY_TYPE = "ULA"
-
+    SPECTRUM_TYPE = SpectrumType.MVDR
+    SPECTRUM_NORMALIZATION = NormalizePowerType.NONE
+    DELTA_FOR_DIAG_LOADING = 1e-4
 globalParams = GlobalParms()
 # =====================================================================
 
@@ -265,11 +279,42 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
     return num_detected_doas, all_detected_doas, all_detected_powers, selected_doa_error, selected_power_error, \
             succ_match_detected_doa, succ_match_true_doa, mean_HPBW
 
-class NormalizePowerType:
-    NONE = 0
-    MAX = 1
-    DESIRED = 2
-    PDF = 3
+
+
+def CreateSpectrum(G_hat, A, spectrum_type, normalize_type):
+    if spectrum_type == SpectrumType.Bartlett:
+        p_vec = np.sum(A.conj() * (G_hat @ A), axis=0).real
+    elif spectrum_type == SpectrumType.MVDR:
+        G_hat_inv_A = np.linalg.solve(G_hat + globalParams.DELTA_FOR_DIAG_LOADING * np.eye(A.shape[0]), A) 
+        p_vec = 1 / np.sum(A.conj() * G_hat_inv_A, axis=0).real
+    elif spectrum_type == SpectrumType.MUSIC:
+        # Compute the noise subspace from the eigen-decomposition of G_hat
+        eigvals, eigvecs = np.linalg.eigh(G_hat)
+        # sort eigenvalues in descending order and eigenvectors accordingly
+        idx = np.argsort(eigvals)[::-1]
+        eigvals = eigvals[idx]
+        eigvecs = eigvecs[:, idx]
+        num_sources = np.argmax(eigvals[:-1] / eigvals[1:]) + 1 # Scree plot (largest eigenvalue ratio)
+        # num_sources = 2; print(f"Using fixed num_sources={num_sources} for MUSIC spectrum")
+        noise_subspace = eigvecs[:, num_sources:] # Take the eigenvectors corresponding to the smallest eigenvalues
+
+        p_vec = 1.0 / np.sum(np.abs(noise_subspace.conj().T @ A)**2, axis=0).real
+    else:
+        raise ValueError(f"Unknown spectrum type: {spectrum_type}")
+    
+
+    # Normalization
+    if normalize_type == NormalizePowerType.NONE:
+        pass        
+    elif normalize_type == NormalizePowerType.MAX:
+        p_vec = p_vec / np.max(p_vec)
+    elif normalize_type == NormalizePowerType.PDF:
+        p_vec = p_vec / np.sum(p_vec)
+    else:
+        raise ValueError(f"illegal normalize type: {normalize_type}")
+
+
+    return p_vec
 
 def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=None, ax=None, normalize_power=NormalizePowerType.NONE,
                            do_legend=False, do_colorbar=True, algos_to_leave_out = []):
@@ -310,15 +355,23 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
             doa_est_degrees = est
             doa_to_display = np.array(doa_est_degrees)
             powers_to_display = 0*doa_to_display
-            pltobj, = ax.plot(doa_to_display, powers_to_display, label=label, **algo_list[algo_name])
+            d = algo_list[algo_name].copy()
+            d["linestyle"] = "none"
+            pltobj, = ax.plot(doa_to_display, powers_to_display, label=label, **d)
         else:
             spectrum = est
             spectrum[spectrum < epsilon_power] = epsilon_power
             if normalize_power == NormalizePowerType.MAX:
                 spectrum = spectrum / np.max(spectrum)
             elif normalize_power == NormalizePowerType.DESIRED:
-                grid_index_desired_doa = np.argmin(np.abs(grid_doa - config["doa"][0]))
+                grid_index_desired_doa = np.argmin(np.abs(grid_doa - config["doa"][-1]))
                 spectrum = spectrum / spectrum[grid_index_desired_doa]
+            elif normalize_power == NormalizePowerType.PEAK_NEAR_DESIRED:
+                grid_index_desired_doa = np.argmin(np.abs(grid_doa - config["doa"][-1]))
+                # Find max in the neighborhood of the desired DOA
+                neighborhood_indices = np.where(np.abs(grid_doa - config["doa"][-1]) <= 3.0)[0]
+                local_peak = np.max(spectrum[neighborhood_indices])
+                spectrum = spectrum / local_peak
             elif normalize_power == NormalizePowerType.PDF:
                 spectrum = spectrum / np.sum(spectrum)
             spectrum = convert_linear_to_db(spectrum)
@@ -535,6 +588,45 @@ def model_order_selection(R, N):
         mdl[k] = N * plunge + 0.5 * k * (2*M - k) * np.log(N)
     return np.argmin(aic), np.argmin(mdl)
 
+def estimate_num_sources(eigvals, Nsnap):
+    """
+    eigvals : eigenvalues (length M)
+    Nsnap   : number of snapshots
+
+    Returns:
+        {"screeplot": ..., "MDL": ..., "AIC": ...}
+    """
+
+    eigvals = np.asarray(eigvals, dtype=float)
+    M = len(eigvals)
+    # sort in descending order:
+    eigvals = np.sort(eigvals)[::-1]
+
+    # Scree plot (largest eigenvalue ratio)
+    scree = np.argmax(eigvals[:-1] / eigvals[1:]) + 1
+
+    mdl = np.empty(M)
+    aic = np.empty(M)
+
+    for k in range(M):
+        m = M - k
+        noise_eigs = eigvals[k:]
+
+        am = noise_eigs.mean()
+        gm = np.exp(np.mean(np.log(noise_eigs)))
+
+        ll = Nsnap * m * np.log(am / gm)
+
+        mdl[k] = ll + 0.5 * k * (2 * M - k) * np.log(Nsnap)
+        aic[k] = 2 * ll + 2 * k * (2 * M - k)
+    # don't allow 0 sources to be selected
+    mdl[0] = np.inf
+    aic[0] = np.inf
+    return {
+        "screeplot": int(scree),
+        "MDL": int(np.argmin(mdl)),
+        "AIC": int(np.argmin(aic)),
+    }
 
 def get_colormap():
     # return plt.cm.vanimo
@@ -557,10 +649,21 @@ def define_all_algo_dict_list():
             "MinSpectrum": {"linestyle": "--", "color": "#8CBE00", "linewidth": linewidth, 
                    "marker": "o", "markerfacecolor": "none", "markersize": 5},
         })
+        
         d.update({
-            "OptimalNI": {"linestyle": "--", "color": "#FF45EF", "linewidth": linewidth, 
+            "ProjectOutInterf": {"linestyle": "--", "color": "#FF0000", "linewidth": linewidth, 
                    "marker": "o", "markerfacecolor": "none", "markersize": 5},
         })
+        
+        # d.update({
+        #     "OptimalCMPM": {"linestyle": "--", "color": "#FFA4F7", "linewidth": linewidth, 
+        #            "marker": "o", "markerfacecolor": "none", "markersize": 5},
+        # })
+
+        # d.update({
+        #     "OptimalNI": {"linestyle": "--", "color": "#FF00EA", "linewidth": linewidth, 
+        #            "marker": "o", "markerfacecolor": "none", "markersize": 5},
+        # })
     else:
         linewidth = 2
         d = {
@@ -667,3 +770,43 @@ def calc_nismse(curr_p_vec, p_vec_ni, grid_index, half_window_num_grid_points):
     
     
     return nismse
+
+
+
+def esprit(R_hat, num_sources):
+    M = R_hat.shape[0]
+    # Eigen-decomposition
+    eigvals, eigvecs = np.linalg.eigh(R_hat)
+    # Sort eigenvalues and eigenvectors in descending order
+    idx = np.argsort(eigvals)[::-1]
+    eigvecs = eigvecs[:, idx]
+    
+    Us = eigvecs[:, :num_sources]     # (M x num_sources)
+
+    # 2) Selection matrices for shift invariance
+    #    J1 picks sensors 0..M-2, J2 picks sensors 1..M-1
+    J1 = np.eye(M - 1, M, k=0)  # (M-1 x M)
+    J2 = np.eye(M - 1, M, k=1)  # (M-1 x M)
+
+    Us1 = J1 @ Us               # (M-1 x num_sources)
+    Us2 = J2 @ Us               # (M-1 x num_sources)
+
+    # 3) Solve Us2 ≈ Us1 * Psi  (least-squares)
+    Psi = np.linalg.pinv(Us1) @ Us2   # (num_sources x num_sources)
+
+    # 4) Eigen-decomposition of Psi
+    eigvals, eigvecs = np.linalg.eig(Psi)
+
+    # 5) Map eigenvalues to DOAs using your steering convention:
+    #    eigvals ≈ exp(1j * pi * cos(theta))
+    phi = np.angle(eigvals)          # in (-pi, pi]
+    cos_theta = phi / np.pi
+    cos_theta = np.clip(cos_theta, -1.0, 1.0)  # numerical safety
+
+    doa_deg = np.arccos(cos_theta) * 180.0 / np.pi  # in [0, 180]
+
+    # sort by angle
+    sort_idx = np.argsort(doa_deg)
+    doa_deg = doa_deg[sort_idx]
+
+    return tuple(doa_deg)

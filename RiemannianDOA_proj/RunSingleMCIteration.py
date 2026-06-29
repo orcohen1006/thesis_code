@@ -71,7 +71,7 @@ def run_single_mc_iteration(
                 interference_segments_ind_mat[i_interf, segment_index] = True
 
 
-        # print(interference_segments_ind_mat)
+        print(interference_segments_ind_mat)
 
         y_noisy = generate_signal_with_interference(
                     A_desired=A_true, power_desired_db=power_doa_db,
@@ -94,6 +94,8 @@ def run_single_mc_iteration(
     num_iters_list = [None] * num_algos
     eigsG_list = [None] * num_algos
 
+    q_vals = np.array([extract_q_from_algo_name(algo_name) for algo_name in algo_list if algo_name.startswith("CMPM_q=")])
+
     for i_algo in range(num_algos):
         t_algo_start = time()
         if utils.RUNNING_MPM and algo_list[i_algo].startswith("CMPM_q="):
@@ -102,13 +104,15 @@ def run_single_mc_iteration(
             eigsG_list[i_algo] = eigsG
         elif utils.RUNNING_MPM and algo_list[i_algo] == "MinSpectrum":
             p_vec, num_iters, _, _ = fun_MinSpectrum(y_noisy, A, config["L"], 1.0, noise_power)
+        elif utils.RUNNING_MPM and algo_list[i_algo] == "ProjectOutInterf":
+            p_vec, num_iters, _, _ = fun_ProjectOutInterf(y_noisy, A, config["L"], 1.0, noise_power)
             eigsG_list[i_algo] = None
+        elif utils.RUNNING_MPM and algo_list[i_algo] == "OptimalCMPM":
+            p_vec, num_iters, _, eigsG = fun_OptimalCMPM(y_noisy, A, config["L"], q_vals, noise_power)
+            eigsG_list[i_algo] = eigsG
         elif utils.RUNNING_MPM and algo_list[i_algo] == "OptimalNI":
             R_desired = A_true @ np.diag(convert_db_to_linear(config["power_doa_db"])) @ A_true.conj().T + noise_power * np.eye(config["m"])
-            if USE_MVDR:
-                p_vec = 1 / np.sum(A.conj() * np.linalg.solve(R_desired, A), axis=0).real
-            else:
-                p_vec = np.sum(A.conj() * (R_desired @ A), axis=0).real
+            p_vec = CreateSpectrum(R_desired, A, globalParams.SPECTRUM_TYPE, globalParams.SPECTRUM_NORMALIZATION)
             num_iters, eigsG_list[i_algo] = 0, None
         elif algo_list[i_algo] == "PER":
             # p_vec, num_iters, _ = fun_DAS(y_noisy, A, modulus_hat_das, doa_scan, config["doa"])
@@ -162,7 +166,7 @@ def run_single_mc_iteration(
         G_tensor = get_G_tensor(y_noisy, config["L"])
         list_p_vec_for_G_tensor = []
         for l in range(config["L"]):
-            p_vec = np.sum(A.conj() * (G_tensor[l,:,:] @ A), axis=0).real  
+            p_vec = CreateSpectrum(G_tensor[l,:,:] , A, globalParams.SPECTRUM_TYPE, globalParams.SPECTRUM_NORMALIZATION)
             list_p_vec_for_G_tensor .append(p_vec)
         result['list_p_vec_for_G_tensor'] = list_p_vec_for_G_tensor 
     return result
