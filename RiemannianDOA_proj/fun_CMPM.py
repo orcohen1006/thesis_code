@@ -5,9 +5,7 @@ from time import time
 
 def fun_CMPM(Y, A, L, q, noise_power):
 
-    eps_eigval = 1e-10
-    eps_q = 1e-10
-    M, N = Y.shape
+
     G_tensor = get_G_tensor(Y, L)
     t0 = time()
     G_hat = mpm(G_tensor, q, delta=globalParams.DELTA_FOR_DIAG_LOADING)

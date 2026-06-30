@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.linalg import eigh as _eigh_gen
 
 # ------------------------- Helpers (module scope) -------------------------
 
@@ -45,6 +46,29 @@ def sqrt_invsqrt_from_eigh(w: np.ndarray, V: np.ndarray):
     X_invsqrt = (V * invsqrtw) @ V.conj().T
     return X_sqrt, X_invsqrt
 
+def normsquared_logm_invsqrtX_Y_invsqrtX(invsqrtX, Y):
+    return np.sum(np.real(logm_herm(invsqrtX@Y@invsqrtX) ** 2))
+
+# ------------------------- Riemannian (AIRM) distance -------------------------
+
+def riemann_dist2(A: np.ndarray, B: np.ndarray, eig_floor: float = _EIG_FLOOR_DEFAULT) -> float:
+    """
+    Squared affine-invariant Riemannian distance between HPD matrices A, B:
+        d^2(A, B) = sum_i log(lambda_i)^2,
+    where lambda_i are the generalized eigenvalues of the pencil (B, A), i.e. the
+    eigenvalues of A^{-1} B (equivalently of A^{-1/2} B A^{-1/2}).
+
+    Computed via a single generalized Hermitian eigenvalue problem (eigenvalues
+    only), which is cheaper than the naive A^{-1/2} B A^{-1/2} -> logm route used
+    elsewhere (e.g. eigh_clip + sqrt_invsqrt_from_eigh + logm_herm).
+    """
+    w = _eigh_gen(herm(B), herm(A), eigvals_only=True)
+    w = np.maximum(w.real, eig_floor)
+    return float(np.sum(np.log(w) ** 2))
+
+def riemann_dist(A: np.ndarray, B: np.ndarray, eig_floor: float = _EIG_FLOOR_DEFAULT) -> float:
+    """Affine-invariant Riemannian distance between HPD matrices A, B."""
+    return float(np.sqrt(riemann_dist2(A, B, eig_floor=eig_floor)))
 
 # ------------------------- Karcher mean (q=0) -------------------------
 

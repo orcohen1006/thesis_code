@@ -376,7 +376,7 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
                 spectrum = spectrum / np.sum(spectrum)
             spectrum = convert_linear_to_db(spectrum)
 
-            curr_dict = {**algo_list[algo_name], "marker": "none"}
+            curr_dict = {**algo_list[algo_name], "marker": "none", "alpha": 1, "linestyle": "-"}
             pltobj, = ax.plot(grid_doa, spectrum, label=label, **curr_dict)
             # pltobj, = ax.plot(grid_doa*np.pi/180, spectrum, label=label, **algo_list[algo_name])
             
@@ -416,7 +416,7 @@ def create_colorbar(algo_list, ax):
     q_vals = np.array([extract_q_from_algo_name(algo_name) for algo_name in algo_list.keys() if algo_name.startswith("CMPM_q=")])
     sm = plt.cm.ScalarMappable(cmap=colormap, norm=plt.Normalize(vmin=q_vals.min(), vmax=q_vals.max()))
     cbar = plt.colorbar(sm, ax=ax, orientation='horizontal', location="top",pad=0.05)
-    cbar.set_label('q values', fontsize=12)
+    cbar.set_label('$q$ value', fontsize=12)
     cbar.ax.tick_params(labelsize=10)
     return cbar
 
@@ -640,20 +640,35 @@ def define_all_algo_dict_list():
         # linewidth = 1.5
         # d = {key: {"linestyle": "-", "color": colormap(i / (len(q_vals)-1)), "marker": "o", "markersize": 4, "linewidth": linewidth} 
         linewidth = 2.5
-        d = {key: {"linestyle": "-", "color": colormap(i / (len(q_vals)-1)), "linewidth": linewidth, 
-                   "marker": "o", "markerfacecolor": "none", "markersize": 6} 
+        d = {key: {"linestyle": "-", "color": colormap(i / (len(q_vals)-1)), "linewidth": linewidth, "alpha": 0.60,
+                   "marker": "none", "markerfacecolor": "none", "markersize": 6} 
              for i, key in enumerate(keys)}
+        #
+        # d["CMPM_q=0.0"]["linewidth"] = linewidth
+        d["CMPM_q=0.0"]["linestyle"] = "--"
+        d["CMPM_q=0.0"]["marker"] = "o"
+        d["CMPM_q=0.0"]["alpha"] = 1
         
+
+        # d["CMPM_q=1.0"]["linewidth"] = linewidth
+        d["CMPM_q=1.0"]["linestyle"] = "--"
+        d["CMPM_q=1.0"]["marker"] = "o"
+        d["CMPM_q=1.0"]["alpha"] = 1
+
         # add other algorithms with fixed styles
         d.update({
-            "MinSpectrum": {"linestyle": "--", "color": "#8CBE00", "linewidth": linewidth, 
+            "MinSpectrum": {"linestyle": ":", "color": "#CF0505", "linewidth": linewidth, 
                    "marker": "o", "markerfacecolor": "none", "markersize": 5},
         })
         
         d.update({
-            "ProjectOutInterf": {"linestyle": "--", "color": "#FF0000", "linewidth": linewidth, 
-                   "marker": "o", "markerfacecolor": "none", "markersize": 5},
+            "qstar": {"linestyle": "--", "color": "#05B305", "linewidth": linewidth/2, 
+                   "marker": "*", "markerfacecolor": "none", "markersize": 5},
         })
+        # d.update({
+        #     "ProjectOutInterf": {"linestyle": "--", "color": "#FF0000", "linewidth": linewidth, 
+        #            "marker": "o", "markerfacecolor": "none", "markersize": 5},
+        # })
         
         # d.update({
         #     "OptimalCMPM": {"linestyle": "--", "color": "#FFA4F7", "linewidth": linewidth, 
@@ -700,6 +715,7 @@ def get_algo_dict_list():
 def get_specific_inorder_algo_list(specific_algo_names):
     all_algo_list = define_all_algo_dict_list()
     algo_list = {k: all_algo_list[k] for k in specific_algo_names if k in all_algo_list}
+
     return algo_list
 
 # def create_config(m, snr, N, power_doa_db, doa, cohr_flag=False, cohr_coeff=1.0, noncircular_coeff=0.0, 

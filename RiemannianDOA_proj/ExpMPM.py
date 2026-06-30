@@ -58,87 +58,17 @@ def exp(config, scanned_param_name, scanned_param_vals, basedir:str = '') -> Non
 
 
 # %% ---------------------------------------
-def run_on_N_no_interf(basedir):
+def run_on_SNR(basedir, config):
     # %% 
-    M = 12
-    L = 2
-    N = int(M*2*L)
-    doa_desired=np.array([70.0])
-    power_doa_desired_db=np.array([0])
-
-
-    doa_interf = np.array([])
-    power_doa_interf_db = np.array([])
-
-    config = create_config(
-        m=M, snr=10, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
-        power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
-    
-    scanned_param_name = 'N'
-    scanned_param_vals = np.arange(int(M*1*L), int(M*3*L) + 1, int(M*0.5*L))
-    # %% 
-    exp(config, scanned_param_name, scanned_param_vals, basedir=basedir)
-
-# %% ---------------------------------------
-def run_on_SNR(basedir):
-    # %% 
-    M = 12
-    L = 4
-    N = int(2*M*L)
-
-    doa_desired=np.array([70.0, 135.0])
-    power_doa_desired_db=np.array([0.0, 0.0])
-
-    doa_interf = np.array([65.0, 110.0])
-    power_doa_interf_db = np.array([0.0, 0.0]) + 4
-
-    config = create_config(
-        m=M, snr=0, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
-        power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
     scanned_param_name = 'snr'
-    # scanned_param_vals = np.array([-5, -2.5, 0, 2.5, 5])
     scanned_param_vals = np.arange(-8.0, 8.1, 2.0)
     # %% 
     exp(config, scanned_param_name, scanned_param_vals, basedir=basedir) 
    
-def run_on_N(basedir):
+def run_on_inputSIR(basedir, config):
     # %% 
-    M = 12
-    L = 5
-    N = int(M*1.5*L)
-    doa_desired=np.array([70.0])
-    power_doa_desired_db=np.array([0])
-
-    doa_interf = np.array([50.0, 120.0])
-    power_doa_interf_db = np.array([0.0, 0.0])
-
-    config = create_config(
-        m=M, snr=0, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
-        power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
-    scanned_param_name = 'N'
-    scanned_param_vals = np.array([int(M*1*L), int(M*3*L)])
-    # %% 
-    exp(config, scanned_param_name, scanned_param_vals, basedir=basedir) 
-
-def run_on_inputSIR(basedir):
-    # %% 
-    M = 12
-    L = 4
-    N = int(2*M*L)
-
-    doa_desired=np.array([70.0, 135.0])
-    power_doa_desired_db=np.array([0.0, 0.0])
-
-    doa_interf = np.array([65.0, 110.0])
-    power_doa_interf_db = np.array([0.0, 0.0]) + 4
-
-    config = create_config(
-        m=M, snr=0, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
-        power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
     scanned_param_name = 'power_doa_interf_db'
-    # scanned_param_vals = [np.array([0.0, 0.0])-3, np.array([0.0, 0.0]), np.array([0.0, 0.0])+3]
-    scanned_param_vals = [np.array([0.0, 0.0]) + k for k in np.arange(-10.0, 10.1, 2.0)]
-    
+    scanned_param_vals = [np.array([0, 0]) + k for k in np.arange(-10, 10+1, 2)]
     # %% 
     exp(config, scanned_param_name, scanned_param_vals, basedir=basedir) 
 
@@ -153,14 +83,25 @@ if __name__ == "__main__":
     print(f"run exp basedir: {basedir}")
     if not os.path.exists(basedir):
         os.makedirs(basedir) 
+
+    # %%
+    M = 12
+    L = 4
+    N = int(2.5*M*L)
+    print(f"Running with M={M}, L={L}, N={N}, W=floor({N/L})")
+    doa_desired=np.array([70.0, 135.0])
+    power_doa_desired_db=np.array([0.0, 0.0])
+
+    doa_interf = np.array([63.0, 110.0])
+    power_doa_interf_db = np.array([0, 0]) + 4
+
+    basic_config = create_config(
+        m=M, snr=0, N=N, power_doa_db=power_doa_desired_db, doa=doa_desired, 
+        power_doa_interf_db=power_doa_interf_db, doa_interf=doa_interf, L=L)
     # %% ---------------------------------------
-    # run_on_N_no_interf(basedir)
+    run_on_SNR(basedir, basic_config)             
     # %% ---------------------------------------
-    # run_on_SNR(basedir)        
-    # %% ---------------------------------------
-    # run_on_N(basedir)        
-    # %% ---------------------------------------
-    run_on_inputSIR(basedir) 
+    run_on_inputSIR(basedir, basic_config) 
 
 
 

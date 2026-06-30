@@ -564,7 +564,7 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
     
     if type(parameter_values[0]) == np.ndarray:
         parameter_values = np.array([param[0] for param in parameter_values])
-
+    print(f"plot_doa_errors: parameter_values = {parameter_values}")
     algo_names = list(algos_error_data["mean_doa_errors"].keys())
     algo_list = get_specific_inorder_algo_list(algo_names)
     # algo_list = get_algo_dict_list()
@@ -589,18 +589,16 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
             doa_root_mse_mean = doa_root_mse_mean / parameter_values
         
         label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
+        if label == "CMPM_q=0.0":
+            label = "Capon on $\mathrm{RiemMean} (q = 0)$"
+        if label == "CMPM_q=1.0":
+            label = "Capon $(q = 1)$"
         pltline = ax.plot(parameter_values, doa_root_mse_mean, label=label, **algo_list[algo_name])
 
-        qlow = np.sqrt(np.percentile(doa_mse, 25, axis=1))
-        qhigh = np.sqrt(np.percentile(doa_mse, 75, axis=1))
-
-        # doa_mse_se = np.std(doa_mse, axis=1, ddof=1)/np.sqrt(doa_mse.shape[1])
-        # qlow = doa_mse_mean - 1.96*doa_mse_se
-        # qhigh = doa_mse_mean + 1.96*doa_mse_se
-        # qlow = np.sqrt(np.maximum(qlow, 0))
-        # qhigh = np.sqrt(qhigh)
-
-        ax.fill_between(parameter_values, qlow, qhigh, color=pltline[0].get_color(), alpha=0.10, linewidth=0.5)
+        if "CMPM_q=" not in label:
+            qlow = np.sqrt(np.percentile(doa_mse, 25, axis=1))
+            qhigh = np.sqrt(np.percentile(doa_mse, 75, axis=1))
+            ax.fill_between(parameter_values, qlow, qhigh, color=pltline[0].get_color(), alpha=0.10, linewidth=0.5)
 
         if do_ylogscale:
             ax.set_yscale('log')
@@ -934,51 +932,6 @@ def plot_sir_per_config(results):
         #     ax.legend()
     plt.tight_layout()
     return fig
-
-def plot_eigsG_per_config(results, do_ylogscale=False):
-    import matplotlib.pyplot as plt
-    
-    algo_names = results[0][0]["algo_names"]
-    algo_list = get_specific_inorder_algo_list(algo_names)
-
-    num_configs = len(results)
-    fig, axs = plt.subplots(num_configs, 1, figsize=(8, 3*num_configs))
-    if num_configs == 1:
-        axs = [axs]  # make it iterable
-     
-    for i_config in range(num_configs):
-        ax = axs[i_config]
-        M = results[i_config][0]["eigsG_list"][0].shape[0]
-        parameter_values = np.arange(1, M+1)
-        for i_algo,algo_name in enumerate(algo_names):
-            eigsG_matrix = np.stack([np.array([results[i_config][i_mc]["eigsG_list"][i_algo] for i_mc in range(len(results[i_config]))])])
-            eigsG_matrix = np.squeeze(eigsG_matrix).T
-            eigsG_matrix = np.flip(eigsG_matrix, axis=0)
-
-            eigsG_matrix /= eigsG_matrix[0, :]  # normalize by the largest eigenvalue for each MC run
-
-            # eigsG_matrix = eigsG_matrix / np.row_stack([eigsG_matrix[1:, :], np.nan * np.ones((1,eigsG_matrix.shape[1]))])
-
-            label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
-            median = np.median(eigsG_matrix, axis=1).flatten()
-            pltline = ax.plot(parameter_values, median, label=label, **algo_list[algo_name])
-
-            qlow = np.percentile(eigsG_matrix, 25, axis=1).flatten()
-            qhigh = np.percentile(eigsG_matrix, 75, axis=1).flatten()
-            ax.fill_between(parameter_values, qlow, qhigh, color=pltline[0].get_color(), alpha=0.10, linewidth=0.5)
-
-            if do_ylogscale:
-                ax.set_yscale('log')
-                ax.grid(True, which='both', linestyle='--')
-        xylabel_fontsize = 12
-        ax.set_ylabel(r"$\lambda_m(G)$", fontsize=xylabel_fontsize)
-        ax.set_xlabel("m", fontsize=xylabel_fontsize)
-        ax.grid(True)
-        if i_config == 0:
-            cbar = create_colorbar(algo_list, ax)
-    plt.tight_layout()
-    return fig
-
 
 def plot_doa_boxplots(algos_error_data, parameter_values, parameter_vals_to_show = None, do_ylogscale=False):
     

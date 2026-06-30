@@ -21,7 +21,7 @@ plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m06-d23_12-29-43/Exp_snr_y2026-m06-d23_12-29-43'
+    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m06-d30_12-22-03/Exp_power_doa_interf_db_y2026-m06-d30_12-22-58'
     name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)
@@ -243,7 +243,7 @@ plt.close('all')
 M = 12
 L = 4
 N = int(2*M*L)
-snr = 5
+snr = 2
 doa_desired=np.array([70.0, 135.0])
 power_doa_desired_db=np.array([0.0, 0.0])
 
@@ -266,14 +266,14 @@ result= run_single_mc_iteration(
 
 ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list,
                             normalize_power=NormalizePowerType.NONE, do_legend=False, do_colorbar=True, 
-                            algos_to_leave_out = ["OptimalNI"])
+                            algos_to_leave_out = ["OptimalNI","ProjectOutInterf","MinSpectrum"])
 fig_q_spectrum = plt.gcf()
 # save_figure(fig_q_spectrum, ".", "q_spectrum_example")
 
 
-ax = display_power_spectrum(result["config"], result["list_p_vec_for_G_tensor"], algo_list=get_segements_dict_list(config["L"]),
-                            normalize_power=NormalizePowerType.NONE, do_legend=True, do_colorbar=False)
-fig_segments_spectrum = plt.gcf()
+# ax = display_power_spectrum(result["config"], result["list_p_vec_for_G_tensor"], algo_list=get_segements_dict_list(config["L"]),
+#                             normalize_power=NormalizePowerType.NONE, do_legend=True, do_colorbar=False)
+# fig_segments_spectrum = plt.gcf()
 
 
 # create figure with 2 subplots:
@@ -387,3 +387,97 @@ print(x)
 Foo(x)
 print(x)
 # %%
+
+# %%
+import numpy as np
+from time import time
+import matplotlib.pyplot as plt
+from typing import List, Tuple, Dict, Any, Optional
+%matplotlib ipympl
+
+from RunSingleMCIteration import run_single_mc_iteration
+from utils import *
+import os
+import pickle
+# 
+import utils
+import ToolsMC
+import importlib
+importlib.reload(utils)
+importlib.reload(ToolsMC)
+from utils import *
+from ToolsMC import *
+plt.close('all')
+# %%
+path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m06-d30_13-57-17/Exp_power_doa_interf_db_y2026-m06-d30_13-58-07'
+# path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m06-d30_13-57-17/Exp_snr_y2026-m06-d30_13-57-17'
+name_results_dir = os.path.basename(path_results_dir)
+with open(path_results_dir + '/results.pkl', 'rb') as f:
+    results = pickle.load(f)
+# %%
+from mpm import *
+num_configs = len(results)
+num_mc = len(results[0])
+costMatrix = np.zeros(shape=(num_configs, num_mc))
+for i_config in range(num_configs):
+    for i_mc in range(num_mc):
+        G_tensor = results[i_config][i_mc]["G_tensor"]
+        L = G_tensor.shape[0]
+        X = karcher_mean(G_tensor,  epsilon=1e-4, max_iter= 10, delta=utils.globalParams.DELTA_FOR_DIAG_LOADING)
+        # wX, VX = eigh_clip(X)
+        # _, invsqrtX = sqrt_invsqrt_from_eigh(wX, VX)
+        # cost = np.sum([normsquared_logm_invsqrtX_Y_invsqrtX(invsqrtX, G_tensor[l,:,:]) for l in range(L)])
+        cost = np.sum([riemann_dist2(X, G_tensor[l,:,:]) for l in range(L)])
+        costMatrix[i_config,i_mc] = cost
+        
+        print(f"i_config={i_config}, i_mc={i_mc}")
+# %%
+mean_cost_vec = np.mean(costMatrix, axis=1)
+qlow_cost_vec = np.percentile(costMatrix, 25, axis=1)
+qhigh_cost_vec = np.percentile(costMatrix, 75, axis=1)
+
+fig = plt.figure()
+ax = plt.gca()
+ax.plot(range(num_configs), mean_cost_vec)
+ax.fill_between(range(num_configs), qlow_cost_vec, qhigh_cost_vec, alpha=0.20, linewidth=0.5)
+plt.show()
+
+
+
+
+# %% --------------
+
+from mpm import *
+num_configs = len(results)
+num_mc = 100 #len(results[0])
+q_vals = np.arange(1, -1.01, -0.25)
+resMatrix = np.zeros(shape=(len(q_vals)-1, num_configs, num_mc))
+for i_config in range(num_configs):
+    for i_mc in range(num_mc):
+        G_tensor = results[i_config][i_mc]["G_tensor"]
+        prev_G_q = None
+        dists = []
+        for q in q_vals:
+            G_q = mpm(G_tensor, q, delta=globalParams.DELTA_FOR_DIAG_LOADING)
+            if not (prev_G_q is None):
+                dists.append(riemann_dist(G_q, prev_G_q))
+            prev_G_q = G_q
+        
+        dists = np.array(dists)
+        path_length = dists.sum()
+        normalized_dists = dists / path_length
+        resMatrix[:, i_config, i_mc] = normalized_dists
+        print(f"i_config={i_config}, i_mc={i_mc}")
+
+# %%
+fig = plt.figure()
+ax = plt.gca()
+for i_jump in range(len(q_vals)-1):
+    currMatrix = resMatrix[i_jump,:,:]
+    mean_cost_vec = np.mean(currMatrix, axis=1)
+    qlow_cost_vec = np.percentile(currMatrix, 25, axis=1)
+    qhigh_cost_vec = np.percentile(currMatrix, 75, axis=1)
+    ax.plot(range(num_configs), mean_cost_vec, label=f"{q_vals[i_jump]} to {q_vals[i_jump+1]}")
+    ax.fill_between(range(num_configs), qlow_cost_vec, qhigh_cost_vec, alpha=0.20, linewidth=0.5)
+
+ax.legend()
