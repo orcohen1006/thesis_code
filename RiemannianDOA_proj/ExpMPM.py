@@ -11,7 +11,7 @@ from ToolsMC import *
 
 # %%
 
-def exp(config, scanned_param_name, scanned_param_vals, basedir:str = '') -> None:
+def exp(config, scanned_param_name, scanned_param_vals, scanned_param_string_to_display, basedir:str = '') -> None:
     utils.globalParams = GlobalParms()  # reset global params to default values
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
     name_results_dir = f'Exp_{scanned_param_name}_{timestamp}'
@@ -30,8 +30,8 @@ def exp(config, scanned_param_name, scanned_param_vals, basedir:str = '') -> Non
     # %%
     results, algos_error_data = analyze_algo_errors(results)
     # %%
-    fig_doa_errors = plot_doa_errors(algos_error_data, f'{scanned_param_name}', "", scanned_param_vals, normalize_rmse_by_parameter=False, do_ylogscale=True, do_legend=True, do_colorbar=True)
-    fig_sir = plot_sir(results, f'{scanned_param_name}', "", scanned_param_vals, do_ylogscale=True, do_legend=True, do_colorbar=True)
+    fig_doa_errors = plot_doa_errors(algos_error_data, scanned_param_string_to_display, "", scanned_param_vals, normalize_rmse_by_parameter=False, do_ylogscale=True, do_legend=True, do_colorbar=True)
+    fig_sir = plot_sir(results, scanned_param_string_to_display, "", scanned_param_vals, do_ylogscale=True, do_legend=True, do_colorbar=True)
     fig_sir_per_config = plot_sir_per_config(results)
     # fig_eigsG = plot_eigsG_per_config(results, do_ylogscale=False)
     # fig_directivity = plot_directivity(results, f'{scanned_param_name}', "", scanned_param_vals, do_ylogscale=True, do_legend=False, do_colorbar=True)
@@ -62,15 +62,17 @@ def run_on_SNR(basedir, config):
     # %% 
     scanned_param_name = 'snr'
     scanned_param_vals = np.arange(-8.0, 8.1, 2.0)
+    scanned_param_string_to_display = f'SNR (dB)'
     # %% 
-    exp(config, scanned_param_name, scanned_param_vals, basedir=basedir) 
+    exp(config, scanned_param_name, scanned_param_vals, scanned_param_string_to_display, basedir=basedir) 
    
 def run_on_inputSIR(basedir, config):
     # %% 
     scanned_param_name = 'power_doa_interf_db'
     scanned_param_vals = [np.array([0, 0]) + k for k in np.arange(-10, 10+1, 2)]
+    scanned_param_string_to_display = f'Interference Power (dB)'
     # %% 
-    exp(config, scanned_param_name, scanned_param_vals, basedir=basedir) 
+    exp(config, scanned_param_name, scanned_param_vals, scanned_param_string_to_display, basedir=basedir) 
 
 
 if __name__ == "__main__":

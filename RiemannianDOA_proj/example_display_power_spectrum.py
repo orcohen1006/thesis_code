@@ -242,12 +242,12 @@ plt.close('all')
 
 M = 12
 L = 4
-N = int(2*M*L)
-snr = 2
+N = int(2.5*M*L)
+snr = 5
 doa_desired=np.array([70.0, 135.0])
 power_doa_desired_db=np.array([0.0, 0.0])
 
-doa_interf = np.array([62.0, 110.0])
+doa_interf = np.array([63.0, 110.0])
 power_doa_interf_db = np.array([0.0, 0.0]) + 4
 
 # doa_interf = np.array([])
@@ -266,7 +266,7 @@ result= run_single_mc_iteration(
 
 ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list,
                             normalize_power=NormalizePowerType.NONE, do_legend=False, do_colorbar=True, 
-                            algos_to_leave_out = ["OptimalNI","ProjectOutInterf","MinSpectrum"])
+                            algos_to_leave_out = ["MinSpectrum","qstar"])
 fig_q_spectrum = plt.gcf()
 # save_figure(fig_q_spectrum, ".", "q_spectrum_example")
 
@@ -409,8 +409,8 @@ from utils import *
 from ToolsMC import *
 plt.close('all')
 # %%
-path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m06-d30_13-57-17/Exp_power_doa_interf_db_y2026-m06-d30_13-58-07'
-# path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m06-d30_13-57-17/Exp_snr_y2026-m06-d30_13-57-17'
+path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d11_21-47-44/Exp_power_doa_interf_db_y2026-m07-d11_21-48-38'
+path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d11_21-47-44/Exp_snr_y2026-m07-d11_21-47-44'
 name_results_dir = os.path.basename(path_results_dir)
 with open(path_results_dir + '/results.pkl', 'rb') as f:
     results = pickle.load(f)
@@ -427,19 +427,45 @@ for i_config in range(num_configs):
         # wX, VX = eigh_clip(X)
         # _, invsqrtX = sqrt_invsqrt_from_eigh(wX, VX)
         # cost = np.sum([normsquared_logm_invsqrtX_Y_invsqrtX(invsqrtX, G_tensor[l,:,:]) for l in range(L)])
-        cost = np.sum([riemann_dist2(X, G_tensor[l,:,:]) for l in range(L)])
+        cost = np.mean([riemann_dist2(X, G_tensor[l,:,:]) for l in range(L)])
         costMatrix[i_config,i_mc] = cost
         
         print(f"i_config={i_config}, i_mc={i_mc}")
 # %%
-mean_cost_vec = np.mean(costMatrix, axis=1)
-qlow_cost_vec = np.percentile(costMatrix, 25, axis=1)
-qhigh_cost_vec = np.percentile(costMatrix, 75, axis=1)
+parameter_values = scanned_param_vals
+if type(parameter_values[0]) == np.ndarray:
+        parameter_values = np.array([param[0] for param in parameter_values])
+
+
+M, W = results[0][0]["config"]["m"], results[0][0]["config"]["N"]/results[0][0]["config"]["L"]
+normalizedCostMatrix = costMatrix * (W / M**2)
+normalizedCostMatrix = np.sqrt(normalizedCostMatrix)
+mean_cost_vec = np.mean(normalizedCostMatrix, axis=1)
+qlow_cost_vec = np.percentile(normalizedCostMatrix, 25, axis=1)
+qhigh_cost_vec = np.percentile(normalizedCostMatrix, 75, axis=1)
 
 fig = plt.figure()
 ax = plt.gca()
-ax.plot(range(num_configs), mean_cost_vec)
-ax.fill_between(range(num_configs), qlow_cost_vec, qhigh_cost_vec, alpha=0.20, linewidth=0.5)
+ax.plot(parameter_values, mean_cost_vec)
+ax.fill_between(parameter_values, qlow_cost_vec, qhigh_cost_vec, alpha=0.20, linewidth=0.5)
+
+
+
+def get_qstar(normalized_dispersion):
+    normalized_dispersion_min = 1.0
+    normalized_dispersion_max = 1.05
+    normalized_dispersion_clipped = np.clip(normalized_dispersion, normalized_dispersion_min, normalized_dispersion_max)
+    dtilde = (normalized_dispersion_clipped - normalized_dispersion_min) / (normalized_dispersion_max - normalized_dispersion_min)
+    qstar = 1 - 2*dtilde
+    # qstar = 1 - 2/(1 + np.exp(-10*(dtilde - 0.5)))
+    return qstar
+
+qstar_mean = get_qstar(mean_cost_vec)
+qstar_low = get_qstar(qlow_cost_vec)
+qstar_high = get_qstar(qhigh_cost_vec)
+ax.plot(parameter_values, qstar_mean)
+ax.fill_between(parameter_values, qstar_low, qstar_high, alpha=0.20, linewidth=0.5)
+
 plt.show()
 
 

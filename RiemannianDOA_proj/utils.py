@@ -640,7 +640,7 @@ def define_all_algo_dict_list():
         # linewidth = 1.5
         # d = {key: {"linestyle": "-", "color": colormap(i / (len(q_vals)-1)), "marker": "o", "markersize": 4, "linewidth": linewidth} 
         linewidth = 2.5
-        d = {key: {"linestyle": "-", "color": colormap(i / (len(q_vals)-1)), "linewidth": linewidth, "alpha": 0.60,
+        d = {key: {"linestyle": "-", "color": colormap(i / (len(q_vals)-1)), "linewidth": linewidth, "alpha": 0.70,
                    "marker": "none", "markerfacecolor": "none", "markersize": 6} 
              for i, key in enumerate(keys)}
         #

@@ -1,6 +1,6 @@
 import numpy as np
 from utils import *
-from mpm import mpm
+from mpm import *
 from time import time
 
 def fun_CMPM(Y, A, L, q, noise_power):
@@ -25,6 +25,38 @@ def fun_CMPM(Y, A, L, q, noise_power):
     return p_vec, 0, 0, eigsG
 
 
+def fun_CMPM_qstar(Y, A, L):
+
+    G_tensor = get_G_tensor(Y, L)
+
+    M, N = Y.shape
+    W = N / L
+    G_bar = karcher_mean(G_tensor,  epsilon=1e-4, max_iter= 10, delta=globalParams.DELTA_FOR_DIAG_LOADING)
+    dispersion = np.mean([riemann_dist2(G_bar, G_tensor[l,:,:]) for l in range(L)])
+    normalized_dispersion = dispersion * (W / M**2)
+    normalized_dispersion = np.sqrt(normalized_dispersion)
+    normalized_dispersion_min = 1.0
+    normalized_dispersion_max = 1.05
+    normalized_dispersion_clipped = np.clip(normalized_dispersion, normalized_dispersion_min, normalized_dispersion_max)
+    dtilde = (normalized_dispersion_clipped - normalized_dispersion_min) / (normalized_dispersion_max - normalized_dispersion_min)
+    # qstar = 1 - 2*dtilde
+    qstar = 1 - 2/(1 + np.exp(-10*(dtilde - 0.5)))
+
+    t0 = time()
+    G_hat = mpm(G_tensor, qstar, delta=globalParams.DELTA_FOR_DIAG_LOADING)
+    dt = time() - t0
+    # print(f"time={dt}[sec]")
+
+    scaler = np.linalg.norm(A[:,0])  # assuming all steering vectors have same norm
+    A = A / scaler
+    
+    p_vec = CreateSpectrum(G_hat, A, globalParams.SPECTRUM_TYPE, globalParams.SPECTRUM_NORMALIZATION)
+
+    p_vec = p_vec / (scaler**2)
+
+    # p_vec = esprit(G_hat, 2)
+
+    return p_vec, qstar, 0, None
 
 
 def fun_OptimalCMPM(Y, A, L, q_vals, noise_power):

@@ -171,12 +171,6 @@ def analyze_algo_errors(results: list):
         print(f"Config {i_config}: threshold_theta_detect = {threshold_theta_detect}")
         noise_power = 10.0 ** ((np.max(config["power_doa_db"]) - config["snr"]) / 10.0)
 
-        A_desired = get_steering_matrix(config["doa"], config["m"])
-        A = get_steering_matrix(get_doa_grid(), config["m"])
-        R_desired = A_desired @ np.diag(convert_db_to_linear(config["power_doa_db"])) @ A_desired.conj().T + noise_power * np.eye(config["m"])
-        # p_vec_ni = 1 / np.sum(A.conj() * np.linalg.solve(R_desired, A), axis=0).real # no interferences
-        # i_algo_ni = algo_list.index("OptimalNI") if "OptimalNI" in algo_list else None
-        i_algo_ni = None
         for i_mc in range(num_mc):
             result = results[i_config][i_mc]
             num_detected = [None] * num_algo
@@ -186,9 +180,6 @@ def analyze_algo_errors(results: list):
             succ_match_true_doa = [None] * num_algo
 
             sir = [None] * num_algo
-            directivity = [None] * num_algo
-            desired_nismse = [None] * num_algo
-            interf_nismse = [None] * num_algo
             l0_norm = [None] * num_algo
             list_HPBW = [None] * num_algo
             for i_alg in range(num_algo):
@@ -214,13 +205,8 @@ def analyze_algo_errors(results: list):
                         sir[i_alg] += estimated_power_at_desired / (1e-20 + estimated_power_at_interf)
                     sir[i_alg] /= len(config["doa_interf"])
 
-                directivity[i_alg] = estimated_power_at_desired / (np.sum(curr_p_vec) - estimated_power_at_desired)
+                # directivity[i_alg] = estimated_power_at_desired / (np.sum(curr_p_vec) - estimated_power_at_desired)
 
-                if i_algo_ni is not None:
-                    p_vec_ni = result["p_vec_list"][i_algo_ni]
-                    nismse_half_window_num_grid_points = int(10 / utils.globalParams.GRID_STEP_DEGREES)
-                    desired_nismse[i_alg] = calc_nismse(curr_p_vec, p_vec_ni, grid_index_desired_doa, half_window_num_grid_points=nismse_half_window_num_grid_points)
-                    interf_nismse[i_alg] = np.mean([calc_nismse(curr_p_vec, p_vec_ni, grid_index_interf_doa, half_window_num_grid_points=nismse_half_window_num_grid_points) for grid_index_interf_doa in grid_indices_interference_doa])
             result["num_detected"] = num_detected
             result["selected_doa_error"] = selected_doa_error
             result["selected_power_error"] = selected_power_error
@@ -228,12 +214,7 @@ def analyze_algo_errors(results: list):
             result["succ_match_true_doa"] = succ_match_true_doa
             result["l0_norm"] = l0_norm
             result["list_HPBW"] = list_HPBW
-            # result["num_detected_aic"] = num_detected_aic
-            # result["num_detected_mdl"] = num_detected_mdl
             result["sir"] = sir
-            result["directivity"] = directivity
-            result["desired_nismse"] = desired_nismse
-            result["interf_nismse"] = interf_nismse
     algos_error_data = {key: defaultdict(lambda: [None]*num_configs) for key in 
                         ["mean_doa_errors", "mean_power_errors", "mean_square_doa_errors", "mean_square_power_errors", 
                          "prob_detect","prob_false_detection", "prob_full_detection"]}
@@ -590,15 +571,17 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         
         label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
         if label == "CMPM_q=0.0":
-            label = "Capon on $\mathrm{RiemMean} (q = 0)$"
+            label = "RiemMean + MVDR"
         if label == "CMPM_q=1.0":
-            label = "Capon $(q = 1)$"
+            label = "SCM + MVDR"
+        if label == "qstar":
+            label = "$\\bf{CMPM(q^*) + MVDR}$"
         pltline = ax.plot(parameter_values, doa_root_mse_mean, label=label, **algo_list[algo_name])
 
         if "CMPM_q=" not in label:
             qlow = np.sqrt(np.percentile(doa_mse, 25, axis=1))
             qhigh = np.sqrt(np.percentile(doa_mse, 75, axis=1))
-            ax.fill_between(parameter_values, qlow, qhigh, color=pltline[0].get_color(), alpha=0.10, linewidth=0.5)
+            ax.fill_between(parameter_values, qlow, qhigh, color=pltline[0].get_color(), alpha=0.20, linewidth=0.5)
 
         if do_ylogscale:
             ax.set_yscale('log')
@@ -613,15 +596,15 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
     if normalize_rmse_by_parameter:
         ax.set_ylabel("DOA RMSE / " + parameter_name, fontsize=xylabel_fontsize)
     else:
-        ax.set_ylabel(r"$\mathrm{RMSE}_{\mathrm{DOA}}$ (degrees)", fontsize=xylabel_fontsize)
+        ax.set_ylabel(r"$\mathrm{RMSE}$ (degrees)", fontsize=xylabel_fontsize)
     ax.set_xlabel(parameter_name + f" {parameter_units}", fontsize=xylabel_fontsize)
     
     
-    if do_legend:
-        lgd = ax.legend()
-        for text in lgd.get_texts():
-            if "JBLD" in text.get_text():
-                text.set_fontweight("bold")
+    # if do_legend:
+    #     lgd = ax.legend()
+    #     for text in lgd.get_texts():
+    #         if "Proposed" in text.get_text():
+    #             text.set_fontweight("bold")
         
     # remove from legend the algos with name that contains "CMPM_q=" (not just text, the entire label):
     handles, labels = ax.get_legend_handles_labels()

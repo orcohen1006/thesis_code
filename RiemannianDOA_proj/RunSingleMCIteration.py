@@ -101,15 +101,7 @@ def run_single_mc_iteration(
             q = float(algo_list[i_algo].split('=')[1])
             p_vec, num_iters, _, eigsG = fun_CMPM(y_noisy, A, config["L"], q, noise_power)
         elif utils.RUNNING_MPM and algo_list[i_algo] == "qstar":
-            q_star = -0.5
-            # CHEATING!!!
-            if power_interf_db[0] < 0:
-                q_star_min, q_star_max = 0.5, 1
-            else:
-                q_star_min, q_star_max = -1, -0.5
-            u = np.random.rand()
-            q_star = q_star_min + u*(q_star_max - q_star_min)
-            p_vec, num_iters, _, eigsG = fun_CMPM(y_noisy, A, config["L"], q_star, noise_power)
+            p_vec, num_iters, _, eigsG = fun_CMPM_qstar(y_noisy, A, config["L"])
         elif utils.RUNNING_MPM and algo_list[i_algo] == "MinSpectrum":
             p_vec, num_iters, _, _ = fun_MinSpectrum(y_noisy, A, config["L"], 1.0, noise_power)
         elif utils.RUNNING_MPM and algo_list[i_algo] == "ProjectOutInterf":
