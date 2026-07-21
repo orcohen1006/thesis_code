@@ -376,7 +376,8 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
                 spectrum = spectrum / np.sum(spectrum)
             spectrum = convert_linear_to_db(spectrum)
 
-            curr_dict = {**algo_list[algo_name], "marker": "none", "alpha": 1, "linestyle": "-"}
+            original_linewidth = algo_list[algo_name]["linewidth"]
+            curr_dict = {**algo_list[algo_name], "marker": "none", "alpha": 1, "linestyle": "-", "linewidth": original_linewidth+0.5}
             pltobj, = ax.plot(grid_doa, spectrum, label=label, **curr_dict)
             # pltobj, = ax.plot(grid_doa*np.pi/180, spectrum, label=label, **algo_list[algo_name])
             
@@ -630,7 +631,67 @@ def estimate_num_sources(eigvals, Nsnap):
 
 def get_colormap():
     # return plt.cm.vanimo
-    return plt.cm.managua
+    # return plt.cm.managua
+    # return plt.cm.plasma
+    # return plt.cm.bwr
+
+    # return get_pastel_cmap()
+    
+    return get_managua_purple_cmap()
+
+    # return plt.cm.get_cmap('inferno_r')  # reversed inferno
+    # return plt.cm.YlOrBr
+    # return plt.cm.get_cmap('hot_r')
+
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+
+def get_pastel_cmap():
+
+    # The order of this list dictates the gradient sequence
+    # color_sequence = ["#E9E500FF","#C28E00FF", "#F00000FF","#940000FF", "#270000"]
+    # color_sequence = ["#DDD900FF", "#270000",  "#9C00CCFF",]
+    # color_sequence = ["#FFFB00FF", "#DAA700FF", "#270000",  "#8B00E7FF",  "#E700DBFF",]
+    # color_sequence = ["#4a148c", "#f5f5f5", "#e65100"]
+    color_sequence = ["#4a148c", "#999999", "#e65100"]
+    # Generate and return the LinearSegmentedColormap
+    return mcolors.LinearSegmentedColormap.from_list("mypastel", color_sequence, N=256)
+
+
+
+def get_managua_purple_cmap(light_purple="#AB8FFF", name="managua_purple"):
+
+    base_cmap = plt.get_cmap("managua")
+
+    # 1. Sample 128 color stops from the first half (0.0 -> 0.5) of managua
+    first_half = base_cmap(np.linspace(0.0, 0.5, 128))
+
+    # 2. Extract midpoint color (RGBA) to ensure a smooth transition
+    mid_color = base_cmap(0.5)
+
+    # 3. Interpolate from the midpoint color to the target light purple (128 stops)
+    # target_purple_rgba = mcolors.to_rgba(light_purple)
+    # second_half = np.linspace(mid_color, target_purple_rgba, 128)
+
+    # second_half = np.linspace(mid_color, mcolors.to_rgba("#AB8FFF"), 128)
+
+    target_1 = mcolors.to_rgba("#3E1AAC")
+    target_2 = mcolors.to_rgba("#AB8FFF")
+    second_half_1 = np.linspace(mid_color, target_1 , 64)
+    second_half_2 = np.linspace(target_1, target_2, 64)
+
+
+    second_half = np.vstack((second_half_1, second_half_2))
+
+
+    # 4. Combine both halves (256 total color levels)
+    combined_colors = np.vstack((first_half, second_half))
+
+    # 5. Create and return the colormap
+    return mcolors.LinearSegmentedColormap.from_list(name, combined_colors)
+
+
 
 def define_all_algo_dict_list():
     if RUNNING_MPM:
@@ -644,26 +705,35 @@ def define_all_algo_dict_list():
                    "marker": "none", "markerfacecolor": "none", "markersize": 6} 
              for i, key in enumerate(keys)}
         #
-        # d["CMPM_q=0.0"]["linewidth"] = linewidth
-        d["CMPM_q=0.0"]["linestyle"] = "--"
+        d["CMPM_q=0.0"]["linewidth"] = linewidth
+        d["CMPM_q=0.0"]["linestyle"] = "-"
         d["CMPM_q=0.0"]["marker"] = "o"
+        d["CMPM_q=0.0"]["markersize"] = 6
         d["CMPM_q=0.0"]["alpha"] = 1
         
 
-        # d["CMPM_q=1.0"]["linewidth"] = linewidth
-        d["CMPM_q=1.0"]["linestyle"] = "--"
+        d["CMPM_q=1.0"]["linewidth"] = linewidth
+        d["CMPM_q=1.0"]["linestyle"] = "-"
         d["CMPM_q=1.0"]["marker"] = "o"
+        d["CMPM_q=1.0"]["markersize"] = 6
         d["CMPM_q=1.0"]["alpha"] = 1
+
+        d["CMPM_q=-1.0"]["linewidth"] = linewidth
+        d["CMPM_q=-1.0"]["linestyle"] = "-"
+        d["CMPM_q=-1.0"]["marker"] = "o"
+        d["CMPM_q=-1.0"]["markersize"] = 6
+        d["CMPM_q=-1.0"]["alpha"] = 1
+
 
         # add other algorithms with fixed styles
         d.update({
-            "MinSpectrum": {"linestyle": ":", "color": "#CF0505", "linewidth": linewidth, 
-                   "marker": "o", "markerfacecolor": "none", "markersize": 5},
+            "MinSpectrum": {"linestyle": ":", "color": "#429200", "linewidth": linewidth, 
+                   "marker": "^", "markerfacecolor": "none", "markersize": 7},
         })
         
         d.update({
-            "qstar": {"linestyle": "--", "color": "#05B305", "linewidth": linewidth/2, 
-                   "marker": "*", "markerfacecolor": "none", "markersize": 5},
+            "qstar": {"linestyle": "--", "color": "#171BFD", "linewidth": linewidth, 
+                   "marker": "*", "markerfacecolor": "none", "markersize": 12},
         })
         # d.update({
         #     "ProjectOutInterf": {"linestyle": "--", "color": "#FF0000", "linewidth": linewidth, 

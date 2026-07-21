@@ -409,8 +409,9 @@ from utils import *
 from ToolsMC import *
 plt.close('all')
 # %%
-path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d11_21-47-44/Exp_power_doa_interf_db_y2026-m07-d11_21-48-38'
+# path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d12_01-06-28/Exp_power_doa_interf_db_y2026-m07-d12_01-07-15'
 path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d11_21-47-44/Exp_snr_y2026-m07-d11_21-47-44'
+
 name_results_dir = os.path.basename(path_results_dir)
 with open(path_results_dir + '/results.pkl', 'rb') as f:
     results = pickle.load(f)

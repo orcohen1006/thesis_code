@@ -555,7 +555,24 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
     else:
         fig = plt.figure()
         ax = plt.gca()
-    for algo_name in algo_list.keys():
+
+    # algo_names_list = list(algo_list.keys())
+    algo_names_list = ["qstar", "CMPM_q=1.0", "CMPM_q=0.0", "CMPM_q=-1.0", "MinSpectrum"][-1::-1]  # reverse the order of the list
+
+
+    for algo_name in algo_names_list:
+        
+        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
+        if label == "CMPM_q=0.0":
+            label = f"RiemMean $(q = 0)$ + MVDR"
+        elif label == "CMPM_q=1.0":
+            label = f"SCM $(q = 1)$ + MVDR"
+        elif label == "CMPM_q=-1.0":
+            label = f"Harmonic $(q = -1)$ + MVDR"
+        elif label == "qstar":
+            label = "$\\bf{CMPM(q^*) + MVDR}$"
+
+
         mean_doa_errors = np.stack(algos_error_data["mean_doa_errors"][algo_name]) 
         mse_doa_errors = np.stack(algos_error_data["mean_square_doa_errors"][algo_name])
         
@@ -568,14 +585,7 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
 
         if normalize_rmse_by_parameter:
             doa_root_mse_mean = doa_root_mse_mean / parameter_values
-        
-        label = f"{ALGONAME}({algo_name})" if (algo_name == "AIRM" or algo_name == "JBLD" or algo_name == "LE") else algo_name
-        if label == "CMPM_q=0.0":
-            label = "RiemMean + MVDR"
-        if label == "CMPM_q=1.0":
-            label = "SCM + MVDR"
-        if label == "qstar":
-            label = "$\\bf{CMPM(q^*) + MVDR}$"
+
         pltline = ax.plot(parameter_values, doa_root_mse_mean, label=label, **algo_list[algo_name])
 
         if "CMPM_q=" not in label:
@@ -592,7 +602,9 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
     xylabel_fontsize = 12
     if normalize_rmse_by_parameter:
         lower_bound_all_sources_doa_rmse = lower_bound_all_sources_doa_rmse / parameter_values
-    ax.plot(parameter_values, lower_bound_all_sources_doa_rmse, '--', color='gray', label='CRB', linewidth=2.5)
+    # ax.plot(parameter_values, lower_bound_all_sources_doa_rmse, '--', color='gray', label='CRB', linewidth=2.5)
+    print(f"values for sqrt(CRLB) = {lower_bound_all_sources_doa_rmse}")
+
     if normalize_rmse_by_parameter:
         ax.set_ylabel("DOA RMSE / " + parameter_name, fontsize=xylabel_fontsize)
     else:
@@ -614,6 +626,10 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         if "CMPM_q=" not in label:
             new_handles.append(handle)
             new_labels.append(label)
+
+    new_handles = new_handles[-1::-1]  # reverse the order of the list
+    new_labels = new_labels[-1::-1]  # reverse the order of the list
+    
     ax.legend(new_handles, new_labels)
     
     

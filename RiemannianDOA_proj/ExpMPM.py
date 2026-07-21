@@ -30,7 +30,8 @@ def exp(config, scanned_param_name, scanned_param_vals, scanned_param_string_to_
     # %%
     results, algos_error_data = analyze_algo_errors(results)
     # %%
-    fig_doa_errors = plot_doa_errors(algos_error_data, scanned_param_string_to_display, "", scanned_param_vals, normalize_rmse_by_parameter=False, do_ylogscale=True, do_legend=True, do_colorbar=True)
+    fig_doa_errors = plot_doa_errors(algos_error_data, scanned_param_string_to_display, "", scanned_param_vals, normalize_rmse_by_parameter=False, do_ylogscale=True, do_legend=True, do_colorbar=False)
+    # %%
     fig_sir = plot_sir(results, scanned_param_string_to_display, "", scanned_param_vals, do_ylogscale=True, do_legend=True, do_colorbar=True)
     fig_sir_per_config = plot_sir_per_config(results)
     # fig_eigsG = plot_eigsG_per_config(results, do_ylogscale=False)
@@ -111,5 +112,5 @@ if __name__ == "__main__":
     # %% ---------------------------------------
     print(f'Total Running Time: {time.time() - t0_overall} sec.')
     # %% ---------------------------------------
-    # git_commit_and_push(commit_message=basedir)
+    git_commit_and_push(commit_message=basedir)
 
