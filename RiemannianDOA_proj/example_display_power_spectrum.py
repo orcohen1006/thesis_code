@@ -508,3 +508,117 @@ for i_jump in range(len(q_vals)-1):
     ax.fill_between(range(num_configs), qlow_cost_vec, qhigh_cost_vec, alpha=0.20, linewidth=0.5)
 
 ax.legend()
+
+
+
+# %%
+import pickle
+import matplotlib
+%matplotlib ipympl
+import matplotlib.pyplot as plt
+matplotlib.use("pdf")
+from matplotlib.text import Text
+from matplotlib.backends.backend_pdf import FigureCanvasPdf
+
+COL_IN = 3.39   # 86 mm = one ICASSP column, exactly ((178-6)/2 mm)
+
+def retarget(fig, height_in=1.70, width_in=COL_IN,
+             legend="above", ncol=3, base=7.0, do_constrained_layout=True):
+    """Restyle an existing figure so it prints at 1:1 in a column."""
+    FigureCanvasPdf(fig)          # unpickled figures often carry no usable canvas
+
+    # 1. final printed size -> LaTeX scale factor 1.0, so no font shrinkage
+    fig.set_size_inches(width_in, height_in)
+    
+    # 2. rcParams do NOT apply retroactively: set every existing artist
+    for t in fig.findobj(Text):
+        t.set_fontsize(base)
+        t.set_fontfamily("serif")
+
+    for ax in fig.axes:
+        ax.tick_params(labelsize=base - 0.5, width=0.5, length=2.0, pad=1.5)
+        ax.tick_params(which="minor", width=0.4, length=1.2)
+        for s in ax.spines.values():
+            s.set_linewidth(0.6)
+        for gl in ax.get_xgridlines() + ax.get_ygridlines():
+            gl.set_linewidth(0.4)
+        for ln in ax.get_lines():
+            ln.set_linewidth(max(ln.get_linewidth() * 0.6, 0.9))
+            if ln.get_marker() not in (None, "None", ""):
+                ln.set_markersize(ln.get_markersize()*0.65)
+        ax.xaxis.label.set_size(base)
+        ax.yaxis.label.set_size(base)
+        ax.margins(x=0.01)
+
+    # 3. legend handeling
+    if legend == "remove":
+        for ax in fig.axes:
+            if ax.get_legend() is not None:
+                ax.get_legend().remove()
+    elif legend == "keep":
+        pass  # leave legend as is
+        # Change legend appearance, remove box, and update font
+        # for ax in fig.axes:
+        #     legend = ax.get_legend()
+        #     if legend is not None:
+        #         # Remove the bounding box (frame)
+        #         # legend.set_frame_on(False)  # or legend.get_frame().set_visible(False)
+
+        #         # Update font size and set font family to serif
+        #         for text in legend.get_texts():
+        #             text.set_fontsize(base - 1.0)
+        #             text.set_fontfamily("serif")
+
+        #         # Update marker size for line elements
+        #         for ln in legend.get_lines():
+        #             ln.set_markersize(ln.get_markersize() * 0.65) 
+    else:
+        host = fig.axes[0]
+        handles, labels = host.get_legend_handles_labels()
+        if host.get_legend() is not None:
+            host.get_legend().remove()
+        if legend == "above" and handles:
+            # flip labels order:
+            labels = labels[::-1]
+            handles = handles[::-1]
+            host.legend(handles, labels, loc="lower center",
+                        prop={"family": "serif", "size": base - 1.0},  # Set font family and size here
+                        bbox_to_anchor=(0.5, 1.0), ncol=ncol, frameon=False,
+                        handlelength=1.4, handletextpad=0.4,
+                        columnspacing=1.0, borderaxespad=0.15)
+        # legend="remove" -> leave it off; caption says "legend as in Fig. 2"
+
+    # 4. tight packing at an EXACT size (do not use bbox_inches="tight")
+    if do_constrained_layout:
+        try:
+            fig.set_layout_engine("constrained")     # matplotlib >= 3.6
+        except AttributeError:
+            fig.set_constrained_layout(True)
+    else:
+        fig.tight_layout(pad=0.1, h_pad=0.1, w_pad=0.1)
+    return fig
+
+
+# --------------
+def load(p):
+    with open(p, "rb") as f:
+        return pickle.load(f)
+
+my_fig2_pkl_path = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d21_13-06-39/Exp_power_doa_interf_db_y2026-m07-d21_13-07-38/Exp_power_doa_interf_db_y2026-m07-d21_13-07-38_DOA.pkl'
+fig2 = load(my_fig2_pkl_path)
+fig2.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig2before.pdf", pad_inches=0.01)
+retarget(fig2, height_in=2.25, legend="above", ncol=2)
+fig2.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig2after.pdf", pad_inches=0.01)
+
+my_fig3_pkl_path = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d21_13-06-39/Exp_snr_y2026-m07-d21_13-06-39/Exp_snr_y2026-m07-d21_13-06-39_DOA.pkl'
+fig3 = load(my_fig3_pkl_path)
+fig3.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig3before.pdf", pad_inches=0.01)
+retarget(fig3, height_in=1.80, legend="remove", ncol=2)
+fig3.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig3after.pdf", pad_inches=0.01)
+
+my_fig1_pkl_path = '/home/or.cohen/thesis_code/RiemannianDOA_proj/q_spectrum_example.pkl'
+fig1 = load(my_fig1_pkl_path)
+fig1.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig1before.pdf", pad_inches=0.01)
+retarget(fig1, height_in=2.25, legend="keep", ncol=2, do_constrained_layout=False)
+fig1.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig1after.pdf", pad_inches=0.01)
+
