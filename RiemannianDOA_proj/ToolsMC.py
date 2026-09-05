@@ -278,7 +278,19 @@ def analyze_algo_errors(results: list):
             algos_error_data["prob_false_detection"][algo_name][i_config] = np.mean(prob_false_detection)
             algos_error_data["prob_full_detection"][algo_name][i_config] = np.mean(is_full_detection)
         algos_error_data["mean_square_doa_errors"]["CRB"][i_config] = cramer_rao_lower_bound(config)
+        # ---
+        _, _, _, doa_errors_for_selecting_interf, _, \
+                        _, _, _ =\
+                        estimate_doa_calc_errors(
+                             tuple(result["config"]["doa_interf"]), grid_doa,
+                             result["config"]["doa"],
+                             convert_db_to_linear(result["config"]["power_doa_db"]), threshold_theta_detect=threshold_theta_detect)
+        algos_error_data["mean_square_doa_errors"]["SelectingInterf"][i_config] = doa_errors_for_selecting_interf**2
         # --
+    # -----------------------
+
+    # -----------------------
+
     return results, algos_error_data
 # %%
 def tmp123():
@@ -556,6 +568,13 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         fig = plt.figure()
         ax = plt.gca()
 
+
+    selectingInterf_values = np.stack(algos_error_data["mean_square_doa_errors"]["SelectingInterf"])
+    selectingInterf_doa_rmse = np.sqrt(np.mean(selectingInterf_values, axis=1))
+    if normalize_rmse_by_parameter:
+        selectingInterf_doa_rmse /= parameter_values
+    ax.plot(parameter_values, selectingInterf_doa_rmse, '--', color='black', label='Selecting Interference', linewidth=list(algo_list.values())[0]["linewidth"])
+
     # algo_names_list = list(algo_list.keys())
     algo_names_list = ["qstar", "CMPM_q=1.0", "CMPM_q=0.0", "CMPM_q=-1.0", "MinSpectrum"][-1::-1]  # reverse the order of the list
 
@@ -604,6 +623,32 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
         lower_bound_all_sources_doa_rmse = lower_bound_all_sources_doa_rmse / parameter_values
     # ax.plot(parameter_values, lower_bound_all_sources_doa_rmse, '--', color='gray', label='CRB', linewidth=2.5)
     print(f"values for sqrt(CRLB) = {lower_bound_all_sources_doa_rmse}")
+
+
+    # ----- best q per config
+    q_vals = []
+    Mat_rmse_different_q_vals = []
+    for algo_name in list(algo_list.keys()):
+        if not algo_name.startswith("CMPM_q="):
+            continue
+        q_vals.append(extract_q_from_algo_name(algo_name))
+
+        mean_doa_errors = np.stack(algos_error_data["mean_doa_errors"][algo_name]) 
+        mse_doa_errors = np.stack(algos_error_data["mean_square_doa_errors"][algo_name])
+        
+        doa_mse = mse_doa_errors
+        doa_mse_mean = np.mean(doa_mse, axis=1)
+        doa_root_mse_mean = np.sqrt(doa_mse_mean)
+        Mat_rmse_different_q_vals.append(doa_root_mse_mean)
+    Mat_rmse_different_q_vals = np.stack(Mat_rmse_different_q_vals, axis=1)
+    print(f"q_vals = {q_vals}")
+    print(f"Mat_rmse_different_q_vals shape: {Mat_rmse_different_q_vals.shape}")
+    best_rmse_outof_all_q = np.min(Mat_rmse_different_q_vals, axis=1)
+    best_q_outof_all_q = np.array(q_vals)[np.argmin(Mat_rmse_different_q_vals, axis=1)]
+    print(f"best_rmse_outof_all_q = {best_rmse_outof_all_q}")
+    print(f"best_q_outof_all_q = {best_q_outof_all_q}")
+    ax.plot(parameter_values, best_rmse_outof_all_q, '.', color='red', label='_no_legend_')    
+
 
     if normalize_rmse_by_parameter:
         ax.set_ylabel("DOA RMSE / " + parameter_name, fontsize=xylabel_fontsize)

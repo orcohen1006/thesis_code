@@ -409,8 +409,8 @@ from utils import *
 from ToolsMC import *
 plt.close('all')
 # %%
-# path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d12_01-06-28/Exp_power_doa_interf_db_y2026-m07-d12_01-07-15'
-path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d11_21-47-44/Exp_snr_y2026-m07-d11_21-47-44'
+path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d12_01-06-28/Exp_power_doa_interf_db_y2026-m07-d12_01-07-15'
+# path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d11_21-47-44/Exp_snr_y2026-m07-d11_21-47-44'
 
 name_results_dir = os.path.basename(path_results_dir)
 with open(path_results_dir + '/results.pkl', 'rb') as f:
@@ -604,21 +604,23 @@ def load(p):
     with open(p, "rb") as f:
         return pickle.load(f)
 
-my_fig2_pkl_path = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d21_13-06-39/Exp_power_doa_interf_db_y2026-m07-d21_13-07-38/Exp_power_doa_interf_db_y2026-m07-d21_13-07-38_DOA.pkl'
+# my_fig2_pkl_path = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d21_13-06-39/Exp_power_doa_interf_db_y2026-m07-d21_13-07-38/Exp_power_doa_interf_db_y2026-m07-d21_13-07-38_DOA.pkl'
+my_fig2_pkl_path = '/home/or.cohen/thesis_code/RiemannianDOA_proj/NewFigures/fig2.pkl'
 fig2 = load(my_fig2_pkl_path)
 fig2.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig2before.pdf", pad_inches=0.01)
 retarget(fig2, height_in=2.25, legend="above", ncol=2)
 fig2.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig2after.pdf", pad_inches=0.01)
 
-my_fig3_pkl_path = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d21_13-06-39/Exp_snr_y2026-m07-d21_13-06-39/Exp_snr_y2026-m07-d21_13-06-39_DOA.pkl'
+# my_fig3_pkl_path = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d21_13-06-39/Exp_snr_y2026-m07-d21_13-06-39/Exp_snr_y2026-m07-d21_13-06-39_DOA.pkl'
+my_fig3_pkl_path = '/home/or.cohen/thesis_code/RiemannianDOA_proj/NewFigures/fig3.pkl'
 fig3 = load(my_fig3_pkl_path)
 fig3.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig3before.pdf", pad_inches=0.01)
 retarget(fig3, height_in=1.80, legend="remove", ncol=2)
 fig3.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig3after.pdf", pad_inches=0.01)
 
-my_fig1_pkl_path = '/home/or.cohen/thesis_code/RiemannianDOA_proj/q_spectrum_example.pkl'
-fig1 = load(my_fig1_pkl_path)
-fig1.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig1before.pdf", pad_inches=0.01)
-retarget(fig1, height_in=2.25, legend="keep", ncol=2, do_constrained_layout=False)
-fig1.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig1after.pdf", pad_inches=0.01)
+# my_fig1_pkl_path = '/home/or.cohen/thesis_code/RiemannianDOA_proj/q_spectrum_example.pkl'
+# fig1 = load(my_fig1_pkl_path)
+# fig1.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig1before.pdf", pad_inches=0.01)
+# retarget(fig1, height_in=2.25, legend="keep", ncol=2, do_constrained_layout=False)
+# fig1.savefig("/home/or.cohen/thesis_code/RiemannianDOA_proj/tmpFigures/fig1after.pdf", pad_inches=0.01)
 
