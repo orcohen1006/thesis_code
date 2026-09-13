@@ -378,6 +378,8 @@ def display_power_spectrum(config, list_p_vec, epsilon_power=None, algo_list=Non
 
             original_linewidth = algo_list[algo_name]["linewidth"]
             curr_dict = {**algo_list[algo_name], "marker": "none", "alpha": 1, "linestyle": "-", "linewidth": original_linewidth+0.5}
+            if (algo_name == "qstar"):
+                curr_dict["linestyle"] = ":"
             pltobj, = ax.plot(grid_doa, spectrum, label=label, **curr_dict)
             # pltobj, = ax.plot(grid_doa*np.pi/180, spectrum, label=label, **algo_list[algo_name])
             

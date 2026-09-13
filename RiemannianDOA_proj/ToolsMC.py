@@ -573,7 +573,8 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
     selectingInterf_doa_rmse = np.sqrt(np.mean(selectingInterf_values, axis=1))
     if normalize_rmse_by_parameter:
         selectingInterf_doa_rmse /= parameter_values
-    ax.plot(parameter_values, selectingInterf_doa_rmse, '--', color='black', label='Selecting Interference', linewidth=list(algo_list.values())[0]["linewidth"])
+    ax.plot(parameter_values, selectingInterf_doa_rmse, '--', color='black', label='_no_legend_',#'Selecting Interference',
+             linewidth=list(algo_list.values())[0]["linewidth"])
 
     # algo_names_list = list(algo_list.keys())
     algo_names_list = ["qstar", "CMPM_q=1.0", "CMPM_q=0.0", "CMPM_q=-1.0", "MinSpectrum"][-1::-1]  # reverse the order of the list
@@ -647,8 +648,13 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
     best_q_outof_all_q = np.array(q_vals)[np.argmin(Mat_rmse_different_q_vals, axis=1)]
     print(f"best_rmse_outof_all_q = {best_rmse_outof_all_q}")
     print(f"best_q_outof_all_q = {best_q_outof_all_q}")
-    ax.plot(parameter_values, best_rmse_outof_all_q, '.', color='red', label='_no_legend_')    
+    label_of_oracle = "Oracle $q$ + MVDR"
+    ax.plot(parameter_values, best_rmse_outof_all_q, ':.', linewidth=pltline[0].get_linewidth()*0.75, color='red', label=label_of_oracle)    
 
+    lines = ax.get_lines()
+    tmpzorder = lines[-1].get_zorder()
+    lines[-1].set_zorder(tmpzorder)
+    lines[-2].set_zorder(tmpzorder+1)
 
     if normalize_rmse_by_parameter:
         ax.set_ylabel("DOA RMSE / " + parameter_name, fontsize=xylabel_fontsize)
@@ -674,7 +680,12 @@ def plot_doa_errors(algos_error_data: dict, parameter_name: str, parameter_units
 
     new_handles = new_handles[-1::-1]  # reverse the order of the list
     new_labels = new_labels[-1::-1]  # reverse the order of the list
-    
+
+    i_oracle = new_labels.index(label_of_oracle)
+    new_labels.append(new_labels.pop(i_oracle))
+    new_handles.append(new_handles.pop(i_oracle))
+
+
     ax.legend(new_handles, new_labels)
     
     

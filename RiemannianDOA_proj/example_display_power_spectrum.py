@@ -315,11 +315,17 @@ M = 12
 L = 4
 W = 1*M
 N = int(W*L)
+
+
 doa_desired=np.array([70.0, 135.0])
 power_doa_desired_db=np.array([0.0, 0.0])
+# doa_desired=np.array([85.0])
+# power_doa_desired_db=np.array([0.0])
 
-doa_interf = np.array([65.0, 110.0])
+
+doa_interf = np.array([63.0, 110.0])
 power_doa_interf_db = np.array([0.0, 0.0]) + 4
+
 
 
 # doa_interf = np.array([40.0, 60.0, 120.0, 150.0])
@@ -343,8 +349,9 @@ configs_to_display = []
 
 # N_vals = [int(1.5*M*L), int(3*M*L)]
 # N_vals = [int(1.2*M*L), int(2*M*L), int(3*M*L), int(6*M*L)]
-N_vals = [int(2*M*L), int(10*M*L)]
-snr_vals = [10, 0, -2.5, -5]
+# N_vals = [int(2*M*L), int(10*M*L)]
+N_vals = [50]
+snr_vals = [5, 0]
 
 for N in N_vals:
     for snr in snr_vals:
@@ -365,9 +372,9 @@ for i, currconfig in enumerate(configs_to_display):
         algo_list=list(algo_list.keys()))
 
     ax = display_power_spectrum(result["config"], result["p_vec_list"], algo_list=algo_list, ax=axes[i],
-                            do_colorbar=False,
-                            normalize_power=NormalizePowerType.NONE, 
-                            algos_to_leave_out = ["OptimalNI","OptimalCMPM"])
+                            do_colorbar= (i==len(configs_to_display)-1),
+                            normalize_power=NormalizePowerType.MAX,
+                            algos_to_leave_out = ["MinSpectrum","_qstar"])
     axes[i].set_title(f"W/M={currconfig['N']/M/config['L']}, SNR={currconfig['snr']}")
 
 fig.suptitle("Power Spectrum Analysis")
@@ -409,8 +416,8 @@ from utils import *
 from ToolsMC import *
 plt.close('all')
 # %%
-path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d12_01-06-28/Exp_power_doa_interf_db_y2026-m07-d12_01-07-15'
-# path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d11_21-47-44/Exp_snr_y2026-m07-d11_21-47-44'
+# path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d12_01-06-28/Exp_power_doa_interf_db_y2026-m07-d12_01-07-15'
+path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/zRunExpMPM_y2026-m07-d11_21-47-44/Exp_snr_y2026-m07-d11_21-47-44'
 
 name_results_dir = os.path.basename(path_results_dir)
 with open(path_results_dir + '/results.pkl', 'rb') as f:
@@ -581,6 +588,12 @@ def retarget(fig, height_in=1.70, width_in=COL_IN,
             # flip labels order:
             labels = labels[::-1]
             handles = handles[::-1]
+
+            label_of_oracle = "Oracle $q$ + MVDR"
+            i_oracle = labels.index(label_of_oracle)
+            labels.append(labels.pop(i_oracle))
+            handles.append(handles.pop(i_oracle))
+
             host.legend(handles, labels, loc="lower center",
                         prop={"family": "serif", "size": base - 1.0},  # Set font family and size here
                         bbox_to_anchor=(0.5, 1.0), ncol=ncol, frameon=False,

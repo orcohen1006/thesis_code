@@ -35,13 +35,14 @@ def fun_CMPM_qstar(Y, A, L):
     dispersion = np.mean([riemann_dist2(G_bar, G_tensor[l,:,:]) for l in range(L)])
     normalized_dispersion = dispersion * (W / M**2)
     normalized_dispersion = np.sqrt(normalized_dispersion)
+    if True:
+        print(f"normalized_dispersion = {normalized_dispersion}")
     normalized_dispersion_min = 1.0
     normalized_dispersion_max = 1.05
     normalized_dispersion_clipped = np.clip(normalized_dispersion, normalized_dispersion_min, normalized_dispersion_max)
     dtilde = (normalized_dispersion_clipped - normalized_dispersion_min) / (normalized_dispersion_max - normalized_dispersion_min)
     qstar = 1 - 2*dtilde
-    # qstar = 1 - 2/(1 + np.exp(-10*(dtilde - 0.5)))
-
+    
     t0 = time()
     G_hat = mpm(G_tensor, qstar, delta=globalParams.DELTA_FOR_DIAG_LOADING)
     dt = time() - t0
