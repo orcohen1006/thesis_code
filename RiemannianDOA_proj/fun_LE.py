@@ -5,7 +5,7 @@ from time import time
 from utils import EPS_REL_CHANGE
 
 
-def fun_LE_ss(Y, A, DAS_init, DOAscan, DOA, noisepower):
+def fun_LE_ss(Y, A, noisepower):
 
     M, D = A.shape
     scaler = np.linalg.norm(A[:,0])  # assuming all steering vectors have same norm
@@ -25,5 +25,5 @@ def fun_LE_ss(Y, A, DAS_init, DOAscan, DOA, noisepower):
     
     p = p * sigma2
     p = p / (scaler**2)
-    
+    p = np.maximum(p, 0)
     return p, 0, noisepower

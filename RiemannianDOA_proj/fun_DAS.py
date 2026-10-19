@@ -52,7 +52,7 @@ def fun_PER(Y, A, noisepower):
 
     return p_vec, num_iters, noisepower
 
-def fun_MVDR(Y, A, DAS_init, DOAscan, DOA, noisepower):
+def fun_MVDR(Y, A, noisepower):
 
     
     M, D = A.shape

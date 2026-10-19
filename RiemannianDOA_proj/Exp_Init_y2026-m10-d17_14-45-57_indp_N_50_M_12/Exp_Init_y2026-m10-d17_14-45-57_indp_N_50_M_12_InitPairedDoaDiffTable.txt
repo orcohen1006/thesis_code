@@ -1,0 +1,8 @@
+\begin{tabular}{lrrr}
+\toprule
+ & diff=0 & diff=0.5° & diff>0.5° \\
+\midrule
+MVDR vs. PER & 83.6 & 15.0 & 1.4 \\
+LE_ss vs. PER & 97.8 & 2.2 & 0.0 \\
+\bottomrule
+\end{tabular}

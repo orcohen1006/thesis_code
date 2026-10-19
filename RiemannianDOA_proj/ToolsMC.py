@@ -26,6 +26,7 @@ def save_job_metadata(workdir: str, config_list: list, num_mc: int, num_jobs: in
     metadata["grid_min_max_vals_degrees"] = utils.globalParams.GRID_MIN_MAX_VALS_DEGREES    
     metadata["wanted_algo_names"] = utils.globalParams.WANTED_ALGO_NAMES
     metadata["sensor_array_type"] = utils.globalParams.SENSOR_ARRAY_TYPE
+    metadata["do_store_convergence"] = utils.globalParams.DO_STORE_CONVERGENCE
     
     with open(FILENAME_PBS_METADATA, "wb") as f:
         pickle.dump(metadata, f)
@@ -701,6 +702,275 @@ def plot_power_errors(algos_error_data: dict, parameter_name: str, parameter_uni
     ax.grid(True)
     return fig
 
+def plot_initialization_convergence(results, list_method_for_p_init, algo_name="JBLD"):
+    """
+    Plot the convergence (median and IQR over MC runs) of `algo_name` for each initialization method.
+    results[i_config] corresponds to list_method_for_p_init[i_config].
+    Each results[i_config][i_mc]["tuple_convergence_list"][algo_idx] is (loss_history, rel_change_history).
+    Runs that converged early are padded with their last value.
+    Returns (fig_loss, fig_rel_change).
+    """
+    import matplotlib.pyplot as plt
+
+    def stack_padded(list_histories):
+        max_len = max(len(h) for h in list_histories)
+        mat = np.full((len(list_histories), max_len), np.nan)
+        for i, h in enumerate(list_histories):
+            mat[i, :len(h)] = h
+            mat[i, len(h):] = h[-1]
+        return mat
+
+    xylabel_fontsize = 12
+    fig_loss, ax_loss = plt.subplots(figsize=(6, 4))
+    fig_rel_change, ax_rel_change = plt.subplots(figsize=(6, 4))
+    for i_config, method_name in enumerate(list_method_for_p_init):
+        algo_idx = results[i_config][0]["algo_names"].index(algo_name)
+        list_tuples = [results[i_config][i_mc]["tuple_convergence_list"][algo_idx] for i_mc in range(len(results[i_config]))]
+        list_tuples = [t for t in list_tuples if t is not None and len(t[0]) > 0]
+        if len(list_tuples) == 0:
+            print(f"plot_initialization_convergence: no convergence data for {algo_name} with init {method_name}")
+            continue
+
+        for ax, i_hist in [(ax_loss, 0), (ax_rel_change, 1)]:
+            mat = stack_padded([t[i_hist] for t in list_tuples])  # Shape: (num_mc, max_iters)
+            if i_hist == 0:
+                mat = mat - mat[:, [-1]] + 1e-12   # suboptimality per run
+                # mat = mat / mat[:, [0]]  # normalize each loss trajectory by its first value
+            q25, q50, q75 = np.percentile(mat, [25, 50, 75], axis=0)
+            iters = np.arange(1, mat.shape[1] + 1)
+            line, = ax.plot(iters, q50, label=method_name)
+            ax.fill_between(iters, q25, q75, color=line.get_color(), alpha=0.25)
+
+    ax_loss.set_ylabel('Normalized loss', fontsize=xylabel_fontsize)
+    ax_loss.set_yscale('log')
+    ax_rel_change.set_ylabel('Relative change', fontsize=xylabel_fontsize)
+    ax_rel_change.set_yscale('log')
+    for ax in [ax_loss, ax_rel_change]:
+        ax.set_xlabel('Iteration', fontsize=xylabel_fontsize)
+        ax.set_xscale('log')
+        ax.set_title(f"{ALGONAME}({algo_name}): median and IQR")
+        ax.legend(title=r'$p_{init}$')
+        ax.grid(True, linestyle='--', alpha=0.4, which='both')
+    fig_loss.tight_layout()
+    fig_rel_change.tight_layout()
+    return fig_loss, fig_rel_change
+
+    
+
+def compute_initialization_paired_metric(results, list_method_for_p_init, algo_name="JBLD", ref_method=None, metric="rel_l2"):
+    """
+    Paired comparison of the final result of `algo_name` across initialization methods.
+    The MC seed equals i_mc in every config, so run i_mc sees the same data for all init methods.
+    For each non-reference method computes, per MC run:
+        metric="rel_l2":  ||p_method - p_ref|| / ||p_ref||
+        metric="max_abs": max(|p_method - p_ref|)
+        metric="loss":    |L_method - L_ref| / |L_ref|, L = final loss (requires DO_STORE_CONVERGENCE)
+        metric="doa":     max |doa_hat_method - doa_hat_ref| [deg], after matching the two sets of
+                          estimated DOAs to each other with linear_sum_assignment (ground truth is not used)
+        metric="power":   max |power_hat_method - power_hat_ref| [dB] over the peaks matched as in "doa"
+    Returns dict_metric where dict_metric[method] is an array of shape (num_mc,).
+    """
+    from scipy.optimize import linear_sum_assignment
+    if ref_method is None:
+        ref_method = list_method_for_p_init[0]
+    i_ref = list_method_for_p_init.index(ref_method)
+    num_mc = min(len(results[i_config]) for i_config in range(len(list_method_for_p_init)))
+    grid_doa = utils.get_doa_grid()
+
+    def get_result_and_algo_idx(i_config, i_mc):
+        result = results[i_config][i_mc]
+        assert result["i_mc"] == i_mc, "results are not ordered by i_mc, pairing is invalid"
+        return result, result["algo_names"].index(algo_name)
+
+    def get_p_vec(i_config, i_mc):
+        result, algo_idx = get_result_and_algo_idx(i_config, i_mc)
+        return np.ravel(np.asarray(result["p_vec_list"][algo_idx], dtype=float))
+
+    def get_final_loss(i_config, i_mc):
+        result, algo_idx = get_result_and_algo_idx(i_config, i_mc)
+        tuple_convergence = result["tuple_convergence_list"][algo_idx]
+        if tuple_convergence is None or len(tuple_convergence[0]) == 0:
+            raise ValueError("No loss history stored, run with DO_STORE_CONVERGENCE = True")
+        return tuple_convergence[0][-1]
+
+    def get_selected_doas_and_powers(i_config, i_mc):
+        config = results[i_config][i_mc]["config"]
+        _, selected_detected_doas, selected_detected_powers, _, _, _, _, _ = estimate_doa_calc_errors(
+            get_p_vec(i_config, i_mc), grid_doa, config["doa"], convert_db_to_linear(config["power_doa_db"]))
+        return selected_detected_doas, selected_detected_powers
+
+    def max_matched_diff(i_config_a, i_config_b, i_mc):
+        # match the two sets of estimated DOAs to each other (the ground truth is not used)
+        doas_a, powers_a = get_selected_doas_and_powers(i_config_a, i_mc)
+        doas_b, powers_b = get_selected_doas_and_powers(i_config_b, i_mc)
+        cost_matrix = np.abs(doas_a[:, np.newaxis] - doas_b[np.newaxis, :])
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+        max_doa_diff = np.max(cost_matrix[row_ind, col_ind])
+        max_power_diff_db = np.max(np.abs(convert_linear_to_db(powers_a[row_ind]) - convert_linear_to_db(powers_b[col_ind])))
+        return max_doa_diff, max_power_diff_db
+
+    dict_metric = {}
+    for i_config, method_name in enumerate(list_method_for_p_init):
+        if i_config == i_ref:
+            continue
+        values = np.zeros(num_mc)
+        for i_mc in range(num_mc):
+            if metric == "rel_l2":
+                p_ref, p_method = get_p_vec(i_ref, i_mc), get_p_vec(i_config, i_mc)
+                values[i_mc] = np.linalg.norm(p_method - p_ref) / np.linalg.norm(p_ref)
+            elif metric == "max_abs":
+                p_ref, p_method = get_p_vec(i_ref, i_mc), get_p_vec(i_config, i_mc)
+                values[i_mc] = np.max(np.abs(p_method - p_ref))
+            elif metric == "loss":
+                loss_ref, loss_method = get_final_loss(i_ref, i_mc), get_final_loss(i_config, i_mc)
+                values[i_mc] = np.abs(loss_method - loss_ref) / np.abs(loss_ref)
+            elif metric == "doa":
+                values[i_mc] = max_matched_diff(i_config, i_ref, i_mc)[0]
+            elif metric == "power":
+                values[i_mc] = max_matched_diff(i_config, i_ref, i_mc)[1]
+            else:
+                raise ValueError(f"Unknown metric: {metric}")
+        dict_metric[method_name] = values
+    return dict_metric
+
+
+def display_initialization_spectra(results, list_method_for_p_init, i_mc, algo_name="JBLD", str_title=None):
+    """
+    Display the spectra of `algo_name` for MC run i_mc, one curve per initialization method.
+    """
+    import matplotlib.pyplot as plt
+    list_p_vec = []
+    algo_list = {}
+    for i_config, method_name in enumerate(list_method_for_p_init):
+        result = results[i_config][i_mc]
+        assert result["i_mc"] == i_mc, "results are not ordered by i_mc, pairing is invalid"
+        algo_idx = result["algo_names"].index(algo_name)
+        list_p_vec.append(np.array(result["p_vec_list"][algo_idx], dtype=float))  # copy, display_power_spectrum clips in place
+        algo_list[f"init: {method_name}"] = {"color": f"C{i_config}", "linestyle": ["-", "--", ":", "-."][i_config % 4]}
+
+    config = results[0][i_mc]["config"]
+    fig, ax = plt.subplots(figsize=(7, 4))
+    display_power_spectrum(config, list_p_vec, algo_list=algo_list, ax=ax)
+    DELTA_X = 10
+    ax.set_xlim([np.min(config["doa"]) - DELTA_X, np.max(config["doa"]) + DELTA_X])
+    ax.set_ylim([-20, np.max(config["power_doa_db"]) + 3])
+    ax.set_title(str_title if str_title is not None else f"{ALGONAME}({algo_name}), MC run {i_mc}")
+    ax.grid(True, linestyle='--', alpha=0.4)
+    fig.tight_layout()
+    return fig
+
+
+def plot_initialization_paired_difference(results, list_method_for_p_init, algo_name="JBLD", ref_method=None,
+                                          plot_type="cdf", logscale=None, metric="rel_l2", num_worst_to_display=0,
+                                          show_fliers=True, doa_gross_threshold=None):
+    """
+    Plot the paired metric of compute_initialization_paired_metric (see there for the metric options).
+    plot_type: "cdf" (empirical CDF per method) or "boxplot".
+    logscale: None -> log for all metrics except "doa" (which is grid-quantized and often exactly 0).
+    num_worst_to_display: for each method, also display the spectra of its num_worst_to_display worst MC runs
+        (chosen from all runs, including the excluded ones).
+    doa_gross_threshold: only for metric="doa" or "power". Runs with a DOA difference > doa_gross_threshold [deg] are
+        counted (reported in the title) and excluded from the plot and statistics. None -> exclude nothing.
+    Returns (fig, dict_metric, list_fig_worst, df_doa_table). dict_metric holds all runs (nothing excluded).
+    df_doa_table: only for metric="doa" (else None). One row per non-reference method, columns are the percentage
+        of all runs (nothing excluded) with a DOA difference of exactly 0 / 1 grid step, or more than 1 step.
+    """
+    import matplotlib.pyplot as plt
+
+    if ref_method is None:
+        ref_method = list_method_for_p_init[0]
+    if logscale is None:
+        logscale = (metric != "doa")
+    dict_metric = compute_initialization_paired_metric(results, list_method_for_p_init, algo_name, ref_method, metric)
+
+    # runs to exclude from the plot and statistics (gross DOA disagreements)
+    do_exclude = metric in ["doa", "power"] and doa_gross_threshold is not None
+    if do_exclude:
+        dict_doa_diff = dict_metric if metric == "doa" else \
+            compute_initialization_paired_metric(results, list_method_for_p_init, algo_name, ref_method, "doa")
+    dict_is_excluded = {}
+    for method_name, values in dict_metric.items():
+        if do_exclude:
+            dict_is_excluded[method_name] = dict_doa_diff[method_name] > doa_gross_threshold + 1e-6
+        else:
+            dict_is_excluded[method_name] = np.zeros(len(values), dtype=bool)
+    dict_metric_kept = {m: dict_metric[m][~dict_is_excluded[m]] for m in dict_metric}
+
+    xylabel_fontsize = 12
+    str_ref = r'\mathrm{' + ref_method.replace('_', r'\_') + r'}'
+    dict_str_metric = {
+        "rel_l2": r'$\|\hat{p}_{\mathrm{init}} - \hat{p}_{' + str_ref + r'}\| / \|\hat{p}_{' + str_ref + r'}\|$',
+        "max_abs": r'$\max|\hat{p}_{\mathrm{init}} - \hat{p}_{' + str_ref + r'}|$',
+        "loss": r'$|L_{\mathrm{init}} - L_{' + str_ref + r'}| / |L_{' + str_ref + r'}|$',
+        "doa": r'$\max_k |\hat{\theta}_{k,\mathrm{init}} - \hat{\theta}_{k,' + str_ref + r'}|$ (degrees)',
+        "power": r'$\max_k |\hat{P}_{k,\mathrm{init}} - \hat{P}_{k,' + str_ref + r'}|$ (dB)',
+    }
+    str_metric = dict_str_metric[metric]
+    fig, ax = plt.subplots(figsize=(6, 4))
+    if plot_type == "cdf":
+        for method_name, values in dict_metric_kept.items():
+            x = np.sort(values)
+            y = np.arange(1, len(x) + 1) / len(x)
+            ax.step(x, y, where='post', label=f'{method_name} vs. {ref_method}')
+        ax.set_xlabel(str_metric, fontsize=xylabel_fontsize)
+        ax.set_ylabel('Empirical CDF', fontsize=xylabel_fontsize)
+        ax.set_ylim([0, 1.02])
+        if logscale:
+            ax.set_xscale('log')
+        ax.legend()
+    elif plot_type == "boxplot":
+        list_methods = list(dict_metric_kept.keys())
+        ax.boxplot([dict_metric_kept[m] for m in list_methods], showfliers=show_fliers)
+        for method_name in list_methods:
+            values = dict_metric_kept[method_name]
+            q25, q75 = np.percentile(values, [25, 75])
+            num_fliers = np.sum((values < q25 - 1.5 * (q75 - q25)) | (values > q75 + 1.5 * (q75 - q25)))
+            print(f"boxplot {method_name} vs. {ref_method}: {num_fliers}/{len(values)} runs are outliers (beyond 1.5 IQR)")
+        ax.set_xticks(np.arange(1, len(list_methods) + 1))
+        ax.set_xticklabels([f'{m} vs. {ref_method}' for m in list_methods], fontsize=xylabel_fontsize)
+        ax.set_ylabel(str_metric, fontsize=xylabel_fontsize)
+        if logscale:
+            ax.set_yscale('log')
+    else:
+        raise ValueError(f"Unknown plot_type: {plot_type}")
+    str_title = f"{ALGONAME}({algo_name}): paired difference of final results"
+    if do_exclude:
+        str_excluded = ", ".join(f"{m}: {np.sum(dict_is_excluded[m])}/{len(dict_is_excluded[m])}" for m in dict_is_excluded)
+        str_title += f"\nexcluded runs with DOA difference > {doa_gross_threshold}°: {str_excluded}"
+    ax.set_title(str_title)
+    ax.grid(True, linestyle='--', alpha=0.4, which='both')
+    fig.tight_layout()
+
+    df_doa_table = None
+    if metric == "doa":
+        import pandas as pd
+        # detected DOAs are on-grid, so the differences are integer multiples of the grid step
+        step_deg = np.diff(utils.get_doa_grid())[0]
+        list_columns = ["diff=0", f"diff={step_deg:g}°", f"diff>{step_deg:g}°"]
+        dict_rows = {}
+        for method_name, values in dict_metric.items():
+            num_steps = np.round(values / step_deg).astype(int)
+            dict_rows[f"{method_name} vs. {ref_method}"] = \
+                [100 * np.mean(num_steps == 0), 100 * np.mean(num_steps == 1), 100 * np.mean(num_steps > 1)]
+        df_doa_table = pd.DataFrame.from_dict(dict_rows, orient="index", columns=list_columns)
+        print(f"{ALGONAME}({algo_name}): DOA difference vs. {ref_method}, % of all runs:")
+        print(df_doa_table.to_string(float_format=lambda x: f"{x:.1f}%"))
+
+    list_fig_worst = []
+    for method_name, values in dict_metric.items():
+        values_kept = dict_metric_kept[method_name]
+        q25, q50, q75 = np.percentile(values_kept, [25, 50, 75])
+        i_mc_worst = np.argsort(values)[::-1][:max(num_worst_to_display, 3)]
+        print(f"[{metric}] {method_name} vs. {ref_method}: excluded {np.sum(dict_is_excluded[method_name])}/{len(values)} runs. "
+              f"Over kept runs: median = {q50:.2e}, IQR = [{q25:.2e}, {q75:.2e}], max = {values_kept.max():.2e}, "
+              f"fraction of exact zeros = {np.mean(values_kept == 0):.2f}. "
+              f"Worst MC runs (all runs) = {i_mc_worst.tolist()}")
+        if logscale and np.any(values_kept <= 0):
+            print(f"  note: {np.sum(values_kept <= 0)} non-positive values are not shown on the log scale")
+        for i_mc in i_mc_worst[:num_worst_to_display]:
+            str_title = f"MC run {i_mc}: {metric} ({method_name} vs. {ref_method}) = {values[i_mc]:.2e}"
+            list_fig_worst.append(display_initialization_spectra(results, list_method_for_p_init, i_mc, algo_name, str_title))
+    return fig, dict_metric, list_fig_worst, df_doa_table
 
 
 def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPLOT=True, logscale_y=True):
@@ -819,9 +1089,9 @@ def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPL
     
     def print_table_with_percentile(table_name, mat, do_only_mean = False):
         from tabulate import tabulate
-        qlow_mat = np.percentile(mat, 10, axis=1).T
+        qlow_mat = np.percentile(mat, 25, axis=1).T
         qmid_mat = np.percentile(mat, 50, axis=1).T
-        qhigh_mat = np.percentile(mat, 95, axis=1).T
+        qhigh_mat = np.percentile(mat, 75, axis=1).T
 
         mean_mat = np.mean(mat, axis=1).T
 
@@ -856,7 +1126,7 @@ def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPL
     # print_table("Num Iters", num_iters_mat.mean(axis=1).T, num_iters_mat.std(axis=1).T)
     # print_table("Iteration Runtime", iter_runtime_mat.mean(axis=1).T, iter_runtime_mat.std(axis=1).T)
     # print_table_with_percentile("Runtime", runtime_mat)
-    table_num_iters = print_table_with_percentile("Num Iters", num_iters_mat, do_only_mean=True)
+    table_num_iters = print_table_with_percentile("Num Iters", num_iters_mat, do_only_mean=False)
     table_iter_runtime_ms = print_table_with_percentile("Iteration Runtime [ms]", iter_runtime_mat * 1e3)  # Convert to milliseconds
     table_runtime_s = print_table_with_percentile("Runtime [s]", runtime_mat)
 
@@ -866,6 +1136,7 @@ def plot_iteration_and_runtime_boxplot(results, param_vals, param_name, DO_BOXPL
 
 
 def create_runtime_plot_M(list_resultPaths, list_M):
+    #%%
     import matplotlib.pyplot as plt
     import pickle
     num_results = len(list_resultPaths)
@@ -878,6 +1149,7 @@ def create_runtime_plot_M(list_resultPaths, list_M):
         results.append(curr_results[0])
 
     fig_runtime_boxplot, list_of_tables = plot_iteration_and_runtime_boxplot(results, list_M, 'M', DO_BOXPLOT=True, logscale_y=True)
+    #%%
     save_figure(fig_runtime_boxplot, path_results_dir, "boxplot_runtime_vs_M")
 
     for table_name, table_data in list_of_tables:

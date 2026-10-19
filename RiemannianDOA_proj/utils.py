@@ -20,6 +20,7 @@ class GlobalParms: # trick to have a global variable that can be easily modified
     GRID_MIN_MAX_VALS_DEGREES = (0, 180)
     WANTED_ALGO_NAMES = {"SPICE", "SAMV", "AIRM", "JBLD", "LE", "ESPRIT"}
     SENSOR_ARRAY_TYPE = "ULA"
+    DO_STORE_CONVERGENCE = False
 
 globalParams = GlobalParms()
 # =====================================================================
@@ -260,7 +261,7 @@ def estimate_doa_calc_errors(p_vec, grid_doa, true_doas, true_powers,
     
 
 
-    return num_detected_doas, all_detected_doas, all_detected_powers, selected_doa_error, selected_power_error, \
+    return num_detected_doas, selected_detected_doas, selected_detected_powers, selected_doa_error, selected_power_error, \
             succ_match_detected_doa, succ_match_true_doa, mean_HPBW
 
 

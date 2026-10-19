@@ -68,7 +68,7 @@ def loss_LD(p, A, R_hat, sigma2):
     loss = loss.real
     return loss
 
-def optimize_adam_AIRM(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
+def optimize_adam_AIRM(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_convergence = False, do_verbose = False):
     # t0 = time()
     pinv_sqrtm_R_hat = matrix_pinv_sqrtm(torch.as_tensor(_R_hat, dtype=TORCH_DTYPE))  # Compute R_hat^(-1/2)
     p = torch.as_tensor(_p_init, dtype=torch.float).clone().detach().requires_grad_(True)  # Use provided initialization
@@ -80,7 +80,7 @@ def optimize_adam_AIRM(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do
     rel_change_history = []
 
     for step in range(_max_iter):
-        print(f"AIRM iteration {step}/{_max_iter}", end='\r')
+        # print(f"AIRM iteration {step}/{_max_iter}", end='\r')
         optimizer.zero_grad()
         loss = loss_AFFINV(p, A, pinv_sqrtm_R_hat, _sigma2)
         loss.backward()
@@ -91,7 +91,7 @@ def optimize_adam_AIRM(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do
 
         with torch.no_grad():
             rel_change = (torch.norm(p - p_prev) / (1e-5 + torch.norm(p_prev))).item()
-            if do_store_history:
+            if do_store_convergence:
                 rel_change_history.append(rel_change)
                 loss_history.append(loss.item())
 
@@ -106,7 +106,7 @@ def optimize_adam_AIRM(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do
 
 
 
-def optimize_adam_LE(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
+def optimize_adam_LE(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_convergence = False, do_verbose = False):
     # t0 = time()
     logm_R_hat = matrix_logm(torch.as_tensor(_R_hat, dtype=TORCH_DTYPE)) # Compute log(R_hat)
     p = torch.as_tensor(_p_init, dtype=torch.float).clone().detach().requires_grad_(True)  # Use provided initialization
@@ -119,7 +119,7 @@ def optimize_adam_LE(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_s
     rel_change_history = []
 
     for step in range(_max_iter):
-        print(f"LE iteration {step}/{_max_iter}", end='\r')
+        # print(f"LE iteration {step}/{_max_iter}", end='\r')
         optimizer.zero_grad()
         loss = loss_LE(p, A, logm_R_hat, _sigma2)
         # with torch.autograd.detect_anomaly():
@@ -134,7 +134,7 @@ def optimize_adam_LE(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_s
 
         with torch.no_grad():
             rel_change = (torch.norm(p - p_prev) / (1e-5 + torch.norm(p_prev))).item()
-            if do_store_history:
+            if do_store_convergence:
                 rel_change_history.append(rel_change)
                 loss_history.append(loss.item())
 
@@ -147,7 +147,7 @@ def optimize_adam_LE(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_s
     # print(f"le: #iters= {step}, time= {time() - t0} [sec]")
     return p.detach(), step, (loss_history, rel_change_history)
 
-def optimize_adam_JBLD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
+def optimize_adam_JBLD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_convergence = False, do_verbose = False):
     # t0 = time()
 
     R_hat = torch.as_tensor(_R_hat, dtype=TORCH_DTYPE)
@@ -170,7 +170,7 @@ def optimize_adam_JBLD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do
 
         with torch.no_grad():
             rel_change = (torch.norm(p - p_prev) / (1e-5 + torch.norm(p_prev))).item()
-            if do_store_history:
+            if do_store_convergence:
                 rel_change_history.append(rel_change)
                 loss_history.append(loss.item())
 

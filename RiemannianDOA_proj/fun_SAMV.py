@@ -41,7 +41,7 @@ def fun_SAMV(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
     maxmax = 0.0
 
     for iterIdx in range(maxIter):
-        print(f"SAMV iteration {iterIdx}/{maxIter}", end='\r')
+        # print(f"SAMV iteration {iterIdx}/{maxIter}", end='\r')
 
         R = (A * p_vec_Old[np.newaxis, :]) @ A.conj().T + sigma * np.eye(M)
 

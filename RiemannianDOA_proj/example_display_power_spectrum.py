@@ -3,7 +3,7 @@ import numpy as np
 from time import time
 import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict, Any, Optional
-# %matplotlib ipympl
+%matplotlib ipympl
 
 from RunSingleMCIteration import run_single_mc_iteration
 from utils import *
@@ -21,7 +21,7 @@ plt.close('all')
 # %%
 def example_display_power_spectrum():
     # %%
-    path_results_dir = '/home/or.cohen/thesis_code/RiemannianDOA_proj/run_exp_y2026-m01-d13_15-59-09/Exp_OffGrid_y2026-m01-d13_16-28-38_indp_N_50_M_12_SNR_0'
+    path_results_dir = '/home/or.cohen/thesis_code_main/RiemannianDOA_proj/Exp_Init_y2026-m10-d17_14-45-57_indp_N_50_M_12'
     name_results_dir = os.path.basename(path_results_dir)
     with open(path_results_dir + '/results.pkl', 'rb') as f:
         results = pickle.load(f)

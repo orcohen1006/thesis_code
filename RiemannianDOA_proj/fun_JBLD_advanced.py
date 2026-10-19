@@ -566,7 +566,7 @@ def optimize_JBLD_cccp(
 #     return p_out.detach(), i_iter, (loss_history, rel_change_history)
 
 
-def optimize_adam_cholesky_JBLD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_history = False, do_verbose = False):
+def optimize_adam_cholesky_JBLD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr=0.01, do_store_convergence = False, do_verbose = False):
     # t0 = time()
 
     R_hat = torch.as_tensor(_R_hat, dtype=TORCH_DTYPE)
@@ -579,7 +579,7 @@ def optimize_adam_cholesky_JBLD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr
     rel_change_history = []
 
     for step in range(_max_iter):
-        print(f"JBLD iteration {step}/{_max_iter}", end='\r')
+        # print(f"JBLD iteration {step}/{_max_iter}", end='\r')
         optimizer.zero_grad()
         loss = jbl_loss(A, p, _sigma2, R_hat)
         loss.backward()
@@ -590,7 +590,7 @@ def optimize_adam_cholesky_JBLD(_A, _R_hat, _sigma2, _p_init, _max_iter=100, _lr
 
         with torch.no_grad():
             rel_change = (torch.norm(p - p_prev) / (1e-5 + torch.norm(p_prev))).item()
-            if do_store_history:
+            if do_store_convergence:
                 rel_change_history.append(rel_change)
                 loss_history.append(loss.item())
 

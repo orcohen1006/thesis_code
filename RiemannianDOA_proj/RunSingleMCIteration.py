@@ -58,14 +58,30 @@ def run_single_mc_iteration(
     if do_log:
         logging.info(f"- generated noisy signal y_noisy with shape {y_noisy.shape}.")
         
-    # modulus_hat_das = np.sum(np.abs(A.conj().T @ (y_noisy / config["m"])), axis=1) / config["N"]
-    p_init = fun_PER(y_noisy, A, noise_power)[0]
+    # if config has a "method_for_p_init" key, use it to initialize p_init, otherwise use PER
+    p_init = None
+    if "method_for_p_init" in config:
+        if do_log:
+            logging.info(f"- method_for_p_init = {config['method_for_p_init']}.")
+
+        if config["method_for_p_init"] == "PER":
+            p_init = fun_PER(y_noisy, A, noise_power)[0]
+        elif config["method_for_p_init"] == "MVDR":
+            p_init = fun_MVDR(y_noisy, A, noise_power)[0]
+        elif config["method_for_p_init"] == "LE_ss":
+            p_init = fun_LE_ss(y_noisy, A, noise_power)[0]
+        else:
+            raise ValueError(f"Unknown method_for_p_init: {config['method_for_p_init']}")        
+    else:
+        p_init = fun_PER(y_noisy, A, noise_power)[0]
     # Run on all algorithms
     p_vec_list = [None] * num_algos
     runtime_list = [None] * num_algos
     num_iters_list = [None] * num_algos
+    tuple_convergence_list = [None] * num_algos
 
     for i_algo in range(num_algos):
+        tuple_convergence = None
         t_algo_start = time()
         if algo_list[i_algo] == "PER":
             # p_vec, num_iters, _ = fun_DAS(y_noisy, A, modulus_hat_das, doa_scan, config["doa"])
@@ -77,11 +93,11 @@ def run_single_mc_iteration(
         elif algo_list[i_algo] == "SPICE":
             p_vec, num_iters, _ = fun_SPICE(y_noisy, A, p_init, doa_scan, config["doa"], noise_power)
         elif algo_list[i_algo] == "AIRM":
-            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, p_init, doa_scan, config["doa"], noise_power, loss_name="AIRM")
+            p_vec, num_iters, tuple_convergence = fun_Riemannian(y_noisy, A, p_init, doa_scan, config["doa"], noise_power, loss_name="AIRM")
         elif algo_list[i_algo] == "JBLD":
-            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, p_init, doa_scan, config["doa"], noise_power, loss_name="JBLD")
+            p_vec, num_iters, tuple_convergence = fun_Riemannian(y_noisy, A, p_init, doa_scan, config["doa"], noise_power, loss_name="JBLD")
         elif algo_list[i_algo] == "LE":
-            p_vec, num_iters, _ = fun_Riemannian(y_noisy, A, p_init, doa_scan, config["doa"], noise_power, loss_name="LE")
+            p_vec, num_iters, tuple_convergence = fun_Riemannian(y_noisy, A, p_init, doa_scan, config["doa"], noise_power, loss_name="LE")
         elif algo_list[i_algo] == "LE_ss":
             p_vec, num_iters, _ = fun_LE_ss(y_noisy, A, p_init, doa_scan, config["doa"], noise_power)
         elif algo_list[i_algo] == "ESPRIT":
@@ -94,6 +110,7 @@ def run_single_mc_iteration(
         runtime_list[i_algo] = time() - t_algo_start
         num_iters_list[i_algo] = num_iters
         p_vec_list[i_algo] = p_vec
+        tuple_convergence_list[i_algo] = tuple_convergence
         msg = f"{algo_list[i_algo]}: #iters= {num_iters}, runtime= {runtime_list[i_algo]} [sec]"
         if do_log:
             logging.info(msg)
@@ -114,6 +131,7 @@ def run_single_mc_iteration(
     result['num_iters_list'] = num_iters_list
     result['p_vec_list'] = p_vec_list
     result['algo_names'] = algo_list
+    result['tuple_convergence_list'] = tuple_convergence_list
     
     return result
 
@@ -141,7 +159,7 @@ def run_single_mc_iteration(
 if __name__ == "__main__":
 
     job_id = int(sys.argv[1])  # PBS job index
-    log_dir = "/home/or.cohen/thesis_code/RiemannianDOA_proj/job_logs"
+    log_dir = "/home/or.cohen/thesis_code_main/RiemannianDOA_proj/job_logs"
     log_path = os.path.join(log_dir, f"mylog_job_{job_id}.log")
 
     # Configure logging to write immediately
@@ -177,6 +195,7 @@ if __name__ == "__main__":
     utils.globalParams.GRID_MIN_MAX_VALS_DEGREES = metadata["grid_min_max_vals_degrees"]
     utils.globalParams.WANTED_ALGO_NAMES = metadata["wanted_algo_names"]
     utils.globalParams.SENSOR_ARRAY_TYPE = metadata["sensor_array_type"]
+    utils.globalParams.DO_STORE_CONVERGENCE = metadata["do_store_convergence"]
 
     total_tasks = num_configs * num_mc
     tasks_per_job = (total_tasks + num_jobs - 1) // num_jobs  # ceil division

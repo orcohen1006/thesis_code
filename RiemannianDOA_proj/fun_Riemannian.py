@@ -12,17 +12,19 @@ def fun_Riemannian(Y, A, DAS_init, DOAscan, DOA, noise_power, loss_name="AIRM"):
     R_hat /= noise_power
     sigma2_n = 1.0
 
+    do_store_convergence = globalParams.DO_STORE_CONVERGENCE
+
     if loss_name == "AIRM":
-        p,num_iters, _ = optimize_adam_AIRM(A, R_hat, sigma2_n, DAS_init, _max_iter=int(5e3), _lr=1e-2)
+        p,num_iters, tuple_convergence = optimize_adam_AIRM(A, R_hat, sigma2_n, DAS_init, _max_iter=int(5e3), _lr=1e-2, do_store_convergence=do_store_convergence)
     elif loss_name == "JBLD":
-        p,num_iters, _ = optimize_adam_cholesky_JBLD(A, R_hat, sigma2_n, DAS_init, _max_iter=int(5e3), _lr=1e-2)
+        p,num_iters, tuple_convergence = optimize_adam_cholesky_JBLD(A, R_hat, sigma2_n, DAS_init, _max_iter=int(5e3), _lr=1e-2, do_store_convergence=do_store_convergence)
     elif loss_name == "LE":
-        p,num_iters, _ = optimize_adam_LE(A, R_hat, sigma2_n, DAS_init, _max_iter=int(5e3), _lr=1e-2)
+        p,num_iters, tuple_convergence = optimize_adam_LE(A, R_hat, sigma2_n, DAS_init, _max_iter=int(5e3), _lr=1e-2, do_store_convergence=do_store_convergence)
     else:
         raise ValueError("loss_name not recognized in fun_Riemannian")
-    
     if isinstance(p, torch.Tensor):
         p = p.detach().cpu().numpy()
     # rescale p 
     p *= noise_power
-    return p, num_iters, noise_power
+
+    return p, num_iters, tuple_convergence

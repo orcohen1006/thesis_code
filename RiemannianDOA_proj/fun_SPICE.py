@@ -33,7 +33,7 @@ def fun_SPICE(Y, A, DAS_init, DOAscan, DOA, sigma_given=None):
     R_hat_sqrt = linalg.sqrtm(R_hat)
     
     for jj in range(maxIter):
-        print(f"SPICE iteration {jj}/{maxIter}", end='\r')
+        # print(f"SPICE iteration {jj}/{maxIter}", end='\r')
         p_prev = p.copy()
         
         # R = A @ np.diag(p) @ A.conj().T + sigma * np.eye(M)

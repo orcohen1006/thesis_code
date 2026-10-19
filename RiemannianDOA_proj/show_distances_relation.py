@@ -1,7 +1,7 @@
 # %%
 import os
 from tqdm import tqdm
-os.chdir('/home/or.cohen/thesis_code/RiemannianDOA_proj')
+os.chdir('/home/or.cohen/thesis_code_main/RiemannianDOA_proj')
 import numpy as np
 import matplotlib.pyplot as plt
 # %matplotlib ipympl

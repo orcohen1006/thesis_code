@@ -1,3 +1,4 @@
+# %%
 import numpy as np
 import time
 import os
@@ -13,7 +14,7 @@ import ToolsMC
 from commit_repo_git import git_commit_and_push
 from datetime import datetime
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
+# %%
 def run_all_exp():
     t0_overall = time.time()
     timestamp = datetime.now().strftime('y%Y-m%m-d%d_%H-%M-%S')
